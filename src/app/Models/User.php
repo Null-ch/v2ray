@@ -2,36 +2,33 @@
 
 namespace App\Models;
 
-// use Illuminate\Contracts\Auth\MustVerifyEmail;
+use App\Models\Balance;
+use App\Models\Referral;
+use App\Models\Configuration;
+use Illuminate\Notifications\Notifiable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
-use Illuminate\Notifications\Notifiable;
 
 class User extends Authenticatable
 {
-    /** @use HasFactory<\Database\Factories\UserFactory> */
     use HasFactory, Notifiable;
 
     /**
      * The attributes that are mass assignable.
-     *
-     * @var list<string>
      */
     protected $fillable = [
         'name',
-        'email',
-        'password',
+        'tg_tag',
+        'phone_number',
+        'tg_id',
+        'uuid',
+        'referrer_id',
     ];
 
     /**
      * The attributes that should be hidden for serialization.
-     *
-     * @var list<string>
      */
-    protected $hidden = [
-        'password',
-        'remember_token',
-    ];
+    protected $hidden = [];
 
     /**
      * Get the attributes that should be cast.
@@ -41,8 +38,52 @@ class User extends Authenticatable
     protected function casts(): array
     {
         return [
-            'email_verified_at' => 'datetime',
-            'password' => 'hashed',
+            'tg_id' => 'integer',
         ];
+    }
+
+    /**
+     * Who invited the user
+     */
+    public function referrer()
+    {
+        return $this->belongsTo(self::class, 'referrer_id');
+    }
+
+    /**
+     * The users that this user invited
+     */
+    public function referrals()
+    {
+        return $this->hasMany(Referral::class, 'user_id');
+    }
+
+    /**
+     * Users invited by this user
+     */
+    public function referredUsers()
+    {
+        return $this->belongsToMany(
+            self::class,
+            'referrals',
+            'user_id',
+            'referred_user_id'
+        );
+    }
+
+    /**
+     * User balance
+     */
+    public function balance()
+    {
+        return $this->hasOne(Balance::class);
+    }
+
+    /**
+     * User Configurations
+     */
+    public function configurations()
+    {
+        return $this->hasMany(Configuration::class);
     }
 }
