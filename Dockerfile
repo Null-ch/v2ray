@@ -28,4 +28,8 @@ RUN chown -R www-data:www-data /var/www/html/v2ray/src \
 
 EXPOSE 9000
 
-CMD sh -c "php /var/www/html/v2ray/src/artisan migrate --force && php-fpm"
+CMD sh -c "\
+    if [ ! -f /var/www/html/v2ray/src/.env ]; then cp /var/www/html/v2ray/src/.env.example /var/www/html/v2ray/src/.env; fi && \
+    php /var/www/html/v2ray/src/artisan key:generate --ansi && \
+    php /var/www/html/v2ray/src/artisan migrate --force && \
+    php-fpm"
