@@ -18,9 +18,9 @@ services:
 
   web:
     image: nginx:alpine
-    container_name: v2ray_web
+    container_name: ${CONTAINER_NAME:-v2ray_web}
     ports:
-      - "8080:80"
+      - "${APP_PORT}:80"
       - "8443:443"
     volumes:
       - ./src:/var/www/html/v2ray/src
