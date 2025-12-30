@@ -1,0 +1,52 @@
+version: '3.3'
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: v2ray_app
+    working_dir: /var/www/html/v2ray/src
+    volumes:
+      - ./src:/var/www/html/v2ray/src
+    networks:
+      - app-network
+    depends_on:
+      - db
+    environment:
+      COMPOSER_ALLOW_SUPERUSER: 1
+
+  web:
+    image: nginx:alpine
+    container_name: v2ray_web
+    ports:
+      - "8080:80"
+      - "8443:443"
+    volumes:
+      - ./src:/var/www/html/v2ray/src
+      - ./nginx/conf.d:/etc/nginx/conf.d
+    networks:
+      - app-network
+    depends_on:
+      - app
+
+  db:
+    image: mysql:8
+    container_name: v2ray_db
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: v2ray
+      MYSQL_USER: v2ray
+      MYSQL_PASSWORD: CHvcuXdcHECcfMrK
+    ports:
+      - "3307:3306"
+    volumes:
+      - dbdata:/var/lib/mysql
+    networks:
+      - app-network
+
+networks:
+  app-network:
+
+volumes:
+  dbdata:
