@@ -5,10 +5,8 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: v2ray_app
+    container_name: ${APP_CONTAINER_NAME}
     working_dir: /var/www/html/v2ray/src
-    volumes:
-      - ./src:/var/www/html/v2ray/src
     networks:
       - app-network
     depends_on:
@@ -18,10 +16,10 @@ services:
 
   web:
     image: nginx:alpine
-    container_name: ${CONTAINER_NAME:-v2ray_web}
+    container_name: ${WEB_CONTAINER_NAME}
     ports:
-      - "${APP_PORT}:80"
-      - "8443:443"
+      - "${DOCKER_APP_PORT}:80"
+      - "${DOCKER_SSL_PORT}:443"
     volumes:
       - ./src:/var/www/html/v2ray/src
       - ./nginx/conf.d:/etc/nginx/conf.d
@@ -32,14 +30,14 @@ services:
 
   db:
     image: mysql:8
-    container_name: v2ray_db
+    container_name: ${DB_CONTAINER_NAME}
     environment:
       MYSQL_ROOT_PASSWORD: root
       MYSQL_DATABASE: v2ray
       MYSQL_USER: v2ray
       MYSQL_PASSWORD: CHvcuXdcHECcfMrK
     ports:
-      - "3307:3306"
+      - "${DOCKER_DB_PORT}:3306"
     volumes:
       - dbdata:/var/lib/mysql
     networks:
