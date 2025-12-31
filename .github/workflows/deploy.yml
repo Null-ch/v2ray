@@ -17,20 +17,14 @@ jobs:
         run: |
           if [ "${{ github.ref }}" = "refs/heads/develop" ]; then
             cp src/.env.example src/.env
-            docker compose -f docker-compose.yml up -d db
+            docker-compose -f docker-compose.yml up -d db
             sleep 20
-            docker compose run --rm app php artisan key:generate
-            docker compose run --rm app php artisan migrate --env=testing
-            docker compose run --rm app php artisan test
+            docker-compose run --rm app php artisan key:generate
+            docker-compose run --rm app php artisan migrate --env=testing
+            docker-compose run --rm app php artisan test
           else
             echo "Skipping tests on main branch (prod)"
           fi
-
-      - name: Debug secrets
-        run: |
-          echo "SERVER_HOST=${{ secrets.SERVER_HOST }}"
-          echo "SERVER_PORT=${{ secrets.SERVER_PORT }}"
-          echo "SERVER_USER=${{ secrets.SERVER_USER }}"
 
       - name: Deploy via SSH
         if: success()
@@ -50,8 +44,16 @@ jobs:
             fi
 
             cd $APP_DIR
+
+            git config --global --add safe.directory $APP_DIR
             git pull origin $(git branch --show-current)
 
-            docker compose up -d --build
-            docker compose exec -T app php artisan migrate --force
-            docker compose exec -T app php artisan optimize
+            docker-compose up -d --build
+
+            if [ "$ENV" = "prod" ]; then
+              docker-compose exec app php artisan migrate --force
+            else
+              docker-compose exec app php artisan migrate
+            fi
+
+            docker-compose exec app php artisan optimize
