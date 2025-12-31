@@ -21,7 +21,7 @@ WORKDIR /var/www/html/v2ray/src
 
 COPY ./src/composer.json ./src/composer.lock* /var/www/html/v2ray/src/
 
-RUN composer install --no-interaction --optimize-autoloader --no-dev --no-scripts
+RUN RUN composer install --no-interaction --optimize-autoloader --no-scripts
 
 COPY ./src /var/www/html/v2ray/src
 
