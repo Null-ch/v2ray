@@ -25,6 +25,12 @@ jobs:
             echo "Skipping tests on main branch (prod)"
           fi
 
+      - name: Debug secrets
+        run: |
+          echo "SERVER_HOST=${{ secrets.SERVER_HOST }}"
+          echo "SERVER_PORT=${{ secrets.SERVER_PORT }}"
+          echo "SERVER_USER=${{ secrets.SERVER_USER }}"
+
       - name: Deploy via SSH
         if: success()
         uses: appleboy/ssh-action@v1
