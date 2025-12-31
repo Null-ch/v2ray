@@ -76,7 +76,11 @@ jobs:
             docker-compose build --build-arg APP_ENV=$BUILD_ENV
             docker-compose up -d
 
-            docker-compose run --rm app composer install --no-interaction --optimize-autoloader
+            if [ "$ENV" = "prod" ]; then
+             docker-compose run --rm app composer install --no-interaction --optimize-autoloader --no-dev --no-scripts
+            else
+             docker-compose run --rm app composer install --no-interaction --optimize-autoloader
+            fi
 
             if [ "$ENV" = "prod" ]; then
               docker-compose run --rm app php artisan migrate --force
