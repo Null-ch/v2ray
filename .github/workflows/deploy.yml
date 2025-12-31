@@ -46,6 +46,7 @@ jobs:
             git pull origin $(git rev-parse --abbrev-ref HEAD)
 
             docker-compose up -d --build
+            docker-compose run --rm app composer install --no-interaction --optimize-autoloader --no-dev
 
             if [ "$ENV" = "prod" ]; then
               docker-compose run --rm app php artisan migrate --force
