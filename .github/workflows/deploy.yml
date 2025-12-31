@@ -23,7 +23,14 @@ jobs:
           docker compose -f docker-compose.yml up -d db
           sleep 20
 
-          docker compose run --rm -v $(pwd)/src:/var/www/html -w /var/www/html app bash -c "
+          docker compose run --rm -v $(pwd)/src:/var/www/html/src -w /var/www/html/src app bash -c "
+            echo '--- DEBUG: CURRENT DIR ---';
+            pwd;
+            echo '--- DEBUG: LS ---';
+            ls -la;
+            echo '--- DEBUG: APP_KEY ---';
+            grep APP_KEY .env || echo 'APP_KEY not found';
+            
             composer install --no-interaction --optimize-autoloader &&
             if ! grep -q '^APP_KEY=' .env; then php artisan key:generate; fi &&
             php artisan migrate --env=testing &&
