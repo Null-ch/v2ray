@@ -16,16 +16,22 @@ jobs:
       - name: Run tests
         if: github.ref == 'refs/heads/develop'
         run: |
-          cp src/.env.example src/.env
+          if [ ! -f src/.env ]; then
+            cp src/.env.example src/.env
+          fi
+
           docker compose -f docker-compose.yml up -d db
           echo "Waiting for MySQL to be ready..."
           sleep 20
-          docker compose build --build-arg APP_ENV=dev
-          docker compose run --rm app cp .env.example .env
-          docker compose run --rm app php artisan key:generate
-          docker compose run --rm app composer install --no-interaction --optimize-autoloader
-          docker compose run --rm app php artisan migrate --env=testing
-          docker compose run --rm app ./vendor/bin/phpunit --colors=always
+
+          docker compose run --rm -v $(pwd)/src:/var/www/html app composer install --no-interaction --optimize-autoloader
+
+          if ! grep -q '^APP_KEY=' src/.env; then
+            docker compose run --rm -v $(pwd)/src:/var/www/html app php artisan key:generate
+          fi
+
+          docker compose run --rm -v $(pwd)/src:/var/www/html app php artisan migrate --env=testing
+          docker compose run --rm -v $(pwd)/src:/var/www/html app ./vendor/bin/phpunit --colors=always
 
       - name: Deploy via SSH
         if: success()
