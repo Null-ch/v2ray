@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <title>Блекпилл — что это и почему концепция опасна</title>
+    <title>Блекпилл — что это и почему концепция ОЧЕНЬ опасна</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
     <style>
