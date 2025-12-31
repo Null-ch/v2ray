@@ -82,6 +82,31 @@ jobs:
              docker-compose run --rm app composer install --no-interaction --optimize-autoloader
             fi
 
+            docker-compose run --rm app bash -c "
+              if [ ! -f .env ]; then
+                cp .env.example .env
+              fi
+
+              if ! grep -q '^APP_KEY=' .env || grep -q '^APP_KEY=$' .env; then
+                php artisan key:generate --ansi --force
+              fi
+
+              APP_KEY_VALUE=\$(grep '^APP_KEY=' .env | sed -n 's/^APP_KEY=//p' | sed 's/^\"//;s/\"$//' | tr -d '[:space:]')
+
+              if [ -z \"\$APP_KEY_VALUE\" ]; then
+                php artisan key:generate --ansi --force
+                APP_KEY_VALUE=\$(grep '^APP_KEY=' .env | sed -n 's/^APP_KEY=//p' | sed 's/^\"//;s/\"$//' | tr -d '[:space:]')
+              fi
+              
+              if [ -z \"\$APP_KEY_VALUE\" ]; then
+                echo \"Ошибка: не удалось извлечь APP_KEY из .env файла\"
+                cat .env | grep APP_KEY
+                exit 1
+              fi
+
+              echo \"APP_KEY установлен (первые 20 символов): \${APP_KEY_VALUE:0:20}...\"
+            "
+
             if [ "$ENV" = "prod" ]; then
               docker-compose run --rm app php artisan migrate --force
             else
