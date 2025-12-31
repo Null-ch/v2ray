@@ -20,6 +20,8 @@ jobs:
           sleep 20
 
           docker compose run --rm -v $(pwd)/src:/var/www/html -w /var/www/html app bash -c "
+            composer install --no-interaction --optimize-autoloader
+
             if [ ! -f .env ]; then
               cp .env.example .env
             fi
@@ -43,9 +45,7 @@ jobs:
 
             echo \"APP_KEY установлен (первые 20 символов): \${APP_KEY_VALUE:0:20}...\"
 
-            composer install --no-interaction --optimize-autoloader
             php artisan migrate --env=testing
-
             APP_KEY=\"\$APP_KEY_VALUE\" ./vendor/bin/phpunit --colors=always
           "
 
