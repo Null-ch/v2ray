@@ -9,6 +9,7 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    environment: v2ray
 
     steps:
       - uses: actions/checkout@v4
