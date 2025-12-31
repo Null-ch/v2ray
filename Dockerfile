@@ -19,12 +19,10 @@ COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
 WORKDIR /var/www/html/v2ray/src
 
-COPY ./src/composer.json ./src/composer.lock* /var/www/html/v2ray/src/
-
-RUN composer install --no-interaction --optimize-autoloader --no-dev
-
 COPY ./src /var/www/html/v2ray/src
 
+RUN composer install --no-interaction --optimize-autoloader --no-dev --no-scripts
+RUN php artisan package:discover --ansi
 RUN chown -R www-data:www-data /var/www/html/v2ray/src \
     && chmod -R 775 /var/www/html/v2ray/src/storage /var/www/html/v2ray/src/bootstrap/cache
 
