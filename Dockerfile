@@ -32,5 +32,4 @@ EXPOSE 9000
 
 CMD sh -c "\
     if [ ! -f /var/www/html/v2ray/src/.env ]; then cp /var/www/html/v2ray/src/.env.example /var/www/html/v2ray/src/.env; fi && \
-    php /var/www/html/v2ray/src/artisan key:generate --ansi && \
     php-fpm"
