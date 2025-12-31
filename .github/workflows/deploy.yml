@@ -25,12 +25,28 @@ jobs:
             fi
 
             if ! grep -q '^APP_KEY=' .env || grep -q '^APP_KEY=$' .env; then
-              php artisan key:generate --ansi
+              php artisan key:generate --ansi --force
             fi
+
+            APP_KEY_VALUE=\$(grep '^APP_KEY=' .env | sed -n 's/^APP_KEY=//p' | sed 's/^\"//;s/\"$//' | tr -d '[:space:]')
+
+            if [ -z \"\$APP_KEY_VALUE\" ]; then
+              php artisan key:generate --ansi --force
+              APP_KEY_VALUE=\$(grep '^APP_KEY=' .env | sed -n 's/^APP_KEY=//p' | sed 's/^\"//;s/\"$//' | tr -d '[:space:]')
+            fi
+            
+            if [ -z \"\$APP_KEY_VALUE\" ]; then
+              echo \"Ошибка: не удалось извлечь APP_KEY из .env файла\"
+              cat .env | grep APP_KEY
+              exit 1
+            fi
+
+            echo \"APP_KEY установлен (первые 20 символов): \${APP_KEY_VALUE:0:20}...\"
 
             composer install --no-interaction --optimize-autoloader
             php artisan migrate --env=testing
-            ./vendor/bin/phpunit --colors=always
+
+            APP_KEY=\"\$APP_KEY_VALUE\" ./vendor/bin/phpunit --colors=always
           "
 
       - name: Deploy via SSH
