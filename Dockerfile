@@ -21,7 +21,11 @@ WORKDIR /var/www/html/v2ray/src
 
 COPY ./src/composer.json ./src/composer.lock* ./
 
-RUN composer install --no-interaction --optimize-autoloader --no-dev --no-scripts
+RUN if [ "$APP_ENV" = "prod" ]; then \
+        composer install --no-interaction --optimize-autoloader --no-dev --no-scripts; \
+    else \
+        composer install --no-interaction --optimize-autoloader; \
+    fi
 
 COPY ./src .
 
