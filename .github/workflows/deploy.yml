@@ -21,17 +21,16 @@ jobs:
           fi
 
           docker compose -f docker-compose.yml up -d db
-          echo "Waiting for MySQL to be ready..."
           sleep 20
 
-          docker compose run --rm -v $(pwd)/src:/var/www/html app composer install --no-interaction --optimize-autoloader
+          docker compose run --rm -v $(pwd)/src:/var/www/html -w /var/www/html app composer install --no-interaction --optimize-autoloader
 
           if ! grep -q '^APP_KEY=' src/.env; then
-            docker compose run --rm -v $(pwd)/src:/var/www/html app php artisan key:generate
+            docker compose run --rm -v $(pwd)/src:/var/www/html -w /var/www/html app php artisan key:generate
           fi
 
-          docker compose run --rm -v $(pwd)/src:/var/www/html app php artisan migrate --env=testing
-          docker compose run --rm -v $(pwd)/src:/var/www/html app ./vendor/bin/phpunit --colors=always
+          docker compose run --rm -v $(pwd)/src:/var/www/html -w /var/www/html app php artisan migrate --env=testing
+          docker compose run --rm -v $(pwd)/src:/var/www/html -w /var/www/html app ./vendor/bin/phpunit --colors=always
 
       - name: Deploy via SSH
         if: success()
