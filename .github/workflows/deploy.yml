@@ -20,7 +20,7 @@ jobs:
           docker compose -f docker-compose.yml up -d db
           echo "Waiting for MySQL to be ready..."
           sleep 20
-          docker compose run --rm app composer install --no-interaction --optimize-autoloader
+          docker compose build --build-arg APP_ENV=dev
           docker compose run --rm app php artisan key:generate
           docker compose run --rm app php artisan migrate --env=testing
           docker compose run --rm app ./vendor/bin/phpunit --colors=always
@@ -37,9 +37,11 @@ jobs:
             if [ "${{ github.ref }}" = "refs/heads/main" ]; then
               APP_DIR="/var/www/html/v2ray"
               ENV="prod"
+              BUILD_ENV="prod"
             else
               APP_DIR="/var/www/html/v2ray-test"
               ENV="stage"
+              BUILD_ENV="dev"
             fi
 
             cd $APP_DIR
@@ -47,7 +49,8 @@ jobs:
             git config --global --add safe.directory $APP_DIR
             git pull origin $(git rev-parse --abbrev-ref HEAD)
 
-            docker-compose up -d --build
+            docker-compose build --build-arg APP_ENV=$BUILD_ENV
+            docker-compose up -d
 
             docker-compose run --rm app composer install --no-interaction --optimize-autoloader
 
