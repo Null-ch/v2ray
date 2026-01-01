@@ -16,6 +16,8 @@ services:
       PHP_IDE_CONFIG: serverName=v2ray
     extra_hosts:
       - "host.docker.internal:host-gateway"
+    volumes:
+      - ./src:/var/www/html/v2ray/src
 
   web:
     image: nginx:alpine
