@@ -38,8 +38,6 @@ jobs:
 
             echo \"TELEGRAM_BOT_TOKEN установлен (первые 10 символов): \${BOT_TOKEN:0:10}...\"
 
-            composer install --no-interaction --optimize-autoloader
-
             if ! grep -q '^APP_KEY=' .env || grep -q '^APP_KEY=$' .env; then
               php artisan key:generate --ansi --force
             fi
@@ -87,13 +85,14 @@ jobs:
             git config --global --add safe.directory $APP_DIR
             git pull origin $(git rev-parse --abbrev-ref HEAD)
 
+            export TELEGRAM_BOT_TOKEN=$BOT_TOKEN
             docker-compose build --build-arg APP_ENV=$BUILD_ENV
             docker-compose up -d
 
             if [ "$ENV" = "prod" ]; then
-              docker-compose run --rm app composer install --no-interaction --optimize-autoloader --no-dev --no-scripts
+              docker-compose run --rm app composer install --no-interaction --no-dev --no-scripts
             else
-              docker-compose run --rm app composer install --no-interaction --optimize-autoloader
+              docker-compose run --rm app composer install --no-interaction
             fi
 
             docker-compose run --rm app bash -c "
@@ -139,4 +138,4 @@ jobs:
             docker-compose run --rm app php artisan view:clear
             docker-compose run --rm app php artisan cache:clear
             docker-compose run --rm app php artisan optimize
-            docker-compose run --rm app php artisan telegram:bot
+            docker-compose up -d bot
