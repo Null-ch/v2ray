@@ -1,0 +1,137 @@
+stages:
+  - test
+  - deploy
+
+variables:
+  DOCKER_COMPOSE_PATH: "/var/www/html/v2ray"
+
+# ----------------------------
+# 1️⃣ Тесты для develop
+# ----------------------------
+test_develop:
+  stage: test
+  image: docker:24.0.5
+  services:
+    - docker:dind
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "develop"'
+  before_script:
+    - apk add --no-cache bash git openssh
+  script:
+    - docker compose -f docker-compose.yml up -d db
+    - sleep 20
+    - docker compose run --rm -v $(pwd)/src:/var/www/html/v2ray/src -w /var/www/html/v2ray/src app bash -c "
+        if [ ! -f .env ]; then
+          cp .env.example .env
+        fi
+        BOT_TOKEN=$TELEGRAM_BOT_TOKEN_DEV
+        export TELEGRAM_BOT_TOKEN=$BOT_TOKEN
+        if grep -q '^TELEGRAM_BOT_TOKEN=' .env; then
+          sed -i \"s|^TELEGRAM_BOT_TOKEN=.*|TELEGRAM_BOT_TOKEN=\$BOT_TOKEN|\" .env
+        else
+          echo \"TELEGRAM_BOT_TOKEN=\$BOT_TOKEN\" >> .env
+        fi
+        composer install --no-interaction
+        if ! grep -q '^APP_KEY=' .env || grep -q '^APP_KEY=$' .env; then
+          php artisan key:generate --force
+        fi
+        php artisan migrate --env=testing
+        ./vendor/bin/phpunit --colors=always
+      "
+
+# ----------------------------
+# 2️⃣ Деплой develop → dev
+# ----------------------------
+deploy_develop:
+  stage: deploy
+  environment:
+    name: dev
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "develop"'
+  before_script:
+    - apk add --no-cache openssh git bash
+  script:
+    - ssh -o StrictHostKeyChecking=no $SERVER_USER@$SERVER_HOST "bash -s" <<'EOF'
+        APP_DIR="/var/www/html/v2ray-test"
+        BUILD_ENV="dev"
+        BOT_TOKEN="$TELEGRAM_BOT_TOKEN_DEV"
+
+        cd $APP_DIR
+        git config --global --add safe.directory $APP_DIR
+        git pull origin $(git rev-parse --abbrev-ref HEAD)
+
+        export TELEGRAM_BOT_TOKEN=$BOT_TOKEN
+        export APP_ENV=$BUILD_ENV
+
+        docker-compose build
+        docker-compose up -d db app web bot
+
+        docker-compose run --rm app bash -c "
+          cd /var/www/html/v2ray/src
+          composer install --no-interaction --prefer-dist
+          if [ ! -f .env ]; then
+            cp .env.example .env
+          fi
+          if ! grep -q '^APP_KEY=' .env || grep -q '^APP_KEY=$' .env; then
+            php artisan key:generate --force
+          fi
+          if grep -q '^TELEGRAM_BOT_TOKEN=' .env; then
+            sed -i \"s|^TELEGRAM_BOT_TOKEN=.*|TELEGRAM_BOT_TOKEN=$BOT_TOKEN|\" .env
+          else
+            echo \"TELEGRAM_BOT_TOKEN=$BOT_TOKEN\" >> .env
+          fi
+        "
+
+        docker-compose run --rm app php /var/www/html/v2ray/src/artisan migrate
+        docker-compose run --rm app php /var/www/html/v2ray/src/artisan optimize
+        docker-compose restart bot
+      EOF
+
+# ----------------------------
+# 3️⃣ Деплой main → prod
+# ----------------------------
+deploy_main:
+  stage: deploy
+  environment:
+    name: prod
+    url: https://your-production-url.example.com
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main"'
+  before_script:
+    - apk add --no-cache openssh git bash
+  script:
+    - ssh -o StrictHostKeyChecking=no $SERVER_USER@$SERVER_HOST "bash -s" <<'EOF'
+        APP_DIR="/var/www/html/v2ray"
+        BUILD_ENV="prod"
+        BOT_TOKEN="$TELEGRAM_BOT_TOKEN_PROD"
+
+        cd $APP_DIR
+        git config --global --add safe.directory $APP_DIR
+        git pull origin $(git rev-parse --abbrev-ref HEAD)
+
+        export TELEGRAM_BOT_TOKEN=$BOT_TOKEN
+        export APP_ENV=$BUILD_ENV
+
+        docker-compose build
+        docker-compose up -d db app web bot
+
+        docker-compose run --rm app bash -c "
+          cd /var/www/html/v2ray/src
+          composer install --no-interaction --prefer-dist
+          if [ ! -f .env ]; then
+            cp .env.example .env
+          fi
+          if ! grep -q '^APP_KEY=' .env || grep -q '^APP_KEY=$' .env; then
+            php artisan key:generate --force
+          fi
+          if grep -q '^TELEGRAM_BOT_TOKEN=' .env; then
+            sed -i \"s|^TELEGRAM_BOT_TOKEN=.*|TELEGRAM_BOT_TOKEN=$BOT_TOKEN|\" .env
+          else
+            echo \"TELEGRAM_BOT_TOKEN=$BOT_TOKEN\" >> .env
+          fi
+        "
+
+        docker-compose run --rm app php /var/www/html/v2ray/src/artisan migrate --force
+        docker-compose run --rm app php /var/www/html/v2ray/src/artisan optimize
+        docker-compose restart bot
+      EOF
