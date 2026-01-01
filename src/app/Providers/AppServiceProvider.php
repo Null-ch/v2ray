@@ -28,13 +28,13 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         // Пример регистрации обработчиков Telegram бота:
-        // $bot = $this->app->make(Nutgram::class);
+        $bot = $this->app->make(Nutgram::class);
         // $bot->onCommand('start', function (Nutgram $bot) {
         //     $bot->sendMessage('Привет!');
         // });
         //
         // Или используйте TelegramBotHandlers:
-        // $handlers = new \App\Services\TelegramBotHandlers($bot);
-        // $handlers->registerHandlers();
+        $handlers = new \App\Services\TelegramBotHandlers($bot);
+        $handlers->registerHandlers();
     }
 }
