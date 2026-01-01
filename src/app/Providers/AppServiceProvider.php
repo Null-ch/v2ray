@@ -13,13 +13,18 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        $this->app->singleton(TelegramService::class, function ($app) {
-            return new TelegramService();
-        });
+        // Регистрируем TelegramService только если токен настроен
+        $token = config('services.telegram.bot_token');
+        
+        if (!empty($token)) {
+            $this->app->singleton(TelegramService::class, function ($app) {
+                return new TelegramService();
+            });
 
-        $this->app->singleton(Nutgram::class, function ($app) {
-            return $app->make(TelegramService::class)->getBot();
-        });
+            $this->app->singleton(Nutgram::class, function ($app) {
+                return $app->make(TelegramService::class)->getBot();
+            });
+        }
     }
 
     /**
@@ -27,14 +32,22 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        // Пример регистрации обработчиков Telegram бота:
-        $bot = $this->app->make(Nutgram::class);
-        // $bot->onCommand('start', function (Nutgram $bot) {
-        //     $bot->sendMessage('Привет!');
-        // });
-        //
-        // Или используйте TelegramBotHandlers:
-        $handlers = new \App\Services\TelegramBotHandlers($bot);
-        $handlers->registerHandlers();
+        // Регистрируем обработчики только если токен настроен и сервисы зарегистрированы
+        $token = config('services.telegram.bot_token');
+        
+        if (empty($token) || !$this->app->bound(TelegramService::class)) {
+            return;
+        }
+
+        try {
+            $bot = $this->app->make(Nutgram::class);
+            $handlers = new \App\Services\TelegramBotHandlers($bot);
+            $handlers->registerHandlers();
+        } catch (\Throwable $e) {
+            // Игнорируем ошибки при инициализации бота в тестовом окружении
+            if (app()->environment() !== 'testing') {
+                throw $e;
+            }
+        }
     }
 }

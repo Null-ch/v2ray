@@ -12,4 +12,6 @@ use Illuminate\Support\Facades\Route;
 Route::post('test', [TestController::class, 'create']);
 Route::put('test/{id}', [TestController::class, 'update']);
 
-Route::post('telegram/webhook', [TelegramWebhookController::class, 'handle']);
+if (!empty(config('services.telegram.bot_token'))) {
+    Route::post('telegram/webhook', [TelegramWebhookController::class, 'handle']);
+}
