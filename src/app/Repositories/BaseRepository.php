@@ -24,7 +24,7 @@ abstract class BaseRepository
         try {
             return $this->model
                 ->newQuery()
-                ->create($itemDTO->toModelValuesArray());
+                ->create($itemDTO->toArray());
         } catch (\Throwable $exception) {
             $this->logger->error('Entity create error: ' . $exception->getMessage());
             $this->logger->error($exception->getTraceAsString());
@@ -38,7 +38,7 @@ abstract class BaseRepository
         return (bool)$this->model
             ->newQuery()
             ->where('id', $itemDTO->id)
-            ->update($itemDTO->toModelValuesArray());
+            ->update($itemDTO->toArray());
     }
 
     public final function deleteInstance(int $id): bool

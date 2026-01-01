@@ -18,6 +18,11 @@ class TestRepository extends BaseRepository
 
     public function create(TestDTO $testDTO): ?Model
     {
-        return parent::createInstance($testDTO);
+        return $this->createInstance($testDTO);
+    }
+
+    public function update(TestDTO $testDTO): bool
+    {
+        return $this->updateInstance($testDTO);
     }
 }

@@ -8,4 +8,5 @@ use Illuminate\Support\Facades\Route;
 //    return $request->user();
 //})->middleware('auth:sanctum');
 
-Route::post('/test', [TestController::class, 'create']);
+Route::post('test', [TestController::class, 'create']);
+Route::put('test/{id}', [TestController::class, 'update']);
