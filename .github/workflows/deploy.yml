@@ -95,36 +95,25 @@ jobs:
               docker-compose run --rm app composer install --no-interaction
             fi
 
-            docker-compose run --rm app bash -c "
-              if [ ! -f .env ]; then
-                cp .env.example .env
-              fi
+            docker compose run --rm -v $(pwd)/src:/var/www/html/v2ray/src -w /var/www/html/v2ray/src app bash -c "
+            if [ ! -f .env ]; then
+              cp .env.example .env
+            fi
 
-              if ! grep -q '^APP_KEY=' .env || grep -q '^APP_KEY=$' .env; then
-                php artisan key:generate --ansi --force
-              fi
+            composer install --no-interaction --optimize-autoloader
 
-              APP_KEY_VALUE=\$(grep '^APP_KEY=' .env | sed -n 's/^APP_KEY=//p' | sed 's/^\"//;s/\"$//' | tr -d '[:space:]')
-              if [ -z \"\$APP_KEY_VALUE\" ]; then
-                php artisan key:generate --ansi --force
-                APP_KEY_VALUE=\$(grep '^APP_KEY=' .env | sed -n 's/^APP_KEY=//p' | sed 's/^\"//;s/\"$//' | tr -d '[:space:]')
-              fi
+            if ! grep -q '^APP_KEY=' .env || grep -q '^APP_KEY=$' .env; then
+              php artisan key:generate --ansi --force
+            fi
 
-              if [ -z \"\$APP_KEY_VALUE\" ]; then
-                echo \"Ошибка: не удалось извлечь APP_KEY из .env файла\"
-                cat .env | grep APP_KEY
-                exit 1
-              fi
+            APP_KEY_VALUE=\$(grep '^APP_KEY=' .env | sed -n 's/^APP_KEY=//p' | tr -d '[:space:]')
+            if [ -z \"\$APP_KEY_VALUE\" ]; then
+              echo 'Ошибка: не удалось извлечь APP_KEY из .env файла'
+              exit 1
+            fi
 
-              echo \"APP_KEY установлен (первые 20 символов): \${APP_KEY_VALUE:0:20}...\"
-
-              if grep -q '^TELEGRAM_BOT_TOKEN=' .env; then
-                sed -i \"s|^TELEGRAM_BOT_TOKEN=.*|TELEGRAM_BOT_TOKEN=$BOT_TOKEN|\" .env
-              else
-                echo \"TELEGRAM_BOT_TOKEN=$BOT_TOKEN\" >> .env
-              fi
-
-              echo \"TELEGRAM_BOT_TOKEN установлен (первые 10 символов): ${BOT_TOKEN:0:10}...\"
+            php artisan migrate --env=testing
+            APP_KEY=\"\$APP_KEY_VALUE\" ./vendor/bin/phpunit --colors=always
             "
 
             if [ "$ENV" = "prod" ]; then
