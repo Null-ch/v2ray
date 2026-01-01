@@ -13,52 +13,43 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+
       - name: Run tests
         if: github.ref == 'refs/heads/develop'
         run: |
-          docker compose -f docker-compose.yml up -d db
+          docker compose up -d db
           sleep 20
 
-          docker compose run --rm -v $(pwd)/src:/var/www/html -w /var/www/html app bash -c "
-            if [ ! -f .env ]; then
-              cp .env.example .env
-            fi
+          docker compose run --rm \
+            -v $(pwd)/src:/var/www/html/v2ray/src \
+            -w /var/www/html/v2ray/src \
+            app bash -c "
+              composer install --no-interaction
 
-            if [ '${{ github.ref }}' = 'refs/heads/main' ]; then
-              BOT_TOKEN='${{ secrets.TELEGRAM_BOT_TOKEN_PROD }}'
-            else
-              BOT_TOKEN='${{ secrets.TELEGRAM_BOT_TOKEN_DEV }}'
-            fi
+              if [ ! -f .env ]; then
+                cp .env.example .env
+              fi
 
-            if grep -q '^TELEGRAM_BOT_TOKEN=' .env; then
-              sed -i \"s|^TELEGRAM_BOT_TOKEN=.*|TELEGRAM_BOT_TOKEN=\$BOT_TOKEN|\" .env
-            else
-              echo \"TELEGRAM_BOT_TOKEN=\$BOT_TOKEN\" >> .env
-            fi
+              if [ '${{ github.ref }}' = 'refs/heads/main' ]; then
+                BOT_TOKEN='${{ secrets.TELEGRAM_BOT_TOKEN_PROD }}'
+              else
+                BOT_TOKEN='${{ secrets.TELEGRAM_BOT_TOKEN_DEV }}'
+              fi
 
-            echo \"TELEGRAM_BOT_TOKEN установлен (первые 10 символов): \${BOT_TOKEN:0:10}...\"
+              if grep -q '^TELEGRAM_BOT_TOKEN=' .env; then
+                sed -i \"s|^TELEGRAM_BOT_TOKEN=.*|TELEGRAM_BOT_TOKEN=\$BOT_TOKEN|\" .env
+              else
+                echo \"TELEGRAM_BOT_TOKEN=\$BOT_TOKEN\" >> .env
+              fi
 
-            if ! grep -q '^APP_KEY=' .env || grep -q '^APP_KEY=$' .env; then
-              php artisan key:generate --ansi --force
-            fi
+              if ! grep -q '^APP_KEY=' .env || grep -q '^APP_KEY=$' .env; then
+                php artisan key:generate --force
+              fi
 
-            APP_KEY_VALUE=\$(grep '^APP_KEY=' .env | sed -n 's/^APP_KEY=//p' | sed 's/^\"//;s/\"$//' | tr -d '[:space:]')
-            if [ -z \"\$APP_KEY_VALUE\" ]; then
-              php artisan key:generate --ansi --force
-              APP_KEY_VALUE=\$(grep '^APP_KEY=' .env | sed -n 's/^APP_KEY=//p' | sed 's/^\"//;s/\"$//' | tr -d '[:space:]')
-            fi
+              php artisan migrate --env=testing
 
-            if [ -z \"\$APP_KEY_VALUE\" ]; then
-              echo \"Ошибка: не удалось извлечь APP_KEY из .env файла\"
-              cat .env | grep APP_KEY
-              exit 1
-            fi
-
-            echo \"APP_KEY установлен (первые 20 символов): \${APP_KEY_VALUE:0:20}...\"
-
-            php artisan migrate --env=testing
-            APP_KEY=\"\$APP_KEY_VALUE\" ./vendor/bin/phpunit --colors=always
-          "
+              ./vendor/bin/phpunit --colors=always
+            "
 
       - name: Deploy via SSH
         if: success()
@@ -71,12 +62,10 @@ jobs:
           script: |
             if [ "${{ github.ref }}" = "refs/heads/main" ]; then
               APP_DIR="/var/www/html/v2ray"
-              ENV="prod"
               BUILD_ENV="prod"
               BOT_TOKEN="${{ secrets.TELEGRAM_BOT_TOKEN_PROD }}"
             else
               APP_DIR="/var/www/html/v2ray-test"
-              ENV="stage"
               BUILD_ENV="dev"
               BOT_TOKEN="${{ secrets.TELEGRAM_BOT_TOKEN_DEV }}"
             fi
@@ -86,45 +75,36 @@ jobs:
             git pull origin $(git rev-parse --abbrev-ref HEAD)
 
             export TELEGRAM_BOT_TOKEN=$BOT_TOKEN
-            docker-compose build --build-arg APP_ENV=$BUILD_ENV
-            docker-compose up -d
+            export APP_ENV=$BUILD_ENV
 
-            if [ "$ENV" = "prod" ]; then
-              docker-compose run --rm app composer install --no-interaction --no-dev --no-scripts
-            else
-              docker-compose run --rm app composer install --no-interaction
-            fi
+            docker-compose build
+            docker-compose up -d db app web bot
 
-            docker compose run --rm -v $(pwd)/src:/var/www/html/v2ray/src -w /var/www/html/v2ray/src app bash -c "
-            if [ ! -f .env ]; then
-              cp .env.example .env
-            fi
+            docker-compose run --rm app bash -c "
+              cd /var/www/html/v2ray/src
 
-            composer install --no-interaction --optimize-autoloader
+              composer install --no-interaction --prefer-dist
 
-            if ! grep -q '^APP_KEY=' .env || grep -q '^APP_KEY=$' .env; then
-              php artisan key:generate --ansi --force
-            fi
+              if [ ! -f .env ]; then
+                cp .env.example .env
+              fi
 
-            APP_KEY_VALUE=\$(grep '^APP_KEY=' .env | sed -n 's/^APP_KEY=//p' | tr -d '[:space:]')
-            if [ -z \"\$APP_KEY_VALUE\" ]; then
-              echo 'Ошибка: не удалось извлечь APP_KEY из .env файла'
-              exit 1
-            fi
+              if ! grep -q '^APP_KEY=' .env || grep -q '^APP_KEY=$' .env; then
+                php artisan key:generate --force
+              fi
 
-            php artisan migrate --env=testing
-            APP_KEY=\"\$APP_KEY_VALUE\" ./vendor/bin/phpunit --colors=always
+              if grep -q '^TELEGRAM_BOT_TOKEN=' .env; then
+                sed -i \"s|^TELEGRAM_BOT_TOKEN=.*|TELEGRAM_BOT_TOKEN=$BOT_TOKEN|\" .env
+              else
+                echo \"TELEGRAM_BOT_TOKEN=$BOT_TOKEN\" >> .env
+              fi
             "
 
-            if [ "$ENV" = "prod" ]; then
-              docker-compose run --rm app php artisan migrate --force
+            if [ "$BUILD_ENV" = "prod" ]; then
+              docker-compose run --rm app php /var/www/html/v2ray/src/artisan migrate --force
             else
-              docker-compose run --rm app php artisan migrate
+              docker-compose run --rm app php /var/www/html/v2ray/src/artisan migrate
             fi
 
-            docker-compose run --rm app php artisan config:clear
-            docker-compose run --rm app php artisan route:clear
-            docker-compose run --rm app php artisan view:clear
-            docker-compose run --rm app php artisan cache:clear
-            docker-compose run --rm app php artisan optimize
-            docker-compose up -d bot
+            docker-compose run --rm app php /var/www/html/v2ray/src/artisan optimize
+            docker-compose restart bot
