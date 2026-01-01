@@ -35,6 +35,8 @@ jobs:
                 BOT_TOKEN='${{ secrets.TELEGRAM_BOT_TOKEN_DEV }}'
               fi
 
+              export TELEGRAM_BOT_TOKEN=$BOT_TOKEN
+
               if grep -q '^TELEGRAM_BOT_TOKEN=' .env; then
                 sed -i \"s|^TELEGRAM_BOT_TOKEN=.*|TELEGRAM_BOT_TOKEN=\$BOT_TOKEN|\" .env
               else
