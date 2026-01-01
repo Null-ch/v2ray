@@ -19,4 +19,9 @@ final readonly class TestService
         /** @var Type|null */
         return $this->testRepository->create($testDTO);
     }
+
+    public function update(TestDTO $testDTO): bool
+    {
+        return $this->testRepository->update($testDTO);
+    }
 }

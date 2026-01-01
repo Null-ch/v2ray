@@ -18,6 +18,15 @@ RUN apt-get update && apt-get install -y \
     && docker-php-ext-install pdo_mysql mbstring bcmath pcntl sockets zip \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
+RUN pecl install xdebug \
+    && docker-php-ext-enable xdebug \
+    && echo "xdebug.mode=debug" >> /usr/local/etc/php/conf.d/docker-php-ext-xdebug.ini \
+    && echo "xdebug.start_with_request=yes" >> /usr/local/etc/php/conf.d/docker-php-ext-xdebug.ini \
+    && echo "xdebug.client_host=host.docker.internal" >> /usr/local/etc/php/conf.d/docker-php-ext-xdebug.ini \
+    && echo "xdebug.client_port=9003" >> /usr/local/etc/php/conf.d/docker-php-ext-xdebug.ini \
+    && echo "xdebug.log=/tmp/xdebug.log" >> /usr/local/etc/php/conf.d/docker-php-ext-xdebug.ini \
+    && echo "xdebug.idekey=PHPSTORM" >> /usr/local/etc/php/conf.d/docker-php-ext-xdebug.ini
+
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
 WORKDIR /var/www/html/v2ray/src
@@ -26,8 +35,11 @@ COPY ./src/composer.json ./src/composer.lock* ./
 COPY ./src ./
 
 RUN if [ "$APP_ENV" = "prod" ]; then \
+        export XDEBUG_MODE=off; \
         composer install --no-interaction --optimize-autoloader --no-dev --no-scripts; \
+        rm /usr/local/etc/php/conf.d/docker-php-ext-xdebug.ini; \
     else \
+        export XDEBUG_MODE=off; \
         composer install --no-interaction --optimize-autoloader; \
     fi
 
