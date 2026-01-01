@@ -20,30 +20,9 @@ jobs:
           sleep 20
 
           docker compose run --rm -v $(pwd)/src:/var/www/html -w /var/www/html app bash -c "
-            composer install --no-interaction --optimize-autoloader
-
             if [ ! -f .env ]; then
               cp .env.example .env
             fi
-
-            if ! grep -q '^APP_KEY=' .env || grep -q '^APP_KEY=$' .env; then
-              php artisan key:generate --ansi --force
-            fi
-
-            APP_KEY_VALUE=\$(grep '^APP_KEY=' .env | sed -n 's/^APP_KEY=//p' | sed 's/^\"//;s/\"$//' | tr -d '[:space:]')
-
-            if [ -z \"\$APP_KEY_VALUE\" ]; then
-              php artisan key:generate --ansi --force
-              APP_KEY_VALUE=\$(grep '^APP_KEY=' .env | sed -n 's/^APP_KEY=//p' | sed 's/^\"//;s/\"$//' | tr -d '[:space:]')
-            fi
-
-            if [ -z \"\$APP_KEY_VALUE\" ]; then
-              echo \"Ошибка: не удалось извлечь APP_KEY из .env файла\"
-              cat .env | grep APP_KEY
-              exit 1
-            fi
-
-            echo \"APP_KEY установлен (первые 20 символов): \${APP_KEY_VALUE:0:20}...\"
 
             if [ '${{ github.ref }}' = 'refs/heads/main' ]; then
               BOT_TOKEN='${{ secrets.TELEGRAM_BOT_TOKEN_PROD }}'
@@ -58,6 +37,26 @@ jobs:
             fi
 
             echo \"TELEGRAM_BOT_TOKEN установлен (первые 10 символов): \${BOT_TOKEN:0:10}...\"
+
+            composer install --no-interaction --optimize-autoloader
+
+            if ! grep -q '^APP_KEY=' .env || grep -q '^APP_KEY=$' .env; then
+              php artisan key:generate --ansi --force
+            fi
+
+            APP_KEY_VALUE=\$(grep '^APP_KEY=' .env | sed -n 's/^APP_KEY=//p' | sed 's/^\"//;s/\"$//' | tr -d '[:space:]')
+            if [ -z \"\$APP_KEY_VALUE\" ]; then
+              php artisan key:generate --ansi --force
+              APP_KEY_VALUE=\$(grep '^APP_KEY=' .env | sed -n 's/^APP_KEY=//p' | sed 's/^\"//;s/\"$//' | tr -d '[:space:]')
+            fi
+
+            if [ -z \"\$APP_KEY_VALUE\" ]; then
+              echo \"Ошибка: не удалось извлечь APP_KEY из .env файла\"
+              cat .env | grep APP_KEY
+              exit 1
+            fi
+
+            echo \"APP_KEY установлен (первые 20 символов): \${APP_KEY_VALUE:0:20}...\"
 
             php artisan migrate --env=testing
             APP_KEY=\"\$APP_KEY_VALUE\" ./vendor/bin/phpunit --colors=always
@@ -113,10 +112,10 @@ jobs:
               fi
 
               if [ -z \"\$APP_KEY_VALUE\" ]; then
-              echo \"Ошибка: не удалось извлечь APP_KEY из .env файла\"
-              cat .env | grep APP_KEY
-              exit 1
-            fi
+                echo \"Ошибка: не удалось извлечь APP_KEY из .env файла\"
+                cat .env | grep APP_KEY
+                exit 1
+              fi
 
               echo \"APP_KEY установлен (первые 20 символов): \${APP_KEY_VALUE:0:20}...\"
 
@@ -125,6 +124,7 @@ jobs:
               else
                 echo \"TELEGRAM_BOT_TOKEN=$BOT_TOKEN\" >> .env
               fi
+
               echo \"TELEGRAM_BOT_TOKEN установлен (первые 10 символов): ${BOT_TOKEN:0:10}...\"
             "
 
