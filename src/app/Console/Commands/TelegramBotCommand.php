@@ -23,21 +23,23 @@ final class TelegramBotCommand extends Command
      */
     protected $description = 'Start the Telegram bot';
 
-    public function __construct(
-        private readonly TelegramService $telegramService
-    ) {
-        parent::__construct();
-    }
-
     /**
      * Execute the console command.
      */
     public function handle(): int
     {
+        // Resolve TelegramService lazily to avoid issues during command discovery
+        if (!app()->bound(TelegramService::class)) {
+            $this->error('Telegram bot token is not configured');
+            
+            return Command::FAILURE;
+        }
+
         $this->info('Starting Telegram bot...');
 
         try {
-            $this->telegramService->run();
+            $telegramService = app()->make(TelegramService::class);
+            $telegramService->run();
         } catch (\Throwable $e) {
             $this->error('Error starting Telegram bot: ' . $e->getMessage());
             
