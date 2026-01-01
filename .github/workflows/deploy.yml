@@ -24,7 +24,6 @@ jobs:
             -v $(pwd)/src:/var/www/html/v2ray/src \
             -w /var/www/html/v2ray/src \
             app bash -c "
-              composer install --no-interaction
 
               if [ ! -f .env ]; then
                 cp .env.example .env
@@ -41,6 +40,8 @@ jobs:
               else
                 echo \"TELEGRAM_BOT_TOKEN=\$BOT_TOKEN\" >> .env
               fi
+
+              composer install --no-interaction
 
               if ! grep -q '^APP_KEY=' .env || grep -q '^APP_KEY=$' .env; then
                 php artisan key:generate --force
