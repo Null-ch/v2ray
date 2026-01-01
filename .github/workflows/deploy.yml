@@ -139,3 +139,4 @@ jobs:
             docker-compose run --rm app php artisan view:clear
             docker-compose run --rm app php artisan cache:clear
             docker-compose run --rm app php artisan optimize
+            docker-compose run --rm app php artisan telegram:bot
