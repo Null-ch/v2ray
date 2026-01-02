@@ -1,9 +1,11 @@
+# Базовый образ PHP-FPM
 FROM php:8.4-fpm
 
-# Аргумент сборки, по умолчанию dev
+# Аргумент сборки и переменная окружения
 ARG APP_ENV=dev
 ENV APP_ENV=$APP_ENV
 
+# Устанавливаем зависимости и расширения PHP
 RUN apt-get update && apt-get install -y \
     default-mysql-client \
     libonig-dev \
@@ -32,16 +34,27 @@ RUN pecl install xdebug \
 # Composer
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
+# Рабочая директория
 WORKDIR /var/www/html/v2ray/src
 
+# Копируем файлы проекта
 COPY ./src/composer.json ./src/composer.lock* ./
 COPY ./src ./
 
+# Устанавливаем права на storage и bootstrap/cache
 RUN chown -R www-data:www-data /var/www/html/v2ray/src \
-    && chmod -R 775 /var/www/html/v2ray/src/storage /var/www/html/v2ray/src/bootstrap/cache
+    && find /var/www/html/v2ray/src/storage -type d -exec chmod 775 {} \; \
+    && find /var/www/html/v2ray/src/storage -type f -exec chmod 664 {} \; \
+    && find /var/www/html/v2ray/src/bootstrap/cache -type d -exec chmod 775 {} \; \
+    && find /var/www/html/v2ray/src/bootstrap/cache -type f -exec chmod 664 {} \;
 
+# Переключаемся на пользователя php-fpm
+USER www-data
+
+# Экспорт порта php-fpm
 EXPOSE 9000
 
+# Команда запуска PHP-FPM с созданием .env
 CMD ["sh", "-c", "\
   if [ ! -f /var/www/html/v2ray/src/.env ]; then \
     cp /var/www/html/v2ray/src/.env.example /var/www/html/v2ray/src/.env; \

@@ -29,9 +29,6 @@
                         <dt class="col-sm-3">TG Tag:</dt>
                         <dd class="col-sm-9">{{ $user->tg_tag ?? '-' }}</dd>
 
-                        <dt class="col-sm-3">Телефон:</dt>
-                        <dd class="col-sm-9">{{ $user->phone_number }}</dd>
-
                         <dt class="col-sm-3">TG ID:</dt>
                         <dd class="col-sm-9">{{ $user->tg_id }}</dd>
 

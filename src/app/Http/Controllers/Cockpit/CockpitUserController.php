@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Cockpit;
 
-use App\DTO\UserDTO;
+use App\DTO\User\UserDTO;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Cockpit\UserStoreRequest;
 use App\Http\Requests\Cockpit\UserUpdateRequest;

@@ -21,7 +21,6 @@ class UserUpdateRequest extends FormRequest
         return [
             'name' => ['required', 'string', 'max:255'],
             'tg_tag' => ['nullable', 'string', 'max:255'],
-            'phone_number' => ['required', 'string', 'max:255'],
             'tg_id' => ['required', 'integer'],
             'uuid' => ['required', 'uuid'],
             'referrer_id' => ['nullable', 'integer', 'exists:users,id'],

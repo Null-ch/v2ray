@@ -22,7 +22,6 @@
                                 <th>ID</th>
                                 <th>Имя</th>
                                 <th>TG Tag</th>
-                                <th>Телефон</th>
                                 <th>TG ID</th>
                                 <th>UUID</th>
                                 <th>Реферер</th>
@@ -38,7 +37,6 @@
                                     <td>{{ $user->id }}</td>
                                     <td>{{ $user->name }}</td>
                                     <td>{{ $user->tg_tag ?? '-' }}</td>
-                                    <td>{{ $user->phone_number }}</td>
                                     <td>{{ $user->tg_id }}</td>
                                     <td><code>{{ $user->uuid }}</code></td>
                                     <td>
@@ -85,7 +83,7 @@
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="11" class="text-center">Нет пользователей</td>
+                                    <td colspan="10" class="text-center">Нет пользователей</td>
                                 </tr>
                             @endforelse
                         </tbody>

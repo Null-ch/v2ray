@@ -31,14 +31,6 @@
                         </div>
 
                         <div class="form-group">
-                            <label for="phone_number">Телефон <span class="text-danger">*</span></label>
-                            <input type="text" name="phone_number" id="phone_number" class="form-control @error('phone_number') is-invalid @enderror" value="{{ old('phone_number', $user->phone_number) }}" required>
-                            @error('phone_number')
-                                <span class="invalid-feedback"><strong>{{ $message }}</strong></span>
-                            @enderror
-                        </div>
-
-                        <div class="form-group">
                             <label for="tg_id">TG ID <span class="text-danger">*</span></label>
                             <input type="number" name="tg_id" id="tg_id" class="form-control @error('tg_id') is-invalid @enderror" value="{{ old('tg_id', $user->tg_id) }}" required>
                             @error('tg_id')
