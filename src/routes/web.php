@@ -14,7 +14,7 @@ Route::get('/', function () {
 // Cockpit routes
 Route::prefix('cockpit')->name('cockpit.')->group(function () {
     Route::get('/login', [CockpitController::class, 'showLogin'])->name('login');
-    Route::post('/login', [CockpitController::class, 'login'])->name('login');
+    Route::post('/login', [CockpitController::class, 'login'])->name('login.post');
     Route::post('/logout', [CockpitController::class, 'logout'])->name('logout');
     
     Route::middleware(['cockpit.auth'])->group(function () {

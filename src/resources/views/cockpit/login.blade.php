@@ -32,7 +32,7 @@
                 </div>
             @endif
 
-            <form action="{{ route('cockpit.login') }}" method="post">
+            <form action="{{ route('cockpit.login.post') }}" method="post">
                 @csrf
                 <div class="input-group mb-3">
                     <input type="text" name="username" class="form-control" placeholder="Логин" value="{{ old('username') }}" required autofocus>
