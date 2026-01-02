@@ -18,6 +18,14 @@ class UserRepository extends BaseRepository
         parent::__construct($model, $logger);
     }
 
+    public function findByTelegramId(int $telegramId): ?Model
+    {
+        return $this->model
+            ->newQuery()
+            ->where('tg_id', $telegramId)
+            ->first();
+    }
+
     public function create(UserDTO $userDTO): ?Model
     {
         try {
@@ -61,7 +69,7 @@ class UserRepository extends BaseRepository
     {
         return $this->model
             ->newQuery()
-            ->with(['referrer', 'balance'])
+            ->with(['balance', 'referrer'])
             ->orderBy('created_at', 'desc')
             ->paginate($perPage);
     }
@@ -70,9 +78,8 @@ class UserRepository extends BaseRepository
     {
         return $this->model
             ->newQuery()
-            ->with(['referrer', 'balance', 'referrals', 'referredUsers'])
+            ->with(['balance', 'referrer'])
             ->where('id', $id)
             ->first();
     }
 }
-

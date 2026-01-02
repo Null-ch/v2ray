@@ -2,6 +2,8 @@
 
 namespace App\Providers;
 
+use App\Services\TelegramBotHandlers;
+use App\Services\VpnConnectionService;
 use SergiX44\Nutgram\Nutgram;
 use App\Services\TelegramService;
 use Illuminate\Support\ServiceProvider;
@@ -24,6 +26,8 @@ class AppServiceProvider extends ServiceProvider
             $this->app->singleton(Nutgram::class, function ($app) {
                 return $app->make(TelegramService::class)->getBot();
             });
+
+            $this->app->singleton(VpnConnectionService::class);
         }
     }
 
@@ -32,16 +36,14 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        // Регистрируем обработчики только если токен настроен и сервисы зарегистрированы
         $token = config('services.telegram.bot_token');
-        
-        if (empty($token) || !$this->app->bound(TelegramService::class)) {
+
+        if (empty($token) || !$this->app->bound(TelegramService::class) || !$this->app->bound(VpnConnectionService::class)) {
             return;
         }
 
         try {
-            $bot = $this->app->make(Nutgram::class);
-            $handlers = new \App\Services\TelegramBotHandlers($bot);
+            $handlers = $this->app->make(TelegramBotHandlers::class);
             $handlers->registerHandlers();
         } catch (\Throwable $e) {
             // Игнорируем ошибки при инициализации бота в тестовом окружении

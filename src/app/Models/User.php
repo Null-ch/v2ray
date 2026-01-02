@@ -19,7 +19,6 @@ class User extends Authenticatable
     protected $fillable = [
         'name',
         'tg_tag',
-        'phone_number',
         'tg_id',
         'uuid',
         'referrer_id',
