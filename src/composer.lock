@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "01f860b84f5a66e8faa27ea2d30d61b7",
+    "content-hash": "386b08dc63eab25d515a8f64fb172924",
     "packages": [
         {
             "name": "brick/math",
@@ -555,6 +555,105 @@
                 }
             ],
             "time": "2025-03-06T22:45:56+00:00"
+        },
+        {
+            "name": "estaheri/3x-ui",
+            "version": "1.3",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/es-taheri/3x-ui.git",
+                "reference": "ba963227c79c4f8e3ab046c6afdbd18bb4c92683"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/es-taheri/3x-ui/zipball/ba963227c79c4f8e3ab046c6afdbd18bb4c92683",
+                "reference": "ba963227c79c4f8e3ab046c6afdbd18bb4c92683",
+                "shasum": ""
+            },
+            "require": {
+                "estaheri/json": "^v1.1.1",
+                "guzzlehttp/guzzle": "^7.8"
+            },
+            "type": "library",
+            "autoload": {
+                "psr-4": {
+                    "XUI\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Esmaeil Taheri",
+                    "email": "ta.es1383@gmail.com",
+                    "homepage": "https://github.com/es-taheri",
+                    "role": "Developer"
+                }
+            ],
+            "description": "An easy to use php library for MHSanaei/3x-ui",
+            "homepage": "https://github.com/es-taheri/3x-ui",
+            "keywords": [
+                "3x-ui",
+                "3x-ui php library",
+                "3xui",
+                "x-ui",
+                "x-ui php library",
+                "xui"
+            ],
+            "support": {
+                "issues": "https://github.com/es-taheri/3x-ui/issues",
+                "source": "https://github.com/es-taheri/3x-ui/tree/1.3"
+            },
+            "time": "2025-07-22T17:11:36+00:00"
+        },
+        {
+            "name": "estaheri/json",
+            "version": "v1.1.3",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/es-taheri/json.git",
+                "reference": "01de596629962c034959b8ca5b4965434398c56e"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/es-taheri/json/zipball/01de596629962c034959b8ca5b4965434398c56e",
+                "reference": "01de596629962c034959b8ca5b4965434398c56e",
+                "shasum": ""
+            },
+            "type": "library",
+            "autoload": {
+                "psr-4": {
+                    "JSON\\": ""
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Esmaeil Taheri",
+                    "email": "ta.es1383@gmail.com",
+                    "homepage": "https://github.com/es-taheri",
+                    "role": "Developer"
+                }
+            ],
+            "description": "An easy way for using json encoded strings in php",
+            "homepage": "https://github.com/es-taheri/json",
+            "keywords": [
+                "PHP API",
+                "easy json library",
+                "json",
+                "json api",
+                "php"
+            ],
+            "support": {
+                "issues": "https://github.com/es-taheri/json/issues",
+                "source": "https://github.com/es-taheri/json/tree/v1.1.3"
+            },
+            "time": "2025-05-06T14:54:26+00:00"
         },
         {
             "name": "fruitcake/php-cors",
