@@ -40,16 +40,15 @@ COPY ./src ./
 RUN chown -R www-data:www-data /var/www/html/v2ray/src \
     && chmod -R 775 /var/www/html/v2ray/src/storage /var/www/html/v2ray/src/bootstrap/cache
 
-# Создание .env при запуске контейнера и установка APP_ENV в зависимости от ARG
-ENTRYPOINT ["sh", "-c", "\
-    if [ ! -f /var/www/html/v2ray/src/.env ]; then \
-        cp /var/www/html/v2ray/src/.env.example /var/www/html/v2ray/src/.env; \
-    fi; \
-    if grep -q '^APP_ENV=' /var/www/html/v2ray/src/.env; then \
-        sed -i 's|^APP_ENV=.*|APP_ENV=$APP_ENV|' /var/www/html/v2ray/src/.env; \
-    else \
-        echo 'APP_ENV=$APP_ENV' >> /var/www/html/v2ray/src/.env; \
-    fi; \
-    php-fpm"]
-
 EXPOSE 9000
+
+CMD ["sh", "-c", "\
+  if [ ! -f /var/www/html/v2ray/src/.env ]; then \
+    cp /var/www/html/v2ray/src/.env.example /var/www/html/v2ray/src/.env; \
+  fi; \
+  if grep -q '^APP_ENV=' /var/www/html/v2ray/src/.env; then \
+    sed -i 's|^APP_ENV=.*|APP_ENV=$APP_ENV|' /var/www/html/v2ray/src/.env; \
+  else \
+    echo 'APP_ENV=$APP_ENV' >> /var/www/html/v2ray/src/.env; \
+  fi; \
+  exec php-fpm"]
