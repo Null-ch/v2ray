@@ -4,50 +4,41 @@ declare(strict_types=1);
 
 namespace App\Repositories;
 
-use App\DTO\XuiDTO;
-use App\Models\Xui;
-use Illuminate\Database\Eloquent\Model;
+use App\DTO\UserDTO;
+use App\Models\User;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
 use Psr\Log\LoggerInterface;
 
-class XuiRepository extends BaseRepository
+class UserRepository extends BaseRepository
 {
-    public function __construct(Xui $model, LoggerInterface $logger)
+    public function __construct(User $model, LoggerInterface $logger)
     {
         parent::__construct($model, $logger);
     }
 
-    public function findByTag(string $tag): ?Model
-    {
-        return $this->model
-            ->newQuery()
-            ->where('tag', $tag)
-            ->where('is_active', true)
-            ->first();
-    }
-
-    public function create(XuiDTO $xuiDTO): ?Model
+    public function create(UserDTO $userDTO): ?Model
     {
         try {
-            return DB::transaction(function () use ($xuiDTO) {
-                return $this->createInstance($xuiDTO);
+            return DB::transaction(function () use ($userDTO) {
+                return $this->createInstance($userDTO);
             });
         } catch (\Throwable $exception) {
-            $this->logger->error('XUI create transaction error: ' . $exception->getMessage());
+            $this->logger->error('User create transaction error: ' . $exception->getMessage());
             $this->logger->error($exception->getTraceAsString());
             return null;
         }
     }
 
-    public function update(XuiDTO $xuiDTO): bool
+    public function update(UserDTO $userDTO): bool
     {
         try {
-            return DB::transaction(function () use ($xuiDTO) {
-                return $this->updateInstance($xuiDTO);
+            return DB::transaction(function () use ($userDTO) {
+                return $this->updateInstance($userDTO);
             });
         } catch (\Throwable $exception) {
-            $this->logger->error('XUI update transaction error: ' . $exception->getMessage());
+            $this->logger->error('User update transaction error: ' . $exception->getMessage());
             $this->logger->error($exception->getTraceAsString());
             return false;
         }
@@ -60,7 +51,7 @@ class XuiRepository extends BaseRepository
                 return $this->deleteInstance($id);
             });
         } catch (\Throwable $exception) {
-            $this->logger->error('XUI delete transaction error: ' . $exception->getMessage());
+            $this->logger->error('User delete transaction error: ' . $exception->getMessage());
             $this->logger->error($exception->getTraceAsString());
             return false;
         }
@@ -70,13 +61,18 @@ class XuiRepository extends BaseRepository
     {
         return $this->model
             ->newQuery()
+            ->with(['referrer', 'balance'])
             ->orderBy('created_at', 'desc')
             ->paginate($perPage);
     }
 
     public function findById(int $id): ?Model
     {
-        return $this->showInstance($id);
+        return $this->model
+            ->newQuery()
+            ->with(['referrer', 'balance', 'referrals', 'referredUsers'])
+            ->where('id', $id)
+            ->first();
     }
 }
 
