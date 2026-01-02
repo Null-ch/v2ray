@@ -101,6 +101,12 @@ jobs:
               else
                 echo \"TELEGRAM_BOT_TOKEN=$BOT_TOKEN\" >> .env
               fi
+
+              if grep -q '^APP_ENV=' .env; then
+                sed -i "s|^APP_ENV=.*|APP_ENV=$BUILD_ENV|" .env
+              else
+                echo "APP_ENV=$BUILD_ENV" >> .env
+              fi
             "
 
             if [ "$BUILD_ENV" = "prod" ]; then
