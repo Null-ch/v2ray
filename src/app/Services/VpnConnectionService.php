@@ -25,7 +25,7 @@ final readonly class VpnConnectionService
             'initialBalance' => $this->userService->getInitialBalance(),
         ])->render();
 
-        $bot->sendMessage(trim($message), reply_markup: $keyboard);
+        $bot->sendMessage(trim($message), parse_mode: 'HTML', reply_markup: $keyboard);
     }
 
     public function sendMainMenu(
@@ -34,13 +34,33 @@ final readonly class VpnConnectionService
         ?InlineKeyboardMarkup $keyboard = null
     ): void {
         $balance = $user->balance?->balance ?? 0;
+        $dailyCost = $this->userService->getDailyCost();
+        $activeKeysCount = $user->configurations()->count();
+
+        $daysRemaining = $balance > 0 ? (int)floor($balance / $dailyCost) : 0;
+
+        $daysWord = $this->getDaysWord($daysRemaining);
+
+        $name = $bot->user()->first_name ?? $user->name ?? $user->tg_tag ?? 'пользователь';
 
         $message = View::make('telegram.welcome-back', [
-            'username' => $user->tg_tag,
+            'name' => $name,
+            'activeKeysCount' => $activeKeysCount,
             'balance' => $balance,
+            'daysRemaining' => $daysRemaining,
+            'daysWord' => $daysWord,
+            'dailyCost' => $dailyCost,
         ])->render();
 
-        $bot->sendMessage(trim($message), reply_markup: $keyboard);
+        $bot->sendMessage(trim($message), parse_mode: 'HTML', reply_markup: $keyboard);
+    }
+
+    private function getDaysWord(int $days): string
+    {
+        $cases = [2, 0, 1, 1, 1, 2];
+        $titles = ['день', 'дня', 'дней'];
+
+        return $titles[($days % 100 > 4 && $days % 100 < 20) ? 2 : $cases[min($days % 10, 5)]];
     }
 
     public function sendVpnConnectionMessages(Nutgram $bot, ?InlineKeyboardMarkup $instructionsKeyboard = null): array

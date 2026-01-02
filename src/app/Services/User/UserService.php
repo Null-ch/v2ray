@@ -18,7 +18,11 @@ final readonly class UserService
 
     public function findUserByTelegramId(int $telegramId): ?User
     {
-        return $this->userRepository->findByTelegramId($telegramId);
+        $user = $this->userRepository->findByTelegramId($telegramId);
+
+        $user?->load(['balance', 'configurations']);
+
+        return $user;
     }
 
     public function createUser(int $telegramId, ?string $username = null, ?string $name = null): ?User
