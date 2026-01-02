@@ -20,13 +20,14 @@ jobs:
           docker compose up -d db
           sleep 20
 
-          docker compose run --rm \
+          docker compose run --rm --user root \
             -v $(pwd)/src:/var/www/html/v2ray/src \
             -w /var/www/html/v2ray/src \
             app bash -c "
 
               if [ ! -f .env ]; then
                 cp .env.example .env
+                chown www-data:www-data .env
               fi
 
               if [ '${{ github.ref }}' = 'refs/heads/main' ]; then
@@ -43,15 +44,19 @@ jobs:
                 echo \"TELEGRAM_BOT_TOKEN=\$BOT_TOKEN\" >> .env
               fi
 
+              chown -R www-data:www-data .env
+
               composer install --no-interaction
 
+              chown -R www-data:www-data /var/www/html/v2ray/src
+
               if ! grep -q '^APP_KEY=' .env || grep -q '^APP_KEY=$' .env; then
-                php artisan key:generate --force
+                su -s /bin/bash www-data -c 'php artisan key:generate --force'
               fi
 
-              php artisan migrate --env=testing
+              su -s /bin/bash www-data -c 'php artisan migrate --env=testing'
 
-              ./vendor/bin/phpunit --colors=always
+              su -s /bin/bash www-data -c './vendor/bin/phpunit --colors=always'
             "
 
       - name: Deploy via SSH
@@ -83,17 +88,18 @@ jobs:
             docker-compose build --build-arg APP_ENV=$BUILD_ENV
             docker-compose up -d db app web bot
 
-            docker-compose run --rm app bash -c "
+            docker-compose run --rm --user root app bash -c "
               cd /var/www/html/v2ray/src
 
               composer install --no-interaction --prefer-dist
 
               if [ ! -f .env ]; then
                 cp .env.example .env
+                chown www-data:www-data .env
               fi
 
               if ! grep -q '^APP_KEY=' .env || grep -q '^APP_KEY=$' .env; then
-                php artisan key:generate --force
+                su -s /bin/bash www-data -c 'php artisan key:generate --force'
               fi
 
               if grep -q '^TELEGRAM_BOT_TOKEN=' .env; then
@@ -101,6 +107,8 @@ jobs:
               else
                 echo \"TELEGRAM_BOT_TOKEN=$BOT_TOKEN\" >> .env
               fi
+
+              chown -R www-data:www-data /var/www/html/v2ray/src
             "
 
             if [ "$BUILD_ENV" = "prod" ]; then
