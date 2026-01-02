@@ -1,8 +1,5 @@
 FROM php:8.4-fpm
 
-ARG APP_ENV=dev
-ENV APP_ENV=$APP_ENV
-
 RUN apt-get update && apt-get install -y \
     default-mysql-client \
     libonig-dev \
