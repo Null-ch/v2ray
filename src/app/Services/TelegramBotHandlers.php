@@ -54,38 +54,48 @@ final readonly class TelegramBotHandlers
 
         // Обработчик нажатия на кнопку "Принять" для нового пользователя
         $this->bot->onCallbackQueryData('accept_terms', function (Nutgram $bot) {
-            $telegramId = $bot->userId();
-            $username = $bot->user()->username;
-            $name = $bot->user()->first_name;
+            try {
+                $telegramId = $bot->userId();
+                $username = $bot->user()->username;
+                $name = $bot->user()->first_name;
 
-            // Создаем пользователя в БД
-            $this->userService->createUser($telegramId, $username, $name);
+                // Создаем пользователя в БД
+                $user = $this->userService->createUser($telegramId, $username, $name);
 
-            // Генерируем конфиг (заглушка)
-            $this->userService->generateVpnConfig();
+                if (!$user) {
+                    $bot->answerCallbackQuery('Ошибка создания пользователя', show_alert: true);
+                    return;
+                }
 
-            $instructionsKeyboard = InlineKeyboardMarkup::make()
-                ->addRow(
-                    InlineKeyboardButton::make('Приложение для Android', url: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ')
-                )
-                ->addRow(
-                    InlineKeyboardButton::make('Приложение для iOS', url: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ')
-                )
-                ->addRow(
-                    InlineKeyboardButton::make('Для Windows', url: 'https://telegra.ph/Instrukciya-VPN-Windows-01-01')
-                )
-                ->addRow(
-                    InlineKeyboardButton::make('Перенести ключ в приложение', url: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ')
-                )
-                ->addRow(
-                    InlineKeyboardButton::make('Вернуться в главное меню', callback_data: 'main_menu')
-                );
+                // Генерируем конфиг (заглушка)
+                $this->userService->generateVpnConfig();
 
-            $messageIds = $this->vpnConnectionService->sendVpnConnectionMessages($bot, $instructionsKeyboard);
+                $instructionsKeyboard = InlineKeyboardMarkup::make()
+                    ->addRow(
+                        InlineKeyboardButton::make('Приложение для Android', url: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ')
+                    )
+                    ->addRow(
+                        InlineKeyboardButton::make('Приложение для iOS', url: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ')
+                    )
+                    ->addRow(
+                        InlineKeyboardButton::make('Для Windows', url: 'https://telegra.ph/Instrukciya-VPN-Windows-01-01')
+                    )
+                    ->addRow(
+                        InlineKeyboardButton::make('Перенести ключ в приложение', url: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ')
+                    )
+                    ->addRow(
+                        InlineKeyboardButton::make('Вернуться в главное меню', callback_data: 'main_menu')
+                    );
 
-            $bot->setGlobalData('vpn_message_ids', $messageIds);
+                $messageIds = $this->vpnConnectionService->sendVpnConnectionMessages($bot, $instructionsKeyboard);
 
-            $bot->answerCallbackQuery();
+                $bot->setGlobalData('vpn_message_ids', $messageIds);
+
+                $bot->answerCallbackQuery();
+            } catch (\Throwable $e) {
+                $bot->answerCallbackQuery('Произошла ошибка: ' . $e->getMessage(), show_alert: true);
+                throw $e;
+            }
         });
 
         // Обработчик кнопки "Вернуться в главное меню"

@@ -21,7 +21,7 @@ final readonly class UserService
         return $this->userRepository->findByTelegramId($telegramId);
     }
 
-    public function createUser(int $telegramId, ?string $username = null, ?string $name = null): User
+    public function createUser(int $telegramId, ?string $username = null, ?string $name = null): ?User
     {
         $userDTO = UserDTO::from([
             'tg_id' => $telegramId,
@@ -31,6 +31,10 @@ final readonly class UserService
         ]);
 
         $user = $this->userRepository->createInstance($userDTO);
+
+        if (!$user) {
+            return null;
+        }
 
         $user->balance()->create([
             'balance' => self::INITIAL_BALANCE,
