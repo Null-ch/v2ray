@@ -12,15 +12,14 @@ Route::get('/', function () {
 });
 
 // Cockpit routes
-Route::prefix('cockpit')->name('cockpit.')->group(function () {
-    Route::get('/login', [CockpitController::class, 'showLogin'])->name('login');
-    Route::post('/login', [CockpitController::class, 'login'])->name('login.post');
-    Route::post('/logout', [CockpitController::class, 'logout'])->name('logout');
+Route::prefix('cockpit')->group(function () {
+    Route::get('/login', [CockpitController::class, 'showLogin'])->name('cockpit.login');
+    Route::post('/login', [CockpitController::class, 'login'])->name('cockpit.login.post');
+    Route::post('/logout', [CockpitController::class, 'logout'])->name('cockpit.logout');
     
-    Route::middleware(['cockpit.auth'])->group(function () {
+    Route::middleware(['cockpit.auth'])->name('cockpit.')->group(function () {
         Route::get('/', [CockpitController::class, 'dashboard'])->name('dashboard');
-        Route::get('/dashboard', [CockpitController::class, 'dashboard'])->name('dashboard');
-        
+
         // XUI CRUD routes
         Route::resource('xui', CockpitXuiController::class);
         

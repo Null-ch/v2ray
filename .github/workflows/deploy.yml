@@ -117,5 +117,8 @@ jobs:
               docker-compose run --rm app php /var/www/html/v2ray/src/artisan migrate
             fi
 
+            docker-compose run --rm app php /var/www/html/v2ray/src/artisan route:clear
+            docker-compose run --rm app php /var/www/html/v2ray/src/artisan config:clear
+            docker-compose run --rm app php /var/www/html/v2ray/src/artisan cache:clear
             docker-compose run --rm app php /var/www/html/v2ray/src/artisan optimize
             docker-compose restart bot
