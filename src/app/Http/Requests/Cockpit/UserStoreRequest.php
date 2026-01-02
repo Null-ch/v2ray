@@ -23,6 +23,7 @@ class UserStoreRequest extends FormRequest
             'tg_id' => ['required', 'integer'],
             'uuid' => ['required', 'uuid'],
             'referrer_id' => ['nullable', 'integer', 'exists:users,id'],
+            'referral_code' => ['nullable', 'string', 'max:255', 'unique:users,referral_code'],
         ];
     }
 }

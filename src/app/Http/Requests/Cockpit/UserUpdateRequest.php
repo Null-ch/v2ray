@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Requests\Cockpit;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class UserUpdateRequest extends FormRequest
 {
@@ -15,6 +16,8 @@ class UserUpdateRequest extends FormRequest
 
     public function rules(): array
     {
+        $userId = $this->route('user');
+
         return [
             'name' => ['required', 'string', 'max:255'],
             'tg_tag' => ['nullable', 'string', 'max:255'],
@@ -22,6 +25,7 @@ class UserUpdateRequest extends FormRequest
             'tg_id' => ['required', 'integer'],
             'uuid' => ['required', 'uuid'],
             'referrer_id' => ['nullable', 'integer', 'exists:users,id'],
+            'referral_code' => ['nullable', 'string', 'max:255', Rule::unique('users', 'referral_code')->ignore($userId)],
         ];
     }
 }

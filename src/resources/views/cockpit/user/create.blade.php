@@ -65,6 +65,15 @@
                                 <span class="invalid-feedback"><strong>{{ $message }}</strong></span>
                             @enderror
                         </div>
+
+                        <div class="form-group">
+                            <label for="referral_code">Реферальный код</label>
+                            <input type="text" name="referral_code" id="referral_code" class="form-control @error('referral_code') is-invalid @enderror" value="{{ old('referral_code') }}">
+                            <small class="form-text text-muted">Уникальный код для реферальной программы</small>
+                            @error('referral_code')
+                                <span class="invalid-feedback"><strong>{{ $message }}</strong></span>
+                            @enderror
+                        </div>
                     </div>
                     <div class="card-footer">
                         <button type="submit" class="btn btn-primary">Создать</button>

@@ -26,6 +26,7 @@
                                 <th>TG ID</th>
                                 <th>UUID</th>
                                 <th>Реферер</th>
+                                <th>Реферальный код</th>
                                 <th>Баланс</th>
                                 <th>Создан</th>
                                 <th>Действия</th>
@@ -45,6 +46,13 @@
                                             <a href="{{ route('cockpit.user.show', $user->referrer->id) }}">
                                                 {{ $user->referrer->name }} (#{{ $user->referrer->id }})
                                             </a>
+                                        @else
+                                            <span class="text-muted">-</span>
+                                        @endif
+                                    </td>
+                                    <td>
+                                        @if($user->referral_code)
+                                            <code>{{ $user->referral_code }}</code>
                                         @else
                                             <span class="text-muted">-</span>
                                         @endif
@@ -77,7 +85,7 @@
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="10" class="text-center">Нет пользователей</td>
+                                    <td colspan="11" class="text-center">Нет пользователей</td>
                                 </tr>
                             @endforelse
                         </tbody>

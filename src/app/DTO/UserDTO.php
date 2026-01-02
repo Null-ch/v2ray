@@ -14,6 +14,7 @@ final class UserDTO extends BaseItemDTO
         public ?int $tg_id = null,
         public ?string $uuid = null,
         public ?int $referrer_id = null,
+        public ?string $referral_code = null,
     ) {
     }
 }

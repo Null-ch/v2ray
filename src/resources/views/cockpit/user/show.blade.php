@@ -49,6 +49,15 @@
                             @endif
                         </dd>
 
+                        <dt class="col-sm-3">Реферальный код:</dt>
+                        <dd class="col-sm-9">
+                            @if($user->referral_code)
+                                <code>{{ $user->referral_code }}</code>
+                            @else
+                                <span class="text-muted">-</span>
+                            @endif
+                        </dd>
+
                         <dt class="col-sm-3">Баланс:</dt>
                         <dd class="col-sm-9">
                             @if($user->balance)

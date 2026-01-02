@@ -23,6 +23,7 @@ class User extends Authenticatable
         'tg_id',
         'uuid',
         'referrer_id',
+        'referral_code',
     ];
 
     /**
