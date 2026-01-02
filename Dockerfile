@@ -1,5 +1,6 @@
 FROM php:8.4-fpm
 
+# Аргумент сборки, по умолчанию dev
 ARG APP_ENV=dev
 ENV APP_ENV=$APP_ENV
 
@@ -18,6 +19,7 @@ RUN apt-get update && apt-get install -y \
     && docker-php-ext-install pdo_mysql mbstring bcmath pcntl sockets zip \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
+# Xdebug
 RUN pecl install xdebug \
     && docker-php-ext-enable xdebug \
     && echo "xdebug.mode=debug" >> /usr/local/etc/php/conf.d/docker-php-ext-xdebug.ini \
@@ -27,6 +29,7 @@ RUN pecl install xdebug \
     && echo "xdebug.log=/tmp/xdebug.log" >> /usr/local/etc/php/conf.d/docker-php-ext-xdebug.ini \
     && echo "xdebug.idekey=PHPSTORM" >> /usr/local/etc/php/conf.d/docker-php-ext-xdebug.ini
 
+# Composer
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
 WORKDIR /var/www/html/v2ray/src
@@ -37,6 +40,16 @@ COPY ./src ./
 RUN chown -R www-data:www-data /var/www/html/v2ray/src \
     && chmod -R 775 /var/www/html/v2ray/src/storage /var/www/html/v2ray/src/bootstrap/cache
 
-EXPOSE 9000
+# Создание .env при запуске контейнера и установка APP_ENV в зависимости от ARG
+ENTRYPOINT ["sh", "-c", "\
+    if [ ! -f /var/www/html/v2ray/src/.env ]; then \
+        cp /var/www/html/v2ray/src/.env.example /var/www/html/v2ray/src/.env; \
+    fi; \
+    if grep -q '^APP_ENV=' /var/www/html/v2ray/src/.env; then \
+        sed -i 's|^APP_ENV=.*|APP_ENV=$APP_ENV|' /var/www/html/v2ray/src/.env; \
+    else \
+        echo 'APP_ENV=$APP_ENV' >> /var/www/html/v2ray/src/.env; \
+    fi; \
+    php-fpm"]
 
-CMD sh -c "if [ ! -f /var/www/html/v2ray/src/.env ]; then cp /var/www/html/v2ray/src/.env.example /var/www/html/v2ray/src/.env; fi && php-fpm"
+EXPOSE 9000
