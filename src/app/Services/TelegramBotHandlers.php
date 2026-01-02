@@ -35,12 +35,10 @@ final readonly class TelegramBotHandlers
         $this->bot->onCommand('start', function (Nutgram $bot) {
             $username = $bot->user()->username;
 
-            $this->vpnConnectionService->sendWelcomeMessage($bot, $username);
-
             $keyboard = InlineKeyboardMarkup::make()
                 ->addRow(InlineKeyboardButton::make('ПОДКЛЮЧИТЬ ВПН', callback_data: 'connect_vpn'));
 
-            $bot->sendMessage('', reply_markup: $keyboard);
+            $this->vpnConnectionService->sendWelcomeMessage($bot, $username, $keyboard);
         });
 
         // Обработчик нажатия на кнопку "ПОДКЛЮЧИТЬ ВПН"

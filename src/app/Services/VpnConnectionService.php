@@ -6,16 +6,17 @@ namespace App\Services;
 
 use Illuminate\Support\Facades\View;
 use SergiX44\Nutgram\Nutgram;
+use SergiX44\Nutgram\Telegram\Types\Keyboard\InlineKeyboardMarkup;
 
 final readonly class VpnConnectionService
 {
-    public function sendWelcomeMessage(Nutgram $bot, ?string $username = null): void
+    public function sendWelcomeMessage(Nutgram $bot, ?string $username = null, ?InlineKeyboardMarkup $keyboard = null): void
     {
         $message = View::make('telegram.welcome', [
             'username' => $username,
         ])->render();
 
-        $bot->sendMessage(trim($message));
+        $bot->sendMessage(trim($message), reply_markup: $keyboard);
     }
 
     public function sendVpnConnectionMessages(Nutgram $bot): void
