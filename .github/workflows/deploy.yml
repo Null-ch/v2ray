@@ -80,7 +80,7 @@ jobs:
             export TELEGRAM_BOT_TOKEN=$BOT_TOKEN
             export APP_ENV=$BUILD_ENV
 
-            docker-compose build
+            docker-compose build --build-arg APP_ENV=$BUILD_ENV
             docker-compose up -d db app web bot
 
             docker-compose run --rm app bash -c "
@@ -100,12 +100,6 @@ jobs:
                 sed -i \"s|^TELEGRAM_BOT_TOKEN=.*|TELEGRAM_BOT_TOKEN=$BOT_TOKEN|\" .env
               else
                 echo \"TELEGRAM_BOT_TOKEN=$BOT_TOKEN\" >> .env
-              fi
-
-              if grep -q '^APP_ENV=' .env; then
-                sed -i "s|^APP_ENV=.*|APP_ENV=$BUILD_ENV|" .env
-              else
-                echo "APP_ENV=$BUILD_ENV" >> .env
               fi
             "
 
