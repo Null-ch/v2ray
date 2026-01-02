@@ -4,28 +4,30 @@ declare(strict_types=1);
 
 namespace App\Services;
 
+use App\Services\User\UserService;
 use SergiX44\Nutgram\Nutgram;
 use SergiX44\Nutgram\Telegram\Types\Keyboard\InlineKeyboardButton;
 use SergiX44\Nutgram\Telegram\Types\Keyboard\InlineKeyboardMarkup;
 
 /**
  * Пример обработчиков команд для Telegram бота
- * 
+ *
  * Использование:
  * В AppServiceProvider или в отдельном сервис-провайдере зарегистрируйте обработчики:
- * 
+ *
  * $bot = app(Nutgram::class);
  * $bot->onCommand('start', function (Nutgram $bot) {
  *     $bot->sendMessage('Привет! Я бот.');
  * });
- * 
+ *
  * Или используйте этот класс для организации обработчиков
  */
 final readonly class TelegramBotHandlers
 {
     public function __construct(
         private Nutgram $bot,
-        private VpnConnectionService $vpnConnectionService
+        private VpnConnectionService $vpnConnectionService,
+        private UserService $userService
     ) {
     }
 
@@ -33,17 +35,35 @@ final readonly class TelegramBotHandlers
     {
         // Обработчик команды /start
         $this->bot->onCommand('start', function (Nutgram $bot) {
-            $username = $bot->user()->username;
+            $telegramId = $bot->userId();
+            $user = $this->userService->findUserByTelegramId($telegramId);
 
-            $keyboard = InlineKeyboardMarkup::make()
-                ->addRow(InlineKeyboardButton::make('ПОДКЛЮЧИТЬ ВПН', callback_data: 'connect_vpn'));
+            if (!$user) {
+                $keyboard = InlineKeyboardMarkup::make()
+                    ->addRow(InlineKeyboardButton::make('✅Принять', callback_data: 'accept_terms'));
 
-            $this->vpnConnectionService->sendWelcomeMessage($bot, $username, $keyboard);
+                $this->vpnConnectionService->sendWelcomeMessageForNewUser($bot, $keyboard);
+            } else {
+                // Существующий пользователь - показываем главное меню
+                $keyboard = InlineKeyboardMarkup::make()
+                    ->addRow(InlineKeyboardButton::make('ПОДКЛЮЧИТЬ ВПН', callback_data: 'connect_vpn'));
+
+                $this->vpnConnectionService->sendMainMenu($bot, $user, $keyboard);
+            }
         });
 
-        // Обработчик нажатия на кнопку "ПОДКЛЮЧИТЬ ВПН"
-        $this->bot->onCallbackQueryData('connect_vpn', function (Nutgram $bot) {
-            // Создаем клавиатуру для инструкции с 5 кнопками
+        // Обработчик нажатия на кнопку "Принять" для нового пользователя
+        $this->bot->onCallbackQueryData('accept_terms', function (Nutgram $bot) {
+            $telegramId = $bot->userId();
+            $username = $bot->user()->username;
+            $name = $bot->user()->first_name;
+
+            // Создаем пользователя в БД
+            $this->userService->createUser($telegramId, $username, $name);
+
+            // Генерируем конфиг (заглушка)
+            $this->userService->generateVpnConfig();
+
             $instructionsKeyboard = InlineKeyboardMarkup::make()
                 ->addRow(
                     InlineKeyboardButton::make('Приложение для Android', url: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ')
@@ -63,10 +83,8 @@ final readonly class TelegramBotHandlers
 
             $messageIds = $this->vpnConnectionService->sendVpnConnectionMessages($bot, $instructionsKeyboard);
 
-            // Сохраняем ID сообщений в глобальные данные пользователя
             $bot->setGlobalData('vpn_message_ids', $messageIds);
 
-            // Отвечаем на callback, чтобы убрать "часики" на кнопке
             $bot->answerCallbackQuery();
         });
 
@@ -84,13 +102,17 @@ final readonly class TelegramBotHandlers
                 }
             }
 
-            // Отправляем сообщение "РАДЫ ВАС СНОВА ВИДЕТЬ"
-            $username = $bot->user()->username;
+            // Получаем пользователя из БД
+            $telegramId = $bot->userId();
+            $user = $this->userService->findUserByTelegramId($telegramId);
 
-            $keyboard = InlineKeyboardMarkup::make()
-                ->addRow(InlineKeyboardButton::make('ПОДКЛЮЧИТЬ ВПН', callback_data: 'connect_vpn'));
+            if ($user) {
+                // Отправляем главное меню с балансом
+                $keyboard = InlineKeyboardMarkup::make()
+                    ->addRow(InlineKeyboardButton::make('ПОДКЛЮЧИТЬ ВПН', callback_data: 'connect_vpn'));
 
-            $this->vpnConnectionService->sendWelcomeBackMessage($bot, $username, $keyboard);
+                $this->vpnConnectionService->sendMainMenu($bot, $user, $keyboard);
+            }
 
             // Отвечаем на callback
             $bot->answerCallbackQuery();
