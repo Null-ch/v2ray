@@ -14,8 +14,11 @@ services:
     environment:
       COMPOSER_ALLOW_SUPERUSER: 1
       PHP_IDE_CONFIG: serverName=v2ray
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN}
     extra_hosts:
       - "host.docker.internal:host-gateway"
+    volumes:
+      - ./src:/var/www/html/v2ray/src
 
   web:
     image: nginx:alpine
@@ -45,6 +48,24 @@ services:
       - dbdata:/var/lib/mysql
     networks:
       - app-network
+
+  bot:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ${BOT_CONTAINER_NAME}
+    working_dir: /var/www/html/v2ray/src
+    environment:
+      APP_ENV: ${APP_ENV}
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN}
+    networks:
+      - app-network
+    depends_on:
+      - app
+    command: php artisan telegram:bot
+    restart: always
+    volumes:
+      - ./src:/var/www/html/v2ray/src
 
 networks:
   app-network:

@@ -34,15 +34,6 @@ WORKDIR /var/www/html/v2ray/src
 COPY ./src/composer.json ./src/composer.lock* ./
 COPY ./src ./
 
-RUN if [ "$APP_ENV" = "prod" ]; then \
-        export XDEBUG_MODE=off; \
-        composer install --no-interaction --optimize-autoloader --no-dev --no-scripts; \
-        rm /usr/local/etc/php/conf.d/docker-php-ext-xdebug.ini; \
-    else \
-        export XDEBUG_MODE=off; \
-        composer install --no-interaction --optimize-autoloader; \
-    fi
-
 RUN chown -R www-data:www-data /var/www/html/v2ray/src \
     && chmod -R 775 /var/www/html/v2ray/src/storage /var/www/html/v2ray/src/bootstrap/cache
 
