@@ -19,18 +19,33 @@ final readonly class VpnConnectionService
         $bot->sendMessage(trim($message), reply_markup: $keyboard);
     }
 
-    public function sendVpnConnectionMessages(Nutgram $bot): void
+    public function sendVpnConnectionMessages(Nutgram $bot, ?InlineKeyboardMarkup $instructionsKeyboard = null): array
     {
         $congratsMessage = View::make('telegram.vpn-congratulations')->render();
-        $bot->sendMessage(trim($congratsMessage));
+        $congratsMsg = $bot->sendMessage(trim($congratsMessage));
 
         $keyMessage = View::make('telegram.vpn-key', [
             'key' => $this->generateVpnKey(),
         ])->render();
-        $bot->sendMessage(trim($keyMessage));
+        $keyMsg = $bot->sendMessage(trim($keyMessage));
 
         $instructionsMessage = View::make('telegram.vpn-instructions')->render();
-        $bot->sendMessage(trim($instructionsMessage));
+        $instructionsMsg = $bot->sendMessage(trim($instructionsMessage), reply_markup: $instructionsKeyboard);
+
+        return [
+            'congrats' => $congratsMsg->message_id,
+            'key' => $keyMsg->message_id,
+            'instructions' => $instructionsMsg->message_id,
+        ];
+    }
+
+    public function sendWelcomeBackMessage(Nutgram $bot, ?string $username = null, ?InlineKeyboardMarkup $keyboard = null): void
+    {
+        $message = View::make('telegram.welcome-back', [
+            'username' => $username,
+        ])->render();
+
+        $bot->sendMessage(trim($message), reply_markup: $keyboard);
     }
 
     public function generateVpnKey(): string
