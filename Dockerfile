@@ -41,6 +41,14 @@ WORKDIR /var/www/html/v2ray/src
 COPY ./src/composer.json ./src/composer.lock* ./
 COPY ./src ./
 
+# Устанавливаем зависимости Composer (как root)
+# Для production используем --no-dev, для dev устанавливаем все зависимости
+RUN if [ "$APP_ENV" = "prod" ]; then \
+        composer install --no-interaction --prefer-dist --optimize-autoloader --no-dev; \
+    else \
+        composer install --no-interaction --prefer-dist --optimize-autoloader; \
+    fi
+
 # Устанавливаем права на storage и bootstrap/cache
 RUN chown -R www-data:www-data /var/www/html/v2ray/src \
     && find /var/www/html/v2ray/src/storage -type d -exec chmod 775 {} \; \
@@ -54,14 +62,6 @@ USER www-data
 # Экспорт порта php-fpm
 EXPOSE 9000
 
-# Команда запуска PHP-FPM с созданием .env
-CMD ["sh", "-c", "\
-  if [ ! -f /var/www/html/v2ray/src/.env ]; then \
-    cp /var/www/html/v2ray/src/.env.example /var/www/html/v2ray/src/.env; \
-  fi; \
-  if grep -q '^APP_ENV=' /var/www/html/v2ray/src/.env; then \
-    sed -i 's|^APP_ENV=.*|APP_ENV=$APP_ENV|' /var/www/html/v2ray/src/.env; \
-  else \
-    echo 'APP_ENV=$APP_ENV' >> /var/www/html/v2ray/src/.env; \
-  fi; \
-  exec php-fpm"]
+# Команда запуска PHP-FPM
+# Примечание: .env создается в CI/CD скрипте перед запуском контейнера
+CMD ["php-fpm"]
