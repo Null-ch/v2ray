@@ -50,11 +50,6 @@ final class XuiService
         // Очищаем host от протокола и порта
         $host = $xuiModel->host;
 
-        // Убираем порт из host если он там есть
-        if (str_contains($host, ':')) {
-            $host = explode(':', $host)[0];
-        }
-
         $xui = new XuiClient($host, $xuiModel->port, $xuiModel->path);
 
         $loginResult = $xui->login($xuiModel->username, $xuiModel->password);
