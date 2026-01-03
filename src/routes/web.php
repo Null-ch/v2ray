@@ -13,8 +13,11 @@ Route::get('/', function () {
 
 // Cockpit routes
 Route::prefix('cockpit')->group(function () {
-    Route::get('/login', [CockpitController::class, 'showLogin'])->name('cockpit.login');
-    Route::post('/login', [CockpitController::class, 'login'])->name('cockpit.login.post');
+    Route::middleware('guest:cockpit')->group(function () {
+        Route::get('/login', [CockpitController::class, 'showLoginForm'])->name('cockpit.login');
+        Route::post('/login', [CockpitController::class, 'login'])->name('cockpit.login.post');
+    });
+    
     Route::post('/logout', [CockpitController::class, 'logout'])->name('cockpit.logout');
     
     Route::middleware(['cockpit.auth'])->name('cockpit.')->group(function () {

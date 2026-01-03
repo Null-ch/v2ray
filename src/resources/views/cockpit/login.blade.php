@@ -51,7 +51,15 @@
                     </div>
                 </div>
                 <div class="row">
-                    <div class="col-12">
+                    <div class="col-8">
+                        <div class="icheck-primary">
+                            <input type="checkbox" id="remember" name="remember">
+                            <label for="remember">
+                                Запомнить меня
+                            </label>
+                        </div>
+                    </div>
+                    <div class="col-4">
                         <button type="submit" class="btn btn-primary btn-block">Войти</button>
                     </div>
                 </div>

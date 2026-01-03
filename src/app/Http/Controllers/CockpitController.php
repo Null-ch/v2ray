@@ -8,53 +8,74 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\View\View;
+use Illuminate\Foundation\Auth\AuthenticatesUsers;
 
-final class CockpitController extends Controller
+class CockpitController extends Controller
 {
+    use AuthenticatesUsers;
+
+    /**
+     * Where to redirect users after login.
+     *
+     * @var string
+     */
+    protected $redirectTo = '/cockpit';
+
     /**
      * Show the login form.
      */
-    public function showLogin(Request $request): View|RedirectResponse
+    public function showLoginForm(): View
     {
-        if (Auth::guard('cockpit')->check()) {
-            return redirect()->route('cockpit.dashboard');
-        }
-        
         return view('cockpit.login');
     }
 
     /**
-     * Handle login request.
+     * Get the guard to be used during authentication.
+     *
+     * @return \Illuminate\Contracts\Auth\StatefulGuard
      */
-    public function login(Request $request): RedirectResponse
+    protected function guard()
     {
-        $request->validate([
-            'username' => 'required|string',
-            'password' => 'required|string',
-        ]);
-
-        $credentials = $request->only('username', 'password');
-
-        if (Auth::guard('cockpit')->attempt($credentials, $request->filled('remember'))) {
-            $request->session()->regenerate();
-            return redirect()->route('cockpit.dashboard');
-        }
-
-        return back()->withErrors([
-            'credentials' => 'Неверный логин или пароль.',
-        ])->withInput($request->only('username'));
+        return Auth::guard('cockpit');
     }
 
     /**
-     * Handle logout request.
+     * Get the login username to be used by the controller.
+     *
+     * @return string
+     */
+    public function username(): string
+    {
+        return 'username';
+    }
+
+    /**
+     * The user has been authenticated.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @param  mixed  $user
+     * @return mixed
+     */
+    protected function authenticated(Request $request, $user): RedirectResponse
+    {
+        return redirect()->route('cockpit.dashboard');
+    }
+
+    /**
+     * Log the user out of the application.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @return \Illuminate\Http\RedirectResponse|\Illuminate\Http\JsonResponse
      */
     public function logout(Request $request): RedirectResponse
     {
-        Auth::guard('cockpit')->logout();
+        $this->guard()->logout();
+
         $request->session()->invalidate();
+
         $request->session()->regenerateToken();
-        
-        return redirect()->route('cockpit.login');
+
+        return $this->loggedOut($request) ?: redirect()->route('cockpit.login');
     }
 
     /**
@@ -65,4 +86,3 @@ final class CockpitController extends Controller
         return view('cockpit.dashboard');
     }
 }
-
