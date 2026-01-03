@@ -61,10 +61,7 @@ final class XuiService
             $host = explode(':', $host)[0];
         }
 
-        // Используем SSL из модели, если не указан - определяем автоматически
-        $ssl = $xuiModel->ssl ?? (filter_var($host, FILTER_VALIDATE_IP) === false);
-
-        $xui = new XuiClient($host, $xuiModel->port, $xuiModel->path, $ssl);
+        $xui = new XuiClient($host, $xuiModel->port, $xuiModel->path);
 
         $loginResult = $xui->login($xuiModel->username, $xuiModel->password);
 
