@@ -12,6 +12,9 @@ use XUI\Xui as XuiClient;
 
 final class XuiService
 {
+    /** @var array<string, XuiClient> */
+    private array $clientCache = [];
+
     public function __construct(private readonly XuiRepository $xuiRepository)
     {
     }
@@ -64,8 +67,15 @@ final class XuiService
 
     private function getXuiClient(string $tag): XuiClient
     {
+        if (isset($this->clientCache[$tag])) {
+            return $this->clientCache[$tag];
+        }
+
         $xuiModel = $this->getXuiModel($tag);
-        return $this->createXuiClient($xuiModel);
+        $client = $this->createXuiClient($xuiModel);
+        $this->clientCache[$tag] = $client;
+
+        return $client;
     }
 
     public function getXui(string $tag): XuiClient
