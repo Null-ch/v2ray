@@ -35,34 +35,31 @@ jobs:
             fi
 
             cd $APP_DIR
-            git config --global --add safe.directory $APP_DIR
 
-            # Принудительный pull, чтобы отбросить локальные изменения
             git fetch origin
             git reset --hard origin/$(git rev-parse --abbrev-ref HEAD)
 
             export TELEGRAM_BOT_TOKEN=$BOT_TOKEN
             export APP_ENV=$BUILD_ENV
 
-            # Установка зависимостей
             composer install --no-interaction --prefer-dist
 
-            # Создание .env если нет
             if [ ! -f .env ]; then
               cp .env.example .env
             fi
 
-            # Генерация ключа приложения, если пустой
             if ! grep -q '^APP_KEY=' .env || grep -q '^APP_KEY=$' .env; then
               php artisan key:generate --force
             fi
 
-            # Обновление токена Telegram в .env
             if grep -q '^TELEGRAM_BOT_TOKEN=' .env; then
               sed -i "s|^TELEGRAM_BOT_TOKEN=.*|TELEGRAM_BOT_TOKEN=$BOT_TOKEN|" .env
             else
               echo "TELEGRAM_BOT_TOKEN=$BOT_TOKEN" >> .env
             fi
+
+            # Права на запись для Laravel
+            chmod -R 775 storage bootstrap/cache
 
             # Миграции базы данных
             if [ "$BUILD_ENV" = "prod" ]; then
