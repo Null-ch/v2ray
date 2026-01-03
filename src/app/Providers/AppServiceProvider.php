@@ -11,6 +11,8 @@ use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
 {
+    private static bool $handlersRegistered = false;
+
     /**
      * Register any application services.
      */
@@ -43,10 +45,16 @@ class AppServiceProvider extends ServiceProvider
             return;
         }
 
+        // Регистрируем обработчики только один раз
+        if (self::$handlersRegistered) {
+            return;
+        }
+
         try {
             Log::info('Initializing Telegram bot handlers');
             $handlers = $this->app->make(TelegramBotHandlers::class);
             $handlers->registerHandlers();
+            self::$handlersRegistered = true;
             Log::info('Telegram bot handlers registered successfully');
         } catch (\Throwable $e) {
             Log::error('Failed to register Telegram bot handlers', [
