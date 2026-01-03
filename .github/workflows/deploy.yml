@@ -78,10 +78,34 @@ jobs:
             php artisan optimize
 
             # Остановка старого процесса бота перед деплоем
+            # Отключаем немедленный выход при ошибке для этого блока
+            set +e
             echo "Stopping any existing bot processes..."
-            pkill -f "artisan telegram:bot" || true
-            # Небольшая задержка для корректного завершения процессов
-            sleep 2
+            # Используем более мягкий подход: проверяем наличие процесса и останавливаем его
+            pgrep -f "artisan telegram:bot" > /dev/null 2>&1
+            if [ $? -eq 0 ]; then
+              echo "Found running bot process, stopping it..."
+              pkill -TERM -f "artisan telegram:bot" 2>/dev/null
+              # Ждем завершения процесса (максимум 5 секунд)
+              for i in {1..5}; do
+                pgrep -f "artisan telegram:bot" > /dev/null 2>&1
+                if [ $? -ne 0 ]; then
+                  break
+                fi
+                sleep 1
+              done
+              # Если процесс все еще работает, принудительно завершаем
+              pgrep -f "artisan telegram:bot" > /dev/null 2>&1
+              if [ $? -eq 0 ]; then
+                echo "Process still running, force killing..."
+                pkill -KILL -f "artisan telegram:bot" 2>/dev/null
+              fi
+              echo "Bot process stopped successfully."
+            else
+              echo "No running bot process found."
+            fi
+            # Включаем обратно проверку ошибок
+            set -e
 
             # Попытка автоматического перезапуска через supervisor (если установлен)
             if command -v supervisorctl &> /dev/null; then
