@@ -64,7 +64,9 @@ final readonly class TelegramBotHandlers
 
                 Log::info('onCallbackQueryData accept_terms', $bot->callbackQuery()->toArray());
                 // Создаем пользователя в БД
-                $user = $this->userService->createUser($telegramId, $username, $name);
+                if (!$user = $this->userService->findUserByTelegramId($telegramId)) {
+                    $user = $this->userService->createUser($telegramId, $username, $name);
+                }
 
                 if (!$user) {
                     $bot->answerCallbackQuery('Ошибка создания пользователя', show_alert: true);
