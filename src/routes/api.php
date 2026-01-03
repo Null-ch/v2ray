@@ -18,6 +18,9 @@ if (!empty(config('services.telegram.bot_token'))) {
 }
 
 Route::prefix('xui')->group(function () {
+    Route::get('test-new-login', [XuiController::class, 'testNewXuiLogin']);
+    Route::get('test-new-inbounds', [XuiController::class, 'testNewXuiInbounds']);
+
     Route::prefix('{tag}')->group(function () {
         Route::get('server/status', [XuiController::class, 'serverStatus']);
         Route::get('inbounds', [XuiController::class, 'inbounds']);
