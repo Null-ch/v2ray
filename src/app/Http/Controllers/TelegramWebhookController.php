@@ -19,9 +19,22 @@ final readonly class TelegramWebhookController
     public function handle(Request $request): Response
     {
         try {
-            $this->telegramService->getBot()->processUpdate($request->all());
+            $update = $request->all();
+            Log::info('Telegram webhook received', [
+                'update_id' => $update['update_id'] ?? null,
+                'has_message' => isset($update['message']),
+                'has_callback_query' => isset($update['callback_query']),
+                'callback_data' => $update['callback_query']['data'] ?? null,
+            ]);
+            
+            $this->telegramService->getBot()->processUpdate($update);
         } catch (\Throwable $e) {
-            Log::error('Telegram webhook error: ' . $e->getMessage());
+            Log::error('Telegram webhook error', [
+                'message' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'trace' => $e->getTraceAsString(),
+            ]);
             
             return response('Error', 500);
         }

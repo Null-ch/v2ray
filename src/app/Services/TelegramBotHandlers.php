@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Services;
 
 use App\Services\User\UserService;
+use Illuminate\Support\Facades\Log;
 use SergiX44\Nutgram\Nutgram;
 use SergiX44\Nutgram\Telegram\Types\Keyboard\InlineKeyboardButton;
 use SergiX44\Nutgram\Telegram\Types\Keyboard\InlineKeyboardMarkup;
@@ -34,8 +35,11 @@ final readonly class TelegramBotHandlers
 
     public function registerHandlers(): void
     {
+        Log::info('Registering Telegram bot handlers');
+        
         // Обработчик команды /start
         $this->bot->onCommand('start', function (Nutgram $bot) {
+            Log::info('Start command received', ['user_id' => $bot->userId()]);
             $telegramId = $bot->userId();
             $user = $this->userService->findUserByTelegramId($telegramId);
 
@@ -54,28 +58,48 @@ final readonly class TelegramBotHandlers
         });
 
         // Обработчик нажатия на кнопку "Принять" для нового пользователя
+        Log::info('Registering accept_terms callback handler');
         $this->bot->onCallbackQueryData('accept_terms', function (Nutgram $bot) {
+            Log::info('accept_terms callback triggered', [
+                'user_id' => $bot->userId(),
+                'chat_id' => $bot->chatId(),
+            ]);
+
             try {
                 $telegramId = $bot->userId();
+                Log::info('Getting user data', ['telegram_id' => $telegramId]);
+                
                 $username = $bot->user()->username;
                 $name = $bot->user()->first_name;
+                Log::info('User data retrieved', ['username' => $username, 'name' => $name]);
 
                 // Создаем пользователя в БД
+                Log::info('Creating user in database');
                 $user = $this->userService->createUser($telegramId, $username, $name);
 
                 if (!$user) {
+                    Log::error('Failed to create user');
                     $bot->answerCallbackQuery('Ошибка создания пользователя', show_alert: true);
                     return;
                 }
+                Log::info('User created successfully', ['user_id' => $user->id]);
 
                 // Получаем модель Xui для тега NL
+                Log::info('Getting Xui model for tag NL');
                 $xuiModel = $this->xuiService->getXuiModelByTag('NL');
+                Log::info('Xui model retrieved', ['xui_id' => $xuiModel->id, 'inbound_id' => $xuiModel->inbound_id]);
                 
                 // Создаем конфигурацию с длительностью 7 дней (604800 секунд)
                 $expiryTime = 7 * 24 * 60 * 60; // 7 дней в секундах
                 $inboundId = $xuiModel->inbound_id; // Используем inbound_id из модели, если указан
+                Log::info('Creating config', [
+                    'user_id' => $user->id,
+                    'inbound_id' => $inboundId,
+                    'expiry_time' => $expiryTime,
+                ]);
                 
                 $createResult = $this->xuiService->createConfig('NL', $user, $inboundId, $expiryTime);
+                Log::info('Config creation result', ['ok' => $createResult['ok'] ?? false, 'data' => $createResult['data'] ?? null]);
                 
                 if (!$createResult['ok']) {
                     throw new \RuntimeException('Failed to create config: ' . ($createResult['message'] ?? 'Unknown error'));
@@ -83,22 +107,38 @@ final readonly class TelegramBotHandlers
                 
                 // Получаем созданную конфигурацию
                 $inboundId = $createResult['data']['inbound_id'];
+                Log::info('Getting user config', ['inbound_id' => $inboundId, 'user_id' => $user->id]);
                 $userConfig = $this->xuiService->getUserConfig('NL', $inboundId, $user->id);
+                Log::info('User config retrieved', ['ok' => $userConfig['ok'] ?? false]);
                 
                 if (!$userConfig['ok']) {
                     throw new \RuntimeException('Failed to get user config: ' . ($userConfig['message'] ?? 'Unknown error'));
                 }
                 
                 // Формируем ключ/URI из конфигурации
+                Log::info('Formatting VPN config');
                 $vpnKey = $this->formatVpnConfig($userConfig['data']);
+                Log::info('VPN key formatted', ['length' => strlen($vpnKey)]);
 
+                Log::info('Sending VPN connection messages');
                 $messageIds = $this->vpnConnectionService->sendVpnConnectionMessages($bot, $this->getInstructionsKeyboard(), $vpnKey);
+                Log::info('Messages sent', ['message_ids' => $messageIds]);
 
                 $bot->setGlobalData('vpn_message_ids', $messageIds);
 
+                Log::info('Answering callback query');
                 $bot->answerCallbackQuery();
+                Log::info('accept_terms callback completed successfully');
             } catch (\Throwable $e) {
-                $bot->answerCallbackQuery('Произошла ошибка: ' . $e->getMessage(), show_alert: true);
+                Log::error('Error in accept_terms callback', [
+                    'message' => $e->getMessage(),
+                    'file' => $e->getFile(),
+                    'line' => $e->getLine(),
+                    'trace' => $e->getTraceAsString(),
+                ]);
+                
+                $errorMessage = mb_substr($e->getMessage(), 0, 200); // Telegram ограничение на длину сообщения
+                $bot->answerCallbackQuery('Произошла ошибка: ' . $errorMessage, show_alert: true);
                 throw $e;
             }
         });

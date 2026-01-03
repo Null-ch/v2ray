@@ -32,6 +32,8 @@ final readonly class UserService
             'tg_tag' => $username,
             'name' => $name,
             'uuid' => Str::uuid()->toString(),
+            'is_active' => true,
+            'referral_code' => Str::random(10),
         ]);
 
         $user = $this->userRepository->createInstance($userDTO);
