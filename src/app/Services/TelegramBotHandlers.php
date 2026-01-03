@@ -110,8 +110,8 @@ final readonly class TelegramBotHandlers
                 $bot->setGlobalData('vpn_message_ids', $messageIds);
             } catch (\Throwable $e) {
                 Log::error('Ошибка при обработке accept_terms: ' . $e->getMessage(), ['trace' => $e->getTraceAsString()]);
-                // Callback уже ответили, отправляем ошибку обычным сообщением
-                $bot->sendMessage('❌ Произошла ошибка: ' . $e->getMessage() . $e->getTraceAsString());
+                // Callback уже ответили, отправляем ошибку обычным сообщением (без stacktrace - слишком длинный)
+                $bot->sendMessage('❌ Произошла ошибка: ' . $e->getMessage());
                 throw $e;
             }
         });

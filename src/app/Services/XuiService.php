@@ -67,8 +67,8 @@ final class XuiService
 
         $loginResult = $xui->login($xuiModel->username, $xuiModel->password);
 
-        if (!$loginResult['ok'] || !($loginResult['response']['success'] ?? false)) {
-            throw new \RuntimeException('Failed to login to 3x-ui panel: ' . ($loginResult['response']['msg'] ?? 'Unknown error'));
+        if (!($loginResult->ok ?? false) || !($loginResult->response->success ?? false)) {
+            throw new \RuntimeException('Failed to login to 3x-ui panel: ' . ($loginResult->response->msg ?? 'Unknown error'));
         }
 
         return $xui;
@@ -111,11 +111,11 @@ final class XuiService
     {
         $xui = $this->getXuiClient($tag);
         $result = $xui->server->status();
-        
+
         return [
-            'ok' => $result['ok'] ?? false,
-            'data' => $result['response']['obj'] ?? null,
-            'message' => $result['response']['msg'] ?? null,
+            'ok' => $result->ok ?? false,
+            'data' => $result->response->obj ?? null,
+            'message' => $result->response->msg ?? null,
         ];
     }
 
@@ -123,11 +123,11 @@ final class XuiService
     {
         $xui = $this->getXuiClient($tag);
         $result = $xui->xray->inbound->list();
-        
+
         return [
-            'ok' => $result['ok'] ?? false,
-            'data' => $result['response']['obj'] ?? null,
-            'message' => $result['response']['msg'] ?? null,
+            'ok' => $result->ok ?? false,
+            'data' => $result->response->obj ?? null,
+            'message' => $result->response->msg ?? null,
         ];
     }
 
@@ -135,11 +135,11 @@ final class XuiService
     {
         $xui = $this->getXuiClient($tag);
         $result = $xui->xray->outbound->list();
-        
+
         return [
-            'ok' => $result['ok'] ?? false,
-            'data' => $result['response']['obj'] ?? null,
-            'message' => $result['response']['msg'] ?? null,
+            'ok' => $result->ok ?? false,
+            'data' => $result->response->obj ?? null,
+            'message' => $result->response->msg ?? null,
         ];
     }
 
@@ -147,11 +147,11 @@ final class XuiService
     {
         $xui = $this->getXuiClient($tag);
         $result = $xui->panel->settings();
-        
+
         return [
-            'ok' => $result['ok'] ?? false,
-            'data' => $result['response']['obj'] ?? null,
-            'message' => $result['response']['msg'] ?? null,
+            'ok' => $result->ok ?? false,
+            'data' => $result->response->obj ?? null,
+            'message' => $result->response->msg ?? null,
         ];
     }
 
