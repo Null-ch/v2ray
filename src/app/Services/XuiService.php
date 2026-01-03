@@ -50,7 +50,31 @@ final class XuiService
         // Очищаем host от протокола и порта
         $host = $xuiModel->host;
 
-        $xui = new XuiClient($host, $xuiModel->port, $xuiModel->path);
+        if (str_starts_with($host, 'https://')) {
+            $host = str_replace('https://', '', $host);
+        } elseif (str_starts_with($host, 'http://')) {
+            $host = str_replace('http://', '', $host);
+        }
+
+        // Убираем порт из host если он там есть
+        if (str_contains($host, ':')) {
+            $host = explode(':', $host)[0];
+        }
+
+        // Создаём директорию для cookies в storage (не в vendor)
+        $cookieDir = storage_path('app/.xui-cookies');
+        if (!is_dir($cookieDir)) {
+            mkdir($cookieDir, 0755, true);
+        }
+
+        // Используем HTTP (без SSL) для избежания проблем с самоподписанными сертификатами
+        $xui = new XuiClient($host, $xuiModel->port, $xuiModel->path, false);
+
+        // Устанавливаем путь к cookie файлу в storage вместо vendor
+        $cookieFile = $cookieDir . '/' . md5($host . ':' . $xuiModel->port) . '.cookie';
+        if (property_exists($xui, 'cookieFile')) {
+            $xui->cookieFile = $cookieFile;
+        }
 
         $loginResult = $xui->login($xuiModel->username, $xuiModel->password);
 
