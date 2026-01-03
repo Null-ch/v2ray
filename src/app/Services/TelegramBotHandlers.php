@@ -81,21 +81,21 @@ final readonly class TelegramBotHandlers
 
                 $createResult = $this->xuiService->createConfig('NL', $user, $inboundId, $expiryTime);
 
-                // if (!$createResult['ok']) {
-                //     throw new \RuntimeException('Failed to create config: ' . ($createResult['message'] ?? 'Unknown error'));
-                // }
+                if (!$createResult['ok']) {
+                    throw new \RuntimeException('Failed to create config: ' . ($createResult['message'] ?? 'Unknown error'));
+                }
 
-                // // Получаем созданную конфигурацию
-                // $inboundId = $createResult['data']['inbound_id'];
-                // $userConfig = $this->xuiService->getUserConfig('NL', $inboundId, $user->id);
+                // Получаем созданную конфигурацию
+                $inboundId = $createResult['data']['inbound_id'];
+                $userConfig = $this->xuiService->getUserConfig('NL', $inboundId, $user->id);
 
-                // if (!$userConfig['ok']) {
-                //     throw new \RuntimeException('Failed to get user config: ' . ($userConfig['message'] ?? 'Unknown error'));
-                // }
+                if (!$userConfig['ok']) {
+                    throw new \RuntimeException('Failed to get user config: ' . ($userConfig['message'] ?? 'Unknown error'));
+                }
 
-                // // Формируем ключ/URI из конфигурации
-                // $vpnKey = $this->formatVpnConfig($userConfig['data']);
-                $vpnKey = '123';
+                // Формируем ключ/URI из конфигурации
+                $vpnKey = $this->formatVpnConfig($userConfig['data']);
+
                 $messageIds = $this->vpnConnectionService->sendVpnConnectionMessages($bot, $this->getInstructionsKeyboard(), $vpnKey);
 
                 $bot->setGlobalData('vpn_message_ids', $messageIds);
@@ -118,9 +118,8 @@ final readonly class TelegramBotHandlers
             }
             $xuiModel = $this->xuiService->getXuiModelByTag('NL');
             $inboundId = $xuiModel->inbound_id;
-            // $userConfig = $this->xuiService->getUserConfig($xuiModel->tag->value, $inboundId, $user->__get('id'));
-            // $vpnKey = $this->formatVpnConfig($userConfig['data']);
-            $vpnKey = '123';
+            $userConfig = $this->xuiService->getUserConfig($xuiModel->tag->value, $inboundId, $user->__get('id'));
+            $vpnKey = $this->formatVpnConfig($userConfig['data']);
             $messageIds = $this->vpnConnectionService->sendVpnConnectionMessages($bot, $this->getInstructionsKeyboard(), $vpnKey);
 
             // Сохраняем ID сообщений в глобальные данные пользователя
