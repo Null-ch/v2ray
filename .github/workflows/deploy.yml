@@ -1,4 +1,4 @@
-name: Deploy Laravel Docker
+name: Deploy Laravel
 
 on:
   push:
@@ -40,40 +40,40 @@ jobs:
             export TELEGRAM_BOT_TOKEN=$BOT_TOKEN
             export APP_ENV=$BUILD_ENV
 
-            docker-compose build --build-arg APP_ENV=$BUILD_ENV
-            docker-compose up -d db app web bot
-
-            docker-compose run --rm --user root app bash -c "
-              cd /var/www/html/v2ray/src
-
-              composer install --no-interaction --prefer-dist
-
-              if [ ! -f .env ]; then
-                cp .env.example .env
-                chown www-data:www-data .env
-              fi
-
-              if ! grep -q '^APP_KEY=' .env || grep -q '^APP_KEY=$' .env; then
-                su -s /bin/bash www-data -c 'php artisan key:generate --force'
-              fi
-
-              if grep -q '^TELEGRAM_BOT_TOKEN=' .env; then
-                sed -i \"s|^TELEGRAM_BOT_TOKEN=.*|TELEGRAM_BOT_TOKEN=$BOT_TOKEN|\" .env
-              else
-                echo \"TELEGRAM_BOT_TOKEN=$BOT_TOKEN\" >> .env
-              fi
-
-              chown -R www-data:www-data /var/www/html/v2ray/src
-            "
-
-            if [ "$BUILD_ENV" = "prod" ]; then
-              docker-compose run --rm app php /var/www/html/v2ray/src/artisan migrate --force
-            else
-              docker-compose run --rm app php /var/www/html/v2ray/src/artisan migrate
+            # Установка зависимостей
+            composer install --no-interaction --prefer-dist
+              
+            # Создание .env если нет
+            if [ ! -f .env ]; then
+              cp .env.example .env
+              chown www-data:www-data .env
             fi
 
-            docker-compose run --rm app php /var/www/html/v2ray/src/artisan route:clear
-            docker-compose run --rm app php /var/www/html/v2ray/src/artisan config:clear
-            docker-compose run --rm app php /var/www/html/v2ray/src/artisan cache:clear
-            docker-compose run --rm app php /var/www/html/v2ray/src/artisan optimize
-            docker-compose restart bot
+            # Генерация ключа приложения, если пустой
+            if ! grep -q '^APP_KEY=' .env || grep -q '^APP_KEY=$' .env; then
+              sudo -u www-data php artisan key:generate --force
+            fi
+
+            # Обновление токена Telegram в .env
+            if grep -q '^TELEGRAM_BOT_TOKEN=' .env; then
+              sed -i "s|^TELEGRAM_BOT_TOKEN=.*|TELEGRAM_BOT_TOKEN=$BOT_TOKEN|" .env
+            else
+              echo "TELEGRAM_BOT_TOKEN=$BOT_TOKEN" >> .env
+            fi
+
+            # Установка прав на папку проекта
+            chown -R www-data:www-data $APP_DIR
+
+            # Миграции
+            if [ "$BUILD_ENV" = "prod" ]; then
+              php artisan migrate --force
+            else
+              php artisan migrate
+            fi
+
+            # Очистка кешей и оптимизация
+            php artisan route:clear
+            php artisan config:clear
+            php artisan cache:clear
+            php artisan view:clear
+            php artisan optimize
