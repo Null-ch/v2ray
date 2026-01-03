@@ -13,7 +13,7 @@ class TrustProxies
      *
      * @var array|string|null
      */
-    protected $proxies = '*';
+    protected $proxies = null;
 
     /**
      * Заголовки, используемые для определения протокола и IP.
@@ -32,7 +32,7 @@ class TrustProxies
     {
         if ($this->proxies !== null) {
             Request::setTrustedProxies(
-                $this->proxies,
+                $this->proxies ?? [],
                 $this->headers
             );
         }
