@@ -22,6 +22,7 @@ class User extends Authenticatable
         'tg_id',
         'uuid',
         'referrer_id',
+        'referral_code',
     ];
 
     /**
@@ -84,5 +85,10 @@ class User extends Authenticatable
     public function configurations()
     {
         return $this->hasMany(Configuration::class);
+    }
+
+    public function getId()
+    {
+        return $this->id;
     }
 }

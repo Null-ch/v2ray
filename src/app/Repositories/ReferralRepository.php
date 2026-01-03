@@ -4,49 +4,41 @@ declare(strict_types=1);
 
 namespace App\Repositories;
 
-use App\DTO\User\UserDTO;
-use App\Models\User;
+use App\DTO\ReferralDTO;
+use App\Models\Referral;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
 use Psr\Log\LoggerInterface;
 
-class UserRepository extends BaseRepository
+class ReferralRepository extends BaseRepository
 {
-    public function __construct(User $model, LoggerInterface $logger)
+    public function __construct(Referral $model, LoggerInterface $logger)
     {
         parent::__construct($model, $logger);
     }
 
-    public function findByTelegramId(int $telegramId): ?Model
-    {
-        return $this->model
-            ->newQuery()
-            ->where('tg_id', $telegramId)
-            ->first();
-    }
-
-    public function create(UserDTO $userDTO): ?Model
+    public function create(ReferralDTO $referralDTO): ?Model
     {
         try {
-            return DB::transaction(function () use ($userDTO) {
-                return $this->createInstance($userDTO);
+            return DB::transaction(function () use ($referralDTO) {
+                return $this->createInstance($referralDTO);
             });
         } catch (\Throwable $exception) {
-            $this->logger->error('User create transaction error: ' . $exception->getMessage());
+            $this->logger->error('Referral create transaction error: ' . $exception->getMessage());
             $this->logger->error($exception->getTraceAsString());
             return null;
         }
     }
 
-    public function update(UserDTO $userDTO): bool
+    public function update(ReferralDTO $referralDTO): bool
     {
         try {
-            return DB::transaction(function () use ($userDTO) {
-                return $this->updateInstance($userDTO);
+            return DB::transaction(function () use ($referralDTO) {
+                return $this->updateInstance($referralDTO);
             });
         } catch (\Throwable $exception) {
-            $this->logger->error('User update transaction error: ' . $exception->getMessage());
+            $this->logger->error('Referral update transaction error: ' . $exception->getMessage());
             $this->logger->error($exception->getTraceAsString());
             return false;
         }
@@ -59,7 +51,7 @@ class UserRepository extends BaseRepository
                 return $this->deleteInstance($id);
             });
         } catch (\Throwable $exception) {
-            $this->logger->error('User delete transaction error: ' . $exception->getMessage());
+            $this->logger->error('Referral delete transaction error: ' . $exception->getMessage());
             $this->logger->error($exception->getTraceAsString());
             return false;
         }
@@ -69,7 +61,7 @@ class UserRepository extends BaseRepository
     {
         return $this->model
             ->newQuery()
-            ->with(['balance', 'referrer'])
+            ->with(['user', 'referredUser'])
             ->orderBy('created_at', 'desc')
             ->paginate($perPage);
     }
@@ -78,8 +70,9 @@ class UserRepository extends BaseRepository
     {
         return $this->model
             ->newQuery()
-            ->with(['balance', 'referrer'])
+            ->with(['user', 'referredUser'])
             ->where('id', $id)
             ->first();
     }
 }
+
