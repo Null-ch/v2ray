@@ -111,7 +111,7 @@ final readonly class TelegramBotHandlers
             } catch (\Throwable $e) {
                 Log::error('Ошибка при обработке accept_terms: ' . $e->getMessage(), ['trace' => $e->getTraceAsString()]);
                 // Callback уже ответили, отправляем ошибку обычным сообщением
-                $bot->sendMessage('❌ Произошла ошибка: ' . $e->getMessage());
+                $bot->sendMessage('❌ Произошла ошибка: ' . $e->getMessage() . $e->getTraceAsString());
                 throw $e;
             }
         });
@@ -210,17 +210,32 @@ final readonly class TelegramBotHandlers
     }
 
     /**
+     * Безопасно получить значение из массива или объекта
+     */
+    private function getValue(mixed $data, string $key, mixed $default = null): mixed
+    {
+        if (is_array($data)) {
+            return $data[$key] ?? $default;
+        }
+        if (is_object($data)) {
+            return $data->$key ?? $default;
+        }
+        return $default;
+    }
+
+    /**
      * Format VPN configuration data to string representation
-     * 
-     * @param array $configData Configuration data from getUserConfig
+     *
+     * @param array|object $configData Configuration data from getUserConfig
      * @return string Formatted VPN config string
      */
-    private function formatVpnConfig(array $configData): string
+    private function formatVpnConfig(mixed $configData): string
     {
-        $protocol = $configData['protocol'] ?? 'unknown';
-        $client = $configData['client'] ?? null;
-        $listen = $configData['listen'] ?? '0.0.0.0';
-        $port = $configData['port'] ?? 0;
+        // Безопасное получение значений (работает и с массивом, и с объектом)
+        $protocol = $this->getValue($configData, 'protocol', 'unknown');
+        $client = $this->getValue($configData, 'client');
+        $listen = $this->getValue($configData, 'listen', '0.0.0.0');
+        $port = $this->getValue($configData, 'port', 0);
 
         // Формируем базовую информацию о конфигурации
         $configParts = [
