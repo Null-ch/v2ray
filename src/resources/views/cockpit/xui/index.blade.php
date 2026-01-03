@@ -28,6 +28,7 @@
                                 <th>Пользователь</th>
                                 <th>SSL</th>
                                 <th>Активен</th>
+                                <th>Inbound ID</th>
                                 <th>Создан</th>
                                 <th>Действия</th>
                             </tr>
@@ -57,6 +58,13 @@
                                             <span class="badge badge-danger">Неактивен</span>
                                         @endif
                                     </td>
+                                    <td>
+                                        @if($xui->inbound_id)
+                                            <span class="badge badge-info">{{ $xui->inbound_id }}</span>
+                                        @else
+                                            <span class="text-muted">-</span>
+                                        @endif
+                                    </td>
                                     <td>{{ $xui->created_at->format('d.m.Y H:i') }}</td>
                                     <td>
                                         <div class="btn-group">
@@ -78,7 +86,7 @@
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="10" class="text-center">Нет серверов</td>
+                                    <td colspan="11" class="text-center">Нет серверов</td>
                                 </tr>
                             @endforelse
                         </tbody>

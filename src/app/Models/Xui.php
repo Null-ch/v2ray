@@ -21,6 +21,7 @@ class Xui extends Model
         'password',
         'ssl',
         'is_active',
+        'inbound_id',
     ];
 
     /**
@@ -35,6 +36,8 @@ class Xui extends Model
             'port' => 'integer',
             'ssl' => 'boolean',
             'is_active' => 'boolean',
+            'password' => 'encrypted',
+            'inbound_id' => 'integer',
         ];
     }
 

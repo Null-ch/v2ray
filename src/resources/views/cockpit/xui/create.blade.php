@@ -92,6 +92,17 @@
                                 <label class="custom-control-label" for="is_active">Активен</label>
                             </div>
                         </div>
+
+                        <div class="form-group">
+                            <label for="inbound_id">Inbound ID</label>
+                            <input type="number" name="inbound_id" id="inbound_id" class="form-control @error('inbound_id') is-invalid @enderror" value="{{ old('inbound_id') }}" min="1" placeholder="Оставьте пустым для автоматического выбора">
+                            <small class="form-text text-muted">ID inbound для использования по умолчанию. Если не указан, будет использован первый доступный inbound.</small>
+                            @error('inbound_id')
+                                <span class="invalid-feedback" role="alert">
+                                    <strong>{{ $message }}</strong>
+                                </span>
+                            @enderror
+                        </div>
                     </div>
                     <!-- /.card-body -->
                     <div class="card-footer">

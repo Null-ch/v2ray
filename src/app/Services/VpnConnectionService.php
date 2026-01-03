@@ -63,13 +63,13 @@ final readonly class VpnConnectionService
         return $titles[($days % 100 > 4 && $days % 100 < 20) ? 2 : $cases[min($days % 10, 5)]];
     }
 
-    public function sendVpnConnectionMessages(Nutgram $bot, ?InlineKeyboardMarkup $instructionsKeyboard = null): array
+    public function sendVpnConnectionMessages(Nutgram $bot, ?InlineKeyboardMarkup $instructionsKeyboard = null, string $vpnKey): array
     {
         $congratsMessage = View::make('telegram.vpn-congratulations')->render();
         $congratsMsg = $bot->sendMessage(trim($congratsMessage));
 
         $keyMessage = View::make('telegram.vpn-key', [
-            'key' => $this->generateVpnKey(),
+            'key' => $vpnKey,
         ])->render();
         $keyMsg = $bot->sendMessage(trim($keyMessage));
 
@@ -81,10 +81,5 @@ final readonly class VpnConnectionService
             'key' => $keyMsg->message_id,
             'instructions' => $instructionsMsg->message_id,
         ];
-    }
-
-    public function generateVpnKey(): string
-    {
-        return 'КЛЮЧ_ЗАГЛУШКА';
     }
 }

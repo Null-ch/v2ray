@@ -18,6 +18,7 @@ final class XuiDTO extends BaseItemDTO
         public ?string $password = null,
         public ?bool $ssl = null,
         public ?bool $is_active = null,
+        public ?int $inbound_id = null,
     ) {
     }
 }

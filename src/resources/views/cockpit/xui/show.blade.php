@@ -65,6 +65,15 @@
                             @endif
                         </dd>
 
+                        <dt class="col-sm-3">Inbound ID:</dt>
+                        <dd class="col-sm-9">
+                            @if($xui->inbound_id)
+                                <span class="badge badge-info">{{ $xui->inbound_id }}</span>
+                            @else
+                                <span class="text-muted">Не указан (будет использован первый доступный)</span>
+                            @endif
+                        </dd>
+
                         <dt class="col-sm-3">Создан:</dt>
                         <dd class="col-sm-9">{{ $xui->created_at->format('d.m.Y H:i:s') }}</dd>
 

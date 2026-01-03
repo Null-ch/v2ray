@@ -27,7 +27,8 @@ final readonly class TelegramBotHandlers
     public function __construct(
         private Nutgram $bot,
         private VpnConnectionService $vpnConnectionService,
-        private UserService $userService
+        private UserService $userService,
+        private XuiService $xuiService
     ) {
     }
 
@@ -67,10 +68,31 @@ final readonly class TelegramBotHandlers
                     return;
                 }
 
-                // Генерируем конфиг (заглушка)
-                $this->userService->generateVpnConfig();
+                // Получаем модель Xui для тега NL
+                $xuiModel = $this->xuiService->getXuiModelByTag('NL');
+                
+                // Создаем конфигурацию с длительностью 7 дней (604800 секунд)
+                $expiryTime = 7 * 24 * 60 * 60; // 7 дней в секундах
+                $inboundId = $xuiModel->inbound_id; // Используем inbound_id из модели, если указан
+                
+                $createResult = $this->xuiService->createConfig('NL', $user, $inboundId, $expiryTime);
+                
+                if (!$createResult['ok']) {
+                    throw new \RuntimeException('Failed to create config: ' . ($createResult['message'] ?? 'Unknown error'));
+                }
+                
+                // Получаем созданную конфигурацию
+                $inboundId = $createResult['data']['inbound_id'];
+                $userConfig = $this->xuiService->getUserConfig('NL', $inboundId, $user->id);
+                
+                if (!$userConfig['ok']) {
+                    throw new \RuntimeException('Failed to get user config: ' . ($userConfig['message'] ?? 'Unknown error'));
+                }
+                
+                // Формируем ключ/URI из конфигурации
+                $vpnKey = $this->formatVpnConfig($userConfig['data']);
 
-                $messageIds = $this->vpnConnectionService->sendVpnConnectionMessages($bot, $this->getInstructionsKeyboard());
+                $messageIds = $this->vpnConnectionService->sendVpnConnectionMessages($bot, $this->getInstructionsKeyboard(), $vpnKey);
 
                 $bot->setGlobalData('vpn_message_ids', $messageIds);
 
@@ -161,6 +183,48 @@ final readonly class TelegramBotHandlers
             ->addRow(
                 InlineKeyboardButton::make('Вернуться в главное меню', callback_data: 'main_menu')
             );
+    }
+
+    /**
+     * Format VPN configuration data to string representation
+     * 
+     * @param array $configData Configuration data from getUserConfig
+     * @return string Formatted VPN config string
+     */
+    private function formatVpnConfig(array $configData): string
+    {
+        $protocol = $configData['protocol'] ?? 'unknown';
+        $client = $configData['client'] ?? [];
+        $listen = $configData['listen'] ?? '0.0.0.0';
+        $port = $configData['port'] ?? 0;
+        
+        // Формируем базовую информацию о конфигурации
+        $configParts = [
+            "Protocol: {$protocol}",
+            "Server: {$listen}:{$port}",
+        ];
+        
+        // Добавляем информацию о клиенте в зависимости от протокола
+        if (in_array($protocol, ['vmess', 'vless'])) {
+            $uuid = $client['id'] ?? 'N/A';
+            $configParts[] = "UUID: {$uuid}";
+        } elseif ($protocol === 'trojan') {
+            $password = $client['password'] ?? 'N/A';
+            $configParts[] = "Password: {$password}";
+        } elseif ($protocol === 'shadowsocks') {
+            $password = $client['password'] ?? 'N/A';
+            $method = $client['method'] ?? 'N/A';
+            $configParts[] = "Method: {$method}";
+            $configParts[] = "Password: {$password}";
+        }
+        
+        // Добавляем информацию о сроке действия
+        if (isset($client['expiryTime']) && $client['expiryTime'] > 0) {
+            $expiryDate = date('Y-m-d H:i:s', $client['expiryTime'] / 1000);
+            $configParts[] = "Expires: {$expiryDate}";
+        }
+        
+        return implode("\n", $configParts);
     }
 }
 

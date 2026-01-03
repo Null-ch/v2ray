@@ -34,6 +34,7 @@ class XuiUpdateRequest extends FormRequest
             'password' => ['nullable', 'string', 'max:255'],
             'ssl' => ['boolean'],
             'is_active' => ['boolean'],
+            'inbound_id' => ['nullable', 'integer', 'min:1'],
         ];
     }
 }

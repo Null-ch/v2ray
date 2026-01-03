@@ -18,7 +18,7 @@ class XuiRepository extends BaseRepository
         parent::__construct($model, $logger);
     }
 
-    public function findByTag(string $tag): ?Model
+    public function findByTag(string $tag = 'NL'): ?Model
     {
         return $this->model
             ->newQuery()
