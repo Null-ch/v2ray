@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Console\Commands;
 
-use App\Services\TelegramBotHandlers;
 use App\Services\TelegramService;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Log;
@@ -42,14 +41,7 @@ final class TelegramBotCommand extends Command
             /** @var TelegramService $telegramService */
             $telegramService = app(TelegramService::class);
 
-            // Регистрируем обработчики прямо перед запуском бота
-            /** @var TelegramBotHandlers $handlers */
-            $handlers = app(TelegramBotHandlers::class);
-            $handlers->registerHandlers();
-
-            Log::info('All Telegram bot handlers registered, starting bot long polling');
-
-            // Запускаем бота
+            // Запускаем бота (обработчики регистрируются внутри TelegramService::run())
             $telegramService->run();
         } catch (\Throwable $e) {
             $this->error('Error starting Telegram bot: ' . $e->getMessage());

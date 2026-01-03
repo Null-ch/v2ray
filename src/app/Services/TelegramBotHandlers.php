@@ -25,6 +25,8 @@ use SergiX44\Nutgram\Telegram\Types\Keyboard\InlineKeyboardMarkup;
  */
 final readonly class TelegramBotHandlers
 {
+    private static bool $handlersRegistered = false;
+
     public function __construct(
         private Nutgram $bot,
         private VpnConnectionService $vpnConnectionService,
@@ -35,6 +37,12 @@ final readonly class TelegramBotHandlers
 
     public function registerHandlers(): void
     {
+        // Prevent multiple registrations on the same bot instance
+        if (self::$handlersRegistered) {
+            Log::debug('Handlers already registered, skipping');
+            return;
+        }
+
         Log::info('Registering Telegram bot handlers');
         
         // Обработчик команды /start
@@ -231,6 +239,7 @@ final readonly class TelegramBotHandlers
             // Но не блокируем специфичные обработчики - они должны сработать первыми
         });
         
+        self::$handlersRegistered = true;
         Log::info('All Telegram bot handlers registered');
     }
 

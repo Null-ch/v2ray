@@ -2,16 +2,13 @@
 
 namespace App\Providers;
 
-use App\Services\TelegramBotHandlers;
 use App\Services\VpnConnectionService;
-use Illuminate\Support\Facades\Log;
 use SergiX44\Nutgram\Nutgram;
 use App\Services\TelegramService;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
 {
-    private static bool $handlersRegistered = false;
 
     /**
      * Register any application services.
@@ -39,38 +36,7 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        $token = config('services.telegram.bot_token');
-
-        if (empty($token) || !$this->app->bound(TelegramService::class) || !$this->app->bound(VpnConnectionService::class)) {
-            return;
-        }
-
-        // Регистрируем обработчики только один раз
-        if (self::$handlersRegistered) {
-            Log::debug('Handlers already registered, skipping');
-            return;
-        }
-
-        try {
-            Log::info('Initializing Telegram bot handlers', [
-                'handlers_registered_flag' => self::$handlersRegistered,
-            ]);
-            $handlers = $this->app->make(TelegramBotHandlers::class);
-            $handlers->registerHandlers();
-            self::$handlersRegistered = true;
-            Log::info('Telegram bot handlers registered successfully', [
-                'handlers_registered_flag' => self::$handlersRegistered,
-            ]);
-        } catch (\Throwable $e) {
-            Log::error('Failed to register Telegram bot handlers', [
-                'message' => $e->getMessage(),
-                'file' => $e->getFile(),
-                'line' => $e->getLine(),
-            ]);
-            // Игнорируем ошибки при инициализации бота в тестовом окружении
-            if (app()->environment() !== 'testing') {
-                throw $e;
-            }
-        }
+        // Handlers should only be registered when the bot command is run,
+        // not during application bootstrap to avoid multiple registrations
     }
 }
