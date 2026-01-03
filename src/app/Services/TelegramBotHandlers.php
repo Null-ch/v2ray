@@ -56,52 +56,68 @@ final readonly class TelegramBotHandlers
 
         // Обработчик нажатия на кнопку "Принять" для нового пользователя
         $this->bot->onCallbackQueryData('accept_terms', function (Nutgram $bot) {
+            // 1️⃣ Немедленно отвечаем на callback, чтобы убрать "часики"
+            $bot->answerCallbackQuery('Обработка запроса...');
+
             try {
                 $telegramId = $bot->userId();
                 $username = $bot->user()->username;
                 $name = $bot->user()->first_name;
 
-                // Создаем пользователя в БД
-                if (!$user = $this->userService->findUserByTelegramId($telegramId)) {
+                // 2️⃣ Создаем пользователя в БД, если его нет
+                $user = $this->userService->findUserByTelegramId($telegramId);
+                if (!$user) {
                     $user = $this->userService->createUser($telegramId, $username, $name);
                 }
 
                 if (!$user) {
+                    // Ошибка создания пользователя, показываем alert
                     $bot->answerCallbackQuery('Ошибка создания пользователя', show_alert: true);
                     return;
                 }
 
-                Log::info('Получаем модель Xui для тега NL');
-                // Получаем модель Xui для тега NL
+                Log::info("Получаем модель Xui для тега NL");
+
+                // 3️⃣ Получаем модель Xui
                 $xuiModel = $this->xuiService->getXuiModelByTag('NL');
-                Log::info('Получили модель Xui для тега NL' . $xuiModel->tag );
-                // Создаем конфигурацию с длительностью 7 дней (604800 секунд)
+                Log::info("Получили модель Xui для тега NL: " . $xuiModel->tag);
+
+                // 4️⃣ Создаем конфигурацию на 7 дней
                 $expiryTime = 7 * 24 * 60 * 60; // 7 дней в секундах
-                $inboundId = $xuiModel->inbound_id; // Используем inbound_id из модели, если указан
+                $inboundId = $xuiModel->inbound_id;
 
                 $createResult = $this->xuiService->createConfig('NL', $user, $inboundId, $expiryTime);
 
                 if (!$createResult['ok']) {
-                    throw new \RuntimeException('Failed to create config: ' . ($createResult['message'] ?? 'Unknown error'));
+                    throw new \RuntimeException('Не удалось создать конфигурацию: ' . ($createResult['message'] ?? 'Unknown error'));
                 }
 
-                // Получаем созданную конфигурацию
+                // 5️⃣ Получаем созданную конфигурацию
                 $inboundId = $createResult['data']['inbound_id'];
                 $userConfig = $this->xuiService->getUserConfig('NL', $inboundId, $user->id);
 
                 if (!$userConfig['ok']) {
-                    throw new \RuntimeException('Failed to get user config: ' . ($userConfig['message'] ?? 'Unknown error'));
+                    throw new \RuntimeException('Не удалось получить конфигурацию пользователя: ' . ($userConfig['message'] ?? 'Unknown error'));
                 }
 
-                // Формируем ключ/URI из конфигурации
+                // 6️⃣ Формируем ключ/URI для VPN
                 $vpnKey = $this->formatVpnConfig($userConfig['data']);
 
-                $messageIds = $this->vpnConnectionService->sendVpnConnectionMessages($bot, $this->getInstructionsKeyboard(), $vpnKey);
+                // 7️⃣ Отправляем пользователю сообщения с VPN
+                $messageIds = $this->vpnConnectionService->sendVpnConnectionMessages(
+                    $bot,
+                    $this->getInstructionsKeyboard(),
+                    $vpnKey
+                );
 
+                // 8️⃣ Сохраняем ID сообщений в глобальные данные бота
                 $bot->setGlobalData('vpn_message_ids', $messageIds);
 
-                $bot->answerCallbackQuery();
+                // ✅ Дополнительно можно подтвердить успешное завершение операции
+                $bot->answerCallbackQuery('Ключ VPN готов и отправлен!');
             } catch (\Throwable $e) {
+                Log::error('Ошибка при обработке accept_terms: ' . $e->getMessage(), ['trace' => $e->getTraceAsString()]);
+                // Показываем пользователю сообщение об ошибке
                 $bot->answerCallbackQuery('Произошла ошибка: ' . $e->getMessage(), show_alert: true);
                 throw $e;
             }
