@@ -45,24 +45,19 @@ final class TelegramBotCommand extends Command
             return Command::FAILURE;
         }
 
-        // Проверяем статус вебхука перед запуском (если метод доступен)
+        // Проверяем статус вебхука перед запуском
         $this->info('Checking webhook status...');
         try {
             /** @var TelegramService $telegramService */
             $telegramService = app(TelegramService::class);
-            $bot = $telegramService->getBot();
+            $api = $telegramService->getApi();
             
-            // Пытаемся проверить статус вебхука (метод может отсутствовать в некоторых версиях)
-            if (method_exists($bot, 'getWebhookInfo')) {
-                $webhookInfo = $bot->getWebhookInfo();
-                if (!empty($webhookInfo->url ?? null)) {
-                    $this->warn("⚠️  Webhook is still active: {$webhookInfo->url}");
-                    $this->info('Webhook will be deleted automatically before starting polling...');
-                } else {
-                    $this->info('✓ No webhook is set');
-                }
+            $webhookInfo = $api->getWebhookInfo();
+            if (!empty($webhookInfo['result']['url'] ?? null)) {
+                $this->warn("⚠️  Webhook is still active: {$webhookInfo['result']['url']}");
+                $this->info('Webhook will be deleted automatically before starting polling...');
             } else {
-                $this->info('Webhook status check not available, will attempt to delete webhook before starting');
+                $this->info('✓ No webhook is set');
             }
         } catch (\Throwable $e) {
             $this->warn('Could not check webhook status: ' . $e->getMessage());

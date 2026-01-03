@@ -8,6 +8,7 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use App\Services\TelegramService;
 use App\Services\TelegramBotHandlers;
+use App\Services\TelegramApiService;
 use Illuminate\Support\Facades\Log;
 
 final readonly class TelegramWebhookController
@@ -19,7 +20,6 @@ final readonly class TelegramWebhookController
 
     public function handle(Request $request): Response
     {
-        // Логируем каждый запрос в самом начале - это КРИТИЧНО для отладки
         error_log('=== WEBHOOK CALLED === ' . date('Y-m-d H:i:s'));
         Log::info('=== WEBHOOK CALLED ===', [
             'method' => $request->method(),
@@ -34,7 +34,6 @@ final readonly class TelegramWebhookController
         try {
             $update = $request->all();
             
-            // Логируем детали обновления
             Log::info('Telegram webhook received', [
                 'update_id' => $update['update_id'] ?? null,
                 'has_message' => isset($update['message']),
@@ -51,12 +50,12 @@ final readonly class TelegramWebhookController
             }
             
             // Регистрируем обработчики перед обработкой обновления
-            // Это нужно делать здесь, так как вебхук обрабатывает обновления по одному
+            $api = $this->telegramService->getApi();
             $handlers = app(TelegramBotHandlers::class);
-            $handlers->registerHandlers();
+            $handlers->registerHandlers($api);
             
-            Log::info('Processing update with Nutgram');
-            $this->telegramService->getBot()->processUpdate($update);
+            Log::info('Processing update');
+            $handlers->handleUpdate($update);
             Log::info('Update processed successfully');
         } catch (\Throwable $e) {
             Log::error('Telegram webhook error', [
@@ -72,4 +71,3 @@ final readonly class TelegramWebhookController
         return response('OK', 200);
     }
 }
-

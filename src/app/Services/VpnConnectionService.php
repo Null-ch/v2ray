@@ -7,8 +7,6 @@ namespace App\Services;
 use App\Models\User;
 use App\Services\User\UserService;
 use Illuminate\Support\Facades\View;
-use SergiX44\Nutgram\Nutgram;
-use SergiX44\Nutgram\Telegram\Types\Keyboard\InlineKeyboardMarkup;
 
 final readonly class VpnConnectionService
 {
@@ -17,21 +15,24 @@ final readonly class VpnConnectionService
     }
 
     public function sendWelcomeMessageForNewUser(
-        Nutgram $bot,
-        ?InlineKeyboardMarkup $keyboard = null
+        int|string $chatId,
+        ?array $keyboard = null,
+        TelegramApiService $api
     ): void {
         $message = View::make('telegram.welcome', [
             'dailyCost' => $this->userService->getDailyCost(),
             'initialBalance' => $this->userService->getInitialBalance(),
         ])->render();
 
-        $bot->sendMessage(trim($message), parse_mode: 'HTML', reply_markup: $keyboard);
+        $api->sendMessage($chatId, trim($message), 'HTML', $keyboard);
     }
 
     public function sendMainMenu(
-        Nutgram $bot,
+        int|string $chatId,
         User $user,
-        ?InlineKeyboardMarkup $keyboard = null
+        ?array $keyboard = null,
+        TelegramApiService $api,
+        array $from = []
     ): void {
         $balance = $user->balance?->balance ?? 0;
         $dailyCost = $this->userService->getDailyCost();
@@ -41,7 +42,7 @@ final readonly class VpnConnectionService
 
         $daysWord = $this->getDaysWord($daysRemaining);
 
-        $name = $bot->user()->first_name ?? $user->name ?? $user->tg_tag ?? 'пользователь';
+        $name = $from['first_name'] ?? $user->name ?? $user->tg_tag ?? 'пользователь';
 
         $message = View::make('telegram.welcome-back', [
             'name' => $name,
@@ -52,7 +53,7 @@ final readonly class VpnConnectionService
             'dailyCost' => $dailyCost,
         ])->render();
 
-        $bot->sendMessage(trim($message), parse_mode: 'HTML', reply_markup: $keyboard);
+        $api->sendMessage($chatId, trim($message), 'HTML', $keyboard);
     }
 
     private function getDaysWord(int $days): string
@@ -63,23 +64,30 @@ final readonly class VpnConnectionService
         return $titles[($days % 100 > 4 && $days % 100 < 20) ? 2 : $cases[min($days % 10, 5)]];
     }
 
-    public function sendVpnConnectionMessages(Nutgram $bot, ?InlineKeyboardMarkup $instructionsKeyboard = null, string $vpnKey): array
-    {
+    public function sendVpnConnectionMessages(
+        int|string $chatId,
+        ?array $instructionsKeyboard = null,
+        string $vpnKey,
+        TelegramApiService $api
+    ): array {
         $congratsMessage = View::make('telegram.vpn-congratulations')->render();
-        $congratsMsg = $bot->sendMessage(trim($congratsMessage));
+        $congratsResponse = $api->sendMessage($chatId, trim($congratsMessage));
+        $congratsMsgId = $congratsResponse['result']['message_id'] ?? null;
 
         $keyMessage = View::make('telegram.vpn-key', [
             'key' => $vpnKey,
         ])->render();
-        $keyMsg = $bot->sendMessage(trim($keyMessage));
+        $keyResponse = $api->sendMessage($chatId, trim($keyMessage));
+        $keyMsgId = $keyResponse['result']['message_id'] ?? null;
 
         $instructionsMessage = View::make('telegram.vpn-instructions')->render();
-        $instructionsMsg = $bot->sendMessage(trim($instructionsMessage), reply_markup: $instructionsKeyboard);
+        $instructionsResponse = $api->sendMessage($chatId, trim($instructionsMessage), null, $instructionsKeyboard);
+        $instructionsMsgId = $instructionsResponse['result']['message_id'] ?? null;
 
         return [
-            'congrats' => $congratsMsg->message_id,
-            'key' => $keyMsg->message_id,
-            'instructions' => $instructionsMsg->message_id,
+            'congrats' => $congratsMsgId,
+            'key' => $keyMsgId,
+            'instructions' => $instructionsMsgId,
         ];
     }
 }

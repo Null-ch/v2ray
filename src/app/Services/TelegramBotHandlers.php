@@ -6,316 +6,383 @@ namespace App\Services;
 
 use App\Services\User\UserService;
 use Illuminate\Support\Facades\Log;
-use SergiX44\Nutgram\Nutgram;
-use SergiX44\Nutgram\Telegram\Types\Keyboard\InlineKeyboardButton;
-use SergiX44\Nutgram\Telegram\Types\Keyboard\InlineKeyboardMarkup;
 
-/**
- * Пример обработчиков команд для Telegram бота
- *
- * Использование:
- * В AppServiceProvider или в отдельном сервис-провайдере зарегистрируйте обработчики:
- *
- * $bot = app(Nutgram::class);
- * $bot->onCommand('start', function (Nutgram $bot) {
- *     $bot->sendMessage('Привет! Я бот.');
- * });
- *
- * Или используйте этот класс для организации обработчиков
- */
 final class TelegramBotHandlers
 {
-    private static bool $handlersRegistered = false;
+    private TelegramApiService $api;
+    private array $userData = []; // Хранилище данных пользователей (замена setGlobalData)
 
     public function __construct(
-        private Nutgram $bot,
         private VpnConnectionService $vpnConnectionService,
         private UserService $userService,
         private XuiService $xuiService
     ) {
     }
 
-    public function registerHandlers(): void
+    public function registerHandlers(TelegramApiService $api): void
     {
-        // Prevent multiple registrations on the same bot instance
-        if (self::$handlersRegistered) {
-            Log::debug('Handlers already registered, skipping');
+        $this->api = $api;
+        Log::info('Telegram bot handlers ready');
+    }
+
+    public function handleUpdate(array $update): void
+    {
+        try {
+            // Обработка сообщений
+            if (isset($update['message'])) {
+                $this->handleMessage($update['message']);
+            }
+
+            // Обработка callback query
+            if (isset($update['callback_query'])) {
+                $this->handleCallbackQuery($update['callback_query']);
+            }
+        } catch (\Throwable $e) {
+            Log::error('Error handling update', [
+                'message' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+        }
+    }
+
+    private function handleMessage(array $message): void
+    {
+        $chatId = $message['chat']['id'] ?? null;
+        $text = $message['text'] ?? '';
+        $from = $message['from'] ?? [];
+
+        if (!$chatId) {
             return;
         }
 
-        Log::info('Registering Telegram bot handlers');
+        // Обработка команд
+        if (str_starts_with($text, '/')) {
+            $command = explode(' ', $text)[0];
+            $command = str_replace('/', '', $command);
+
+            match ($command) {
+                'start' => $this->handleStartCommand($chatId, $from),
+                'help' => $this->handleHelpCommand($chatId),
+                default => null,
+            };
+        }
+    }
+
+    private function handleStartCommand(int|string $chatId, array $from): void
+    {
+        $telegramId = $from['id'] ?? null;
         
-        // Обработчик команды /start
-        $this->bot->onCommand('start', function (Nutgram $bot) {
-            Log::info('Start command received', ['user_id' => $bot->userId()]);
-            $telegramId = $bot->userId();
-            $user = $this->userService->findUserByTelegramId($telegramId);
+        if (!$telegramId) {
+            return;
+        }
 
-            if (!$user) {
-                $keyboard = InlineKeyboardMarkup::make()
-                    ->addRow(InlineKeyboardButton::make('✅Принять', callback_data: 'accept_terms'));
-
-                $this->vpnConnectionService->sendWelcomeMessageForNewUser($bot, $keyboard);
-            } else {
-                // Существующий пользователь - показываем главное меню
-                $keyboard = InlineKeyboardMarkup::make()
-                    ->addRow(InlineKeyboardButton::make('ПОДКЛЮЧИТЬ ВПН', callback_data: 'connect_vpn'));
-
-                $this->vpnConnectionService->sendMainMenu($bot, $user, $keyboard);
-            }
-        });
-
-        // Обработчик нажатия на кнопку "Принять" для нового пользователя
-        Log::info('Registering accept_terms callback handler');
+        Log::info('Start command received', ['user_id' => $telegramId]);
         
-        // Регистрируем специфичные обработчики ПЕРЕД общим
-        // ВАЖНО: В Nutgram обработчики onCallbackQueryData имеют приоритет над onCallbackQuery
-        $this->bot->onCallbackQueryData('accept_terms', function (Nutgram $bot) {
-            error_log('=== accept_terms CALLBACK TRIGGERED === ' . date('Y-m-d H:i:s'));
-            Log::info('=== accept_terms callback triggered ===', [
-                'user_id' => $bot->userId(),
-                'chat_id' => $bot->chatId(),
-                'callback_query_id' => $bot->callbackQuery()?->id,
-                'callback_data' => $bot->callbackQuery()?->data,
-                'timestamp' => now()->toDateTimeString(),
+        $user = $this->userService->findUserByTelegramId($telegramId);
+
+        if (!$user) {
+            // Новый пользователь
+            $keyboard = $this->createInlineKeyboard([
+                [['text' => '✅Принять', 'callback_data' => 'accept_terms']]
             ]);
 
-            // ВАЖНО: Отвечаем на callback query СРАЗУ, до выполнения долгих операций
-            // Telegram требует ответ в течение ~1 секунды, иначе возникает ошибка "query is too old"
-            try {
-                $bot->answerCallbackQuery('Обработка...');
-            } catch (\Throwable $e) {
-                // Если query уже истек, просто логируем и продолжаем
-                Log::warning('Failed to answer callback query immediately', [
-                    'message' => $e->getMessage(),
-                ]);
+            $this->vpnConnectionService->sendWelcomeMessageForNewUser($chatId, $keyboard, $this->api);
+        } else {
+            // Существующий пользователь
+            $keyboard = $this->createInlineKeyboard([
+                [['text' => 'ПОДКЛЮЧИТЬ ВПН', 'callback_data' => 'connect_vpn']]
+            ]);
+
+            $this->vpnConnectionService->sendMainMenu($chatId, $user, $keyboard, $this->api, $from);
+        }
+    }
+
+    private function handleHelpCommand(int|string $chatId): void
+    {
+        $text = 'Доступные команды:' . PHP_EOL . '/start - Начать работу' . PHP_EOL . '/help - Помощь';
+        $this->api->sendMessage($chatId, $text);
+    }
+
+    private function handleCallbackQuery(array $callbackQuery): void
+    {
+        $callbackQueryId = $callbackQuery['id'] ?? null;
+        $data = $callbackQuery['data'] ?? null;
+        $from = $callbackQuery['from'] ?? [];
+        $message = $callbackQuery['message'] ?? [];
+        $chatId = $message['chat']['id'] ?? null;
+
+        if (!$callbackQueryId || !$data || !$chatId) {
+            return;
+        }
+
+        Log::info('Callback query received', [
+            'callback_query_id' => $callbackQueryId,
+            'data' => $data,
+            'user_id' => $from['id'] ?? null,
+            'chat_id' => $chatId,
+        ]);
+
+        // Обрабатываем в зависимости от callback_data
+        match ($data) {
+            'accept_terms' => $this->handleAcceptTerms($callbackQueryId, $chatId, $from),
+            'connect_vpn' => $this->handleConnectVpn($callbackQueryId, $chatId, $from),
+            'export_config' => $this->handleExportConfig($callbackQueryId, $chatId),
+            'main_menu' => $this->handleMainMenu($callbackQueryId, $chatId, $from),
+            default => $this->handleUnknownCallback($callbackQueryId),
+        };
+    }
+
+    private function handleAcceptTerms(string $callbackQueryId, int|string $chatId, array $from): void
+    {
+        error_log('=== accept_terms CALLBACK TRIGGERED === ' . date('Y-m-d H:i:s'));
+        
+        Log::info('=== accept_terms callback triggered ===', [
+            'user_id' => $from['id'] ?? null,
+            'chat_id' => $chatId,
+            'callback_query_id' => $callbackQueryId,
+            'timestamp' => now()->toDateTimeString(),
+        ]);
+
+        // Отвечаем на callback query СРАЗУ
+        try {
+            $this->api->answerCallbackQuery($callbackQueryId, 'Обработка...');
+        } catch (\Throwable $e) {
+            Log::warning('Failed to answer callback query immediately', [
+                'message' => $e->getMessage(),
+            ]);
+        }
+
+        try {
+            $telegramId = $from['id'] ?? null;
+            if (!$telegramId) {
+                throw new \RuntimeException('Telegram ID not found');
             }
 
-            try {
-                $telegramId = $bot->userId();
-                Log::info('Getting user data', ['telegram_id' => $telegramId]);
-                
-                $username = $bot->user()->username;
-                $name = $bot->user()->first_name;
-                Log::info('User data retrieved', ['username' => $username, 'name' => $name]);
+            Log::info('Getting user data', ['telegram_id' => $telegramId]);
+            
+            $username = $from['username'] ?? null;
+            $name = $from['first_name'] ?? null;
+            Log::info('User data retrieved', ['username' => $username, 'name' => $name]);
 
-                // Проверяем, не существует ли уже пользователь
-                $existingUser = $this->userService->findUserByTelegramId($telegramId);
-                if ($existingUser) {
-                    Log::info('User already exists, using existing user', [
-                        'user_id' => $existingUser->id,
-                        'telegram_id' => $telegramId,
-                    ]);
-                    $user = $existingUser;
-                } else {
-                    // Создаем пользователя в БД
-                    Log::info('Creating user in database', [
+            // Проверяем, не существует ли уже пользователь
+            $existingUser = $this->userService->findUserByTelegramId($telegramId);
+            if ($existingUser) {
+                Log::info('User already exists, using existing user', [
+                    'user_id' => $existingUser->id,
+                    'telegram_id' => $telegramId,
+                ]);
+                $user = $existingUser;
+            } else {
+                // Создаем пользователя в БД
+                Log::info('Creating user in database', [
+                    'telegram_id' => $telegramId,
+                    'username' => $username,
+                    'name' => $name,
+                ]);
+                $user = $this->userService->createUser($telegramId, $username, $name);
+
+                if (!$user) {
+                    Log::error('Failed to create user', [
                         'telegram_id' => $telegramId,
                         'username' => $username,
                         'name' => $name,
                     ]);
-                    $user = $this->userService->createUser($telegramId, $username, $name);
-
-                    if (!$user) {
-                        Log::error('Failed to create user', [
-                            'telegram_id' => $telegramId,
-                            'username' => $username,
-                            'name' => $name,
-                        ]);
-                        // Пытаемся показать ошибку пользователю через новое сообщение
-                        $bot->sendMessage(
-                            '❌ Ошибка создания пользователя. Попробуйте позже или обратитесь в поддержку.'
-                        );
-                        return;
-                    }
-                    Log::info('User created successfully', [
-                        'user_id' => $user->id,
-                        'telegram_id' => $telegramId,
-                    ]);
+                    $this->api->sendMessage(
+                        $chatId,
+                        '❌ Ошибка создания пользователя. Попробуйте позже или обратитесь в поддержку.'
+                    );
+                    return;
                 }
-
-                // Получаем модель Xui для тега NL
-                Log::info('Getting Xui model for tag NL');
-                $xuiModel = $this->xuiService->getXuiModelByTag('NL');
-                Log::info('Xui model retrieved', ['xui_id' => $xuiModel->id, 'inbound_id' => $xuiModel->inbound_id]);
-                
-                // Создаем конфигурацию с длительностью 7 дней (604800 секунд)
-                $expiryTime = 7 * 24 * 60 * 60; // 7 дней в секундах
-                $inboundId = $xuiModel->inbound_id; // Используем inbound_id из модели, если указан
-                Log::info('Creating config', [
+                Log::info('User created successfully', [
                     'user_id' => $user->id,
-                    'inbound_id' => $inboundId,
-                    'expiry_time' => $expiryTime,
+                    'telegram_id' => $telegramId,
                 ]);
-                
-                $createResult = $this->xuiService->createConfig('NL', $user, $inboundId, $expiryTime);
-                Log::info('Config creation result', ['ok' => $createResult['ok'] ?? false, 'data' => $createResult['data'] ?? null]);
-                
-                if (!$createResult['ok']) {
-                    throw new \RuntimeException('Failed to create config: ' . ($createResult['message'] ?? 'Unknown error'));
-                }
-                
-                // Получаем созданную конфигурацию
-                $inboundId = $createResult['data']['inbound_id'];
-                Log::info('Getting user config', ['inbound_id' => $inboundId, 'user_id' => $user->id]);
-                $userConfig = $this->xuiService->getUserConfig('NL', $inboundId, $user->id);
-                Log::info('User config retrieved', ['ok' => $userConfig['ok'] ?? false]);
-                
-                if (!$userConfig['ok']) {
-                    throw new \RuntimeException('Failed to get user config: ' . ($userConfig['message'] ?? 'Unknown error'));
-                }
-                
-                // Формируем ключ/URI из конфигурации
-                Log::info('Formatting VPN config');
-                $vpnKey = $this->formatVpnConfig($userConfig['data']);
-                Log::info('VPN key formatted', ['length' => strlen($vpnKey)]);
-
-                Log::info('Sending VPN connection messages');
-                $messageIds = $this->vpnConnectionService->sendVpnConnectionMessages($bot, $this->getInstructionsKeyboard(), $vpnKey);
-                Log::info('Messages sent', ['message_ids' => $messageIds]);
-
-                $bot->setGlobalData('vpn_message_ids', $messageIds);
-
-                Log::info('accept_terms callback completed successfully');
-            } catch (\Throwable $e) {
-                Log::error('Error in accept_terms callback', [
-                    'message' => $e->getMessage(),
-                    'file' => $e->getFile(),
-                    'line' => $e->getLine(),
-                    'trace' => $e->getTraceAsString(),
-                ]);
-                
-                // Отправляем ошибку пользователю через сообщение, так как callback query уже обработан
-                $errorMessage = mb_substr($e->getMessage(), 0, 200);
-                $bot->sendMessage('❌ Произошла ошибка: ' . $errorMessage);
             }
-        });
 
-        // Обработчик нажатия на кнопку "ПОДКЛЮЧИТЬ ВПН" для существующих пользователей
-        $this->bot->onCallbackQueryData('connect_vpn', function (Nutgram $bot) {
-            Log::info('connect_vpn callback triggered');
+            // Получаем модель Xui для тега NL
+            Log::info('Getting Xui model for tag NL');
+            $xuiModel = $this->xuiService->getXuiModelByTag('NL');
+            Log::info('Xui model retrieved', ['xui_id' => $xuiModel->id, 'inbound_id' => $xuiModel->inbound_id]);
             
-            // Отвечаем на callback сразу, до выполнения операций
+            // Создаем конфигурацию с длительностью 7 дней (604800 секунд)
+            $expiryTime = 7 * 24 * 60 * 60; // 7 дней в секундах
+            $inboundId = $xuiModel->inbound_id;
+            Log::info('Creating config', [
+                'user_id' => $user->id,
+                'inbound_id' => $inboundId,
+                'expiry_time' => $expiryTime,
+            ]);
+            
+            $createResult = $this->xuiService->createConfig('NL', $user, $inboundId, $expiryTime);
+            Log::info('Config creation result', ['ok' => $createResult['ok'] ?? false, 'data' => $createResult['data'] ?? null]);
+            
+            if (!$createResult['ok']) {
+                throw new \RuntimeException('Failed to create config: ' . ($createResult['message'] ?? 'Unknown error'));
+            }
+            
+            // Получаем созданную конфигурацию
+            $inboundId = $createResult['data']['inbound_id'];
+            Log::info('Getting user config', ['inbound_id' => $inboundId, 'user_id' => $user->id]);
+            $userConfig = $this->xuiService->getUserConfig('NL', $inboundId, $user->id);
+            Log::info('User config retrieved', ['ok' => $userConfig['ok'] ?? false]);
+            
+            if (!$userConfig['ok']) {
+                throw new \RuntimeException('Failed to get user config: ' . ($userConfig['message'] ?? 'Unknown error'));
+            }
+            
+            // Формируем ключ/URI из конфигурации
+            Log::info('Formatting VPN config');
+            $vpnKey = $this->formatVpnConfig($userConfig['data']);
+            Log::info('VPN key formatted', ['length' => strlen($vpnKey)]);
+
+            Log::info('Sending VPN connection messages');
+            $keyboard = $this->getInstructionsKeyboard();
+            $messageIds = $this->vpnConnectionService->sendVpnConnectionMessages($chatId, $keyboard, $vpnKey, $this->api);
+            Log::info('Messages sent', ['message_ids' => $messageIds]);
+
+            // Сохраняем ID сообщений
+            $this->setUserData($chatId, 'vpn_message_ids', $messageIds);
+
+            Log::info('accept_terms callback completed successfully');
+        } catch (\Throwable $e) {
+            Log::error('Error in accept_terms callback', [
+                'message' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+            
+            $errorMessage = mb_substr($e->getMessage(), 0, 200);
+            $this->api->sendMessage($chatId, '❌ Произошла ошибка: ' . $errorMessage);
+        }
+    }
+
+    private function handleConnectVpn(string $callbackQueryId, int|string $chatId, array $from): void
+    {
+        Log::info('connect_vpn callback triggered');
+        
+        // Отвечаем на callback сразу
+        try {
+            $this->api->answerCallbackQuery($callbackQueryId);
+        } catch (\Throwable $e) {
+            Log::warning('Failed to answer callback query', ['message' => $e->getMessage()]);
+        }
+        
+        $keyboard = $this->getInstructionsKeyboard();
+        $messageIds = $this->vpnConnectionService->sendVpnConnectionMessages($chatId, $keyboard, 'КЛЮЧ_ЗАГЛУШКА', $this->api);
+
+        // Сохраняем ID сообщений
+        $this->setUserData($chatId, 'vpn_message_ids', $messageIds);
+    }
+
+    private function handleExportConfig(string $callbackQueryId, int|string $chatId): void
+    {
+        // Отвечаем на callback сразу
+        try {
+            $this->api->answerCallbackQuery($callbackQueryId, 'Ссылка отправлена');
+        } catch (\Throwable $e) {
+            Log::warning('Failed to answer callback query', ['message' => $e->getMessage()]);
+        }
+        
+        $exportUrl = 'https://www.sigmalink.org/redirect/?redirect_to=www.sigmalink.org&token=PLACEHOLDER_TOKEN&scheme=v2raytun';
+
+        $this->api->sendMessage(
+            $chatId,
+            "📲 Экспортная ссылка для переноса конфигов:\n\n$exportUrl\n\n⚠️ Внимание: это заглушка, функционал в разработке",
+            'HTML'
+        );
+    }
+
+    private function handleMainMenu(string $callbackQueryId, int|string $chatId, array $from): void
+    {
+        // Отвечаем на callback сразу
+        try {
+            $this->api->answerCallbackQuery($callbackQueryId);
+        } catch (\Throwable $e) {
+            Log::warning('Failed to answer callback query', ['message' => $e->getMessage()]);
+        }
+        
+        // Получаем ID сообщений для удаления
+        $messageIds = $this->getUserData($chatId, 'vpn_message_ids', []);
+
+        // Удаляем сообщения
+        foreach ($messageIds as $messageId) {
             try {
-                $bot->answerCallbackQuery();
+                $this->api->deleteMessage($chatId, $messageId);
             } catch (\Throwable $e) {
-                Log::warning('Failed to answer callback query', ['message' => $e->getMessage()]);
+                // Игнорируем ошибки удаления
             }
-            
-            $messageIds = $this->vpnConnectionService->sendVpnConnectionMessages($bot, $this->getInstructionsKeyboard(), 'КЛЮЧ_ЗАГЛУШКА');
+        }
 
-            // Сохраняем ID сообщений в глобальные данные пользователя
-            $bot->setGlobalData('vpn_message_ids', $messageIds);
-        });
-
-        // Обработчик кнопки "Перенести в приложение"
-        $this->bot->onCallbackQueryData('export_config', function (Nutgram $bot) {
-            // Отвечаем на callback сразу
-            try {
-                $bot->answerCallbackQuery('Ссылка отправлена');
-            } catch (\Throwable $e) {
-                Log::warning('Failed to answer callback query', ['message' => $e->getMessage()]);
-            }
-            
-            // TODO: Генерация экспортной ссылки с конфигами
-            // Пример: https://www.sigmalink.org/redirect/?redirect_to=www.sigmalink.org&token=TOKEN&scheme=v2raytun
-
-            $exportUrl = 'https://www.sigmalink.org/redirect/?redirect_to=www.sigmalink.org&token=PLACEHOLDER_TOKEN&scheme=v2raytun';
-
-            $bot->sendMessage(
-                "📲 Экспортная ссылка для переноса конфигов:\n\n$exportUrl\n\n⚠️ Внимание: это заглушка, функционал в разработке",
-                parse_mode: 'HTML'
-            );
-        });
-
-        // Обработчик кнопки "Вернуться в главное меню"
-        $this->bot->onCallbackQueryData('main_menu', function (Nutgram $bot) {
-            // Отвечаем на callback сразу
-            try {
-                $bot->answerCallbackQuery();
-            } catch (\Throwable $e) {
-                Log::warning('Failed to answer callback query', ['message' => $e->getMessage()]);
-            }
-            
-            // Получаем ID сообщений для удаления
-            $messageIds = $bot->getGlobalData('vpn_message_ids', []);
-
-            // Удаляем сообщения (поздравление, ключ, инструкция)
-            foreach ($messageIds as $messageId) {
-                try {
-                    $bot->deleteMessage($bot->chatId(), $messageId);
-                } catch (\Throwable $e) {
-                    // Игнорируем ошибки удаления
-                }
-            }
-
-            // Получаем пользователя из БД
-            $telegramId = $bot->userId();
+        // Получаем пользователя из БД
+        $telegramId = $from['id'] ?? null;
+        if ($telegramId) {
             $user = $this->userService->findUserByTelegramId($telegramId);
 
             if ($user) {
                 // Отправляем главное меню с балансом
-                $keyboard = InlineKeyboardMarkup::make()
-                    ->addRow(InlineKeyboardButton::make('ПОДКЛЮЧИТЬ ВПН', callback_data: 'connect_vpn'));
+                $keyboard = $this->createInlineKeyboard([
+                    [['text' => 'ПОДКЛЮЧИТЬ ВПН', 'callback_data' => 'connect_vpn']]
+                ]);
 
-                $this->vpnConnectionService->sendMainMenu($bot, $user, $keyboard);
+                $this->vpnConnectionService->sendMainMenu($chatId, $user, $keyboard, $this->api, $from);
             }
-        });
-
-        // Пример обработчика команды /help
-        $this->bot->onCommand('help', function (Nutgram $bot) {
-            $bot->sendMessage('Доступные команды:' . PHP_EOL . '/start - Начать работу' . PHP_EOL . '/help - Помощь');
-        });
-        
-        // Общий обработчик для всех остальных callback_query (регистрируется ПОСЛЕ специфичных)
-        // ВАЖНО: Этот обработчик должен быть последним и не должен блокировать специфичные обработчики
-        // В Nutgram специфичные обработчики (onCallbackQueryData) имеют приоритет над общими (onCallbackQuery)
-        // Но на всякий случай логируем только необработанные запросы
-        $this->bot->onCallbackQuery(function (Nutgram $bot) {
-            $callbackData = $bot->callbackQuery()?->data;
-            
-            // Логируем все callback-запросы для отладки
-            Log::info('General callback query handler triggered', [
-                'data' => $callbackData,
-                'user_id' => $bot->userId(),
-                'chat_id' => $bot->chatId(),
-                'message_id' => $bot->callbackQuery()?->message?->message_id,
-            ]);
-            
-            // Если это необработанный callback, отвечаем на него
-            // Но не блокируем специфичные обработчики - они должны сработать первыми
-        });
-        
-        self::$handlersRegistered = true;
-        Log::info('All Telegram bot handlers registered');
+        }
     }
 
-    private function getInstructionsKeyboard(): InlineKeyboardMarkup
+    private function handleUnknownCallback(string $callbackQueryId): void
     {
-        return InlineKeyboardMarkup::make()
-            ->addRow(
-                InlineKeyboardButton::make('Приложение для Android', url: 'https://play.google.com/store/apps/details?id=com.v2raytun.android&pcampaignid=web_share')
-            )
-            ->addRow(
-                InlineKeyboardButton::make('Приложение для iPhone/iOS', url: 'https://apps.apple.com/ru/app/v2raytun/id6476628951')
-            )
-            ->addRow(
-                InlineKeyboardButton::make('Инструкция для Windows', url: 'https://telegra.ph/Instrukciya-po-ustanovke-V2raytun-na-PK--Windows-1011-01-02')
-            )
-            ->addRow(
-                InlineKeyboardButton::make('📲 Перенести в приложение', callback_data: 'export_config')
-            )
-            ->addRow(
-                InlineKeyboardButton::make('Вернуться в главное меню', callback_data: 'main_menu')
-            );
+        Log::info('Unknown callback query', ['callback_query_id' => $callbackQueryId]);
+        try {
+            $this->api->answerCallbackQuery($callbackQueryId);
+        } catch (\Throwable $e) {
+            // Игнорируем ошибки
+        }
     }
 
-    /**
-     * Format VPN configuration data to string representation
-     * 
-     * @param array $configData Configuration data from getUserConfig
-     * @return string Formatted VPN config string
-     */
+    private function getInstructionsKeyboard(): array
+    {
+        return $this->createInlineKeyboard([
+            [['text' => 'Приложение для Android', 'url' => 'https://play.google.com/store/apps/details?id=com.v2raytun.android&pcampaignid=web_share']],
+            [['text' => 'Приложение для iPhone/iOS', 'url' => 'https://apps.apple.com/ru/app/v2raytun/id6476628951']],
+            [['text' => 'Инструкция для Windows', 'url' => 'https://telegra.ph/Instrukciya-po-ustanovke-V2raytun-na-PK--Windows-1011-01-02']],
+            [['text' => '📲 Перенести в приложение', 'callback_data' => 'export_config']],
+            [['text' => 'Вернуться в главное меню', 'callback_data' => 'main_menu']],
+        ]);
+    }
+
+    private function createInlineKeyboard(array $buttons): array
+    {
+        $keyboard = [];
+        foreach ($buttons as $row) {
+            $keyboardRow = [];
+            foreach ($row as $button) {
+                $keyboardButton = ['text' => $button['text']];
+                if (isset($button['callback_data'])) {
+                    $keyboardButton['callback_data'] = $button['callback_data'];
+                }
+                if (isset($button['url'])) {
+                    $keyboardButton['url'] = $button['url'];
+                }
+                $keyboardRow[] = $keyboardButton;
+            }
+            $keyboard[] = $keyboardRow;
+        }
+        return ['inline_keyboard' => $keyboard];
+    }
+
+    private function setUserData(int|string $chatId, string $key, mixed $value): void
+    {
+        $this->userData[$chatId][$key] = $value;
+    }
+
+    private function getUserData(int|string $chatId, string $key, mixed $default = null): mixed
+    {
+        return $this->userData[$chatId][$key] ?? $default;
+    }
+
     private function formatVpnConfig(array $configData): string
     {
         $protocol = $configData['protocol'] ?? 'unknown';
@@ -323,13 +390,11 @@ final class TelegramBotHandlers
         $listen = $configData['listen'] ?? '0.0.0.0';
         $port = $configData['port'] ?? 0;
         
-        // Формируем базовую информацию о конфигурации
         $configParts = [
             "Protocol: {$protocol}",
             "Server: {$listen}:{$port}",
         ];
         
-        // Добавляем информацию о клиенте в зависимости от протокола
         if (in_array($protocol, ['vmess', 'vless'])) {
             $uuid = $client['id'] ?? 'N/A';
             $configParts[] = "UUID: {$uuid}";
@@ -343,7 +408,6 @@ final class TelegramBotHandlers
             $configParts[] = "Password: {$password}";
         }
         
-        // Добавляем информацию о сроке действия
         if (isset($client['expiryTime']) && $client['expiryTime'] > 0) {
             $expiryDate = date('Y-m-d H:i:s', $client['expiryTime'] / 1000);
             $configParts[] = "Expires: {$expiryDate}";
@@ -352,4 +416,3 @@ final class TelegramBotHandlers
         return implode("\n", $configParts);
     }
 }
-

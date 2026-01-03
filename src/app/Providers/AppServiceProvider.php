@@ -3,7 +3,6 @@
 namespace App\Providers;
 
 use App\Services\VpnConnectionService;
-use SergiX44\Nutgram\Nutgram;
 use App\Services\TelegramService;
 use Illuminate\Support\ServiceProvider;
 
@@ -21,10 +20,6 @@ class AppServiceProvider extends ServiceProvider
         if (!empty($token)) {
             $this->app->singleton(TelegramService::class, function ($app) {
                 return new TelegramService();
-            });
-
-            $this->app->singleton(Nutgram::class, function ($app) {
-                return $app->make(TelegramService::class)->getBot();
             });
 
             $this->app->singleton(VpnConnectionService::class);
