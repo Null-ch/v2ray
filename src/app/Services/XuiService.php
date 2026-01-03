@@ -7,6 +7,7 @@ namespace App\Services;
 use App\Models\User;
 use App\Models\Xui;
 use App\Repositories\XuiRepository;
+use Illuminate\Support\Facades\Log;
 use XUI\Xray\Inbound\Inbound as InboundClass;
 use XUI\Xui as XuiClient;
 
@@ -67,8 +68,16 @@ final class XuiService
 
         $loginResult = $xui->login($xuiModel->username, $xuiModel->password);
 
+        Log::info('CLIENT LOGIN RESULT', ['host' => $host, 'port' => $xuiModel->port, 'path' => $xuiModel->path]);
+
+        Log::info('XUI Login result:', [
+            'ok' => $loginResult->ok ?? 'not set',
+            'response' => json_encode($loginResult->response ?? 'not set'),
+            'error' => $loginResult->error ?? 'not set',
+        ]);
+
         if (!($loginResult->ok ?? false) || !($loginResult->response->success ?? false)) {
-            throw new \RuntimeException('Failed to login to 3x-ui panel: ' . ($loginResult->response->msg ?? 'Unknown error'));
+            throw new \RuntimeException('Failed to login to 3x-ui panel: ' . ($loginResult->response->msg ?? $loginResult->error ?? 'Unknown error'));
         }
 
         return $xui;
