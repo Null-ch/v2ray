@@ -4,49 +4,41 @@ declare(strict_types=1);
 
 namespace App\Repositories;
 
-use App\DTO\User\UserDTO;
-use App\Models\User;
+use App\DTO\BalanceDTO;
+use App\Models\Balance;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
 use Psr\Log\LoggerInterface;
 
-class UserRepository extends BaseRepository
+class BalanceRepository extends BaseRepository
 {
-    public function __construct(User $model, LoggerInterface $logger)
+    public function __construct(Balance $model, LoggerInterface $logger)
     {
         parent::__construct($model, $logger);
     }
 
-    public function findByTelegramId(int $telegramId): ?Model
-    {
-        return $this->model
-            ->newQuery()
-            ->where('tg_id', $telegramId)
-            ->first();
-    }
-
-    public function create(UserDTO $userDTO): ?Model
+    public function create(BalanceDTO $balanceDTO): ?Model
     {
         try {
-            return DB::transaction(function () use ($userDTO) {
-                return $this->createInstance($userDTO);
+            return DB::transaction(function () use ($balanceDTO) {
+                return $this->createInstance($balanceDTO);
             });
         } catch (\Throwable $exception) {
-            $this->logger->error('User create transaction error: ' . $exception->getMessage());
+            $this->logger->error('Balance create transaction error: ' . $exception->getMessage());
             $this->logger->error($exception->getTraceAsString());
             return null;
         }
     }
 
-    public function update(UserDTO $userDTO): bool
+    public function update(BalanceDTO $balanceDTO): bool
     {
         try {
-            return DB::transaction(function () use ($userDTO) {
-                return $this->updateInstance($userDTO);
+            return DB::transaction(function () use ($balanceDTO) {
+                return $this->updateInstance($balanceDTO);
             });
         } catch (\Throwable $exception) {
-            $this->logger->error('User update transaction error: ' . $exception->getMessage());
+            $this->logger->error('Balance update transaction error: ' . $exception->getMessage());
             $this->logger->error($exception->getTraceAsString());
             return false;
         }
@@ -59,7 +51,7 @@ class UserRepository extends BaseRepository
                 return $this->deleteInstance($id);
             });
         } catch (\Throwable $exception) {
-            $this->logger->error('User delete transaction error: ' . $exception->getMessage());
+            $this->logger->error('Balance delete transaction error: ' . $exception->getMessage());
             $this->logger->error($exception->getTraceAsString());
             return false;
         }
@@ -69,7 +61,7 @@ class UserRepository extends BaseRepository
     {
         return $this->model
             ->newQuery()
-            ->with(['balance', 'referrer'])
+            ->with('user')
             ->orderBy('created_at', 'desc')
             ->paginate($perPage);
     }
@@ -78,8 +70,17 @@ class UserRepository extends BaseRepository
     {
         return $this->model
             ->newQuery()
-            ->with(['balance', 'referrer'])
+            ->with('user')
             ->where('id', $id)
             ->first();
     }
+
+    public function findByUserId(int $userId): ?Model
+    {
+        return $this->model
+            ->newQuery()
+            ->where('user_id', $userId)
+            ->first();
+    }
 }
+

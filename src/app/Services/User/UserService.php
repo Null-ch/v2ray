@@ -12,9 +12,7 @@ final readonly class UserService
     private const DAILY_COST = 2;
     private const INITIAL_BALANCE = 14; // 7 дней
 
-    public function __construct(private UserRepository $userRepository)
-    {
-    }
+    public function __construct(private UserRepository $userRepository) {}
 
     public function findUserByTelegramId(int $telegramId): ?User
     {
@@ -32,6 +30,8 @@ final readonly class UserService
             'tg_tag' => $username,
             'name' => $name,
             'uuid' => Str::uuid()->toString(),
+            'is_active' => true,
+            'referral_code' => Str::random(10),
         ]);
 
         $user = $this->userRepository->createInstance($userDTO);
