@@ -15,17 +15,26 @@ final class XuiService
     /** @var array<string, XuiClient> */
     private array $clientCache = [];
 
+    /** @var array<string, Xui> */
+    private array $modelCache = [];
+
     public function __construct(private readonly XuiRepository $xuiRepository)
     {
     }
 
     private function getXuiModel(string $tag): Xui
     {
+        if (isset($this->modelCache[$tag])) {
+            return $this->modelCache[$tag];
+        }
+
         $xui = $this->xuiRepository->findByTag($tag);
 
         if (!$xui) {
             throw new \RuntimeException("Active XUI configuration with tag '{$tag}' not found");
         }
+
+        $this->modelCache[$tag] = $xui;
 
         return $xui;
     }
