@@ -76,4 +76,21 @@ jobs:
             php artisan cache:clear
             php artisan view:clear
             php artisan optimize
-            php artisan telegram:bot > storage/logs/telegram-bot.log 2>&1 &
+
+            # Остановка старого процесса бота перед деплоем
+            echo "Stopping any existing bot processes..."
+            pkill -f "artisan telegram:bot" || true
+            # Небольшая задержка для корректного завершения процессов
+            sleep 2
+
+            # Попытка автоматического перезапуска через supervisor (если установлен)
+            if command -v supervisorctl &> /dev/null; then
+              echo "Restarting bot via supervisor..."
+              supervisorctl restart telegram-bot 2>/dev/null || supervisorctl start telegram-bot 2>/dev/null || echo "Supervisor bot service not configured, skipping"
+            fi
+
+            # Примечание: Если supervisor не используется, запустите бота вручную:
+            # php artisan telegram:bot
+            # 
+            # Для продакшена рекомендуется использовать supervisor или systemd
+            # для автоматического перезапуска при сбоях

@@ -51,6 +51,7 @@ final class TelegramBotCommand extends Command
                 'line' => $e->getLine(),
                 'trace' => $e->getTraceAsString(),
             ]);
+            
             return Command::FAILURE;
         }
 
