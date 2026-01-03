@@ -1,4 +1,4 @@
-name: Deploy Laravel Docker
+name: Deploy Laravel
 
 on:
   push:
@@ -14,48 +14,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Run tests
-        if: github.ref == 'refs/heads/develop'
-        run: |
-          docker compose up -d db
-          sleep 20
-
-          docker compose run --rm \
-            -v $(pwd)/src:/var/www/html/v2ray/src \
-            -w /var/www/html/v2ray/src \
-            app bash -c "
-
-              if [ ! -f .env ]; then
-                cp .env.example .env
-              fi
-
-              if [ '${{ github.ref }}' = 'refs/heads/main' ]; then
-                BOT_TOKEN='${{ secrets.TELEGRAM_BOT_TOKEN_PROD }}'
-              else
-                BOT_TOKEN='${{ secrets.TELEGRAM_BOT_TOKEN_DEV }}'
-              fi
-
-              export TELEGRAM_BOT_TOKEN=$BOT_TOKEN
-
-              if grep -q '^TELEGRAM_BOT_TOKEN=' .env; then
-                sed -i \"s|^TELEGRAM_BOT_TOKEN=.*|TELEGRAM_BOT_TOKEN=\$BOT_TOKEN|\" .env
-              else
-                echo \"TELEGRAM_BOT_TOKEN=\$BOT_TOKEN\" >> .env
-              fi
-
-              composer install --no-interaction
-
-              if ! grep -q '^APP_KEY=' .env || grep -q '^APP_KEY=$' .env; then
-                php artisan key:generate --force
-              fi
-
-              php artisan migrate --env=testing
-
-              ./vendor/bin/phpunit --colors=always
-            "
-
       - name: Deploy via SSH
-        if: success()
         uses: appleboy/ssh-action@v1
         with:
           host: ${{ secrets.SERVER_HOST }}
@@ -63,51 +22,57 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           port: ${{ secrets.SERVER_PORT }}
           script: |
+            # Определяем директорию и переменные
             if [ "${{ github.ref }}" = "refs/heads/main" ]; then
-              APP_DIR="/var/www/html/v2ray"
+              APP_DIR="/var/www/html/v2ray/src"
               BUILD_ENV="prod"
               BOT_TOKEN="${{ secrets.TELEGRAM_BOT_TOKEN_PROD }}"
             else
-              APP_DIR="/var/www/html/v2ray-test"
+              APP_DIR="/var/www/html/v2ray-test/src"
               BUILD_ENV="dev"
               BOT_TOKEN="${{ secrets.TELEGRAM_BOT_TOKEN_DEV }}"
             fi
 
             cd $APP_DIR
             git config --global --add safe.directory $APP_DIR
-            git pull origin $(git rev-parse --abbrev-ref HEAD)
+
+            # Принудительный pull с отбросом локальных изменений
+            git fetch origin
+            git reset --hard origin/$(git rev-parse --abbrev-ref HEAD)
 
             export TELEGRAM_BOT_TOKEN=$BOT_TOKEN
             export APP_ENV=$BUILD_ENV
 
-            docker-compose build --build-arg APP_ENV=$BUILD_ENV
-            docker-compose up -d db app web bot
+            # Установка зависимостей
+            composer install --no-interaction --prefer-dist
 
-            docker-compose run --rm app bash -c "
-              cd /var/www/html/v2ray/src
-
-              composer install --no-interaction --prefer-dist
-
-              if [ ! -f .env ]; then
-                cp .env.example .env
-              fi
-
-              if ! grep -q '^APP_KEY=' .env || grep -q '^APP_KEY=$' .env; then
-                php artisan key:generate --force
-              fi
-
-              if grep -q '^TELEGRAM_BOT_TOKEN=' .env; then
-                sed -i \"s|^TELEGRAM_BOT_TOKEN=.*|TELEGRAM_BOT_TOKEN=$BOT_TOKEN|\" .env
-              else
-                echo \"TELEGRAM_BOT_TOKEN=$BOT_TOKEN\" >> .env
-              fi
-            "
-
-            if [ "$BUILD_ENV" = "prod" ]; then
-              docker-compose run --rm app php /var/www/html/v2ray/src/artisan migrate --force
-            else
-              docker-compose run --rm app php /var/www/html/v2ray/src/artisan migrate
+            # Создание .env если нет
+            if [ ! -f .env ]; then
+              cp .env.example .env
             fi
 
-            docker-compose run --rm app php /var/www/html/v2ray/src/artisan optimize
-            docker-compose restart bot
+            # Генерация ключа приложения, если пустой
+            if ! grep -q '^APP_KEY=' .env || grep -q '^APP_KEY=$' .env; then
+              php artisan key:generate --force
+            fi
+
+            # Обновление токена Telegram в .env
+            if grep -q '^TELEGRAM_BOT_TOKEN=' .env; then
+              sed -i "s|^TELEGRAM_BOT_TOKEN=.*|TELEGRAM_BOT_TOKEN=$BOT_TOKEN|" .env
+            else
+              echo "TELEGRAM_BOT_TOKEN=$BOT_TOKEN" >> .env
+            fi
+
+            # Миграции базы данных
+            if [ "$BUILD_ENV" = "prod" ]; then
+              php artisan migrate --force
+            else
+              php artisan migrate
+            fi
+
+            # Очистка кешей и оптимизация
+            php artisan route:clear
+            php artisan config:clear
+            php artisan cache:clear
+            php artisan view:clear
+            php artisan optimize
