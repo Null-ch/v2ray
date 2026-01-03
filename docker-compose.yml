@@ -49,6 +49,11 @@ services:
     networks:
       - app-network
 
+  # ВНИМАНИЕ: Сервис bot автоматически запускает Telegram бота через polling
+  # Если вы запускаете бота вручную командой "php artisan telegram:bot",
+  # ЗАКОММЕНТИРУЙТЕ или ОСТАНОВИТЕ этот сервис, чтобы избежать конфликтов!
+  # Команда для остановки: docker-compose stop bot
+  # Команда для удаления: docker-compose rm -f bot
   bot:
     build:
       context: .
