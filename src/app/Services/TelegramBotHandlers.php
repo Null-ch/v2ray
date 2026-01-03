@@ -7,6 +7,7 @@ namespace App\Services;
 use App\Services\XuiService;
 use SergiX44\Nutgram\Nutgram;
 use App\Services\User\UserService;
+use Illuminate\Support\Facades\Log;
 use SergiX44\Nutgram\Telegram\Types\Keyboard\InlineKeyboardButton;
 use SergiX44\Nutgram\Telegram\Types\Keyboard\InlineKeyboardMarkup;
 
@@ -61,6 +62,7 @@ final readonly class TelegramBotHandlers
                 $username = $bot->user()->username;
                 $name = $bot->user()->first_name;
 
+                Log::info('onCallbackQueryData accept_terms', $bot->callbackQuery()->toArray());
                 // Создаем пользователя в БД
                 $user = $this->userService->createUser($telegramId, $username, $name);
 

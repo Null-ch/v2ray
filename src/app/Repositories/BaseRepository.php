@@ -24,7 +24,7 @@ abstract class BaseRepository
         try {
             return $this->model
                 ->newQuery()
-                ->create($itemDTO->toArray());
+                ->findOrCreate($itemDTO->toArray());
         } catch (\Throwable $exception) {
             $this->logger->error('Entity create error: ' . $exception->getMessage());
             $this->logger->error($exception->getTraceAsString());
