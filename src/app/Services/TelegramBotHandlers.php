@@ -80,6 +80,17 @@ final class TelegramBotHandlers
                 'timestamp' => now()->toDateTimeString(),
             ]);
 
+            // ВАЖНО: Отвечаем на callback query СРАЗУ, до выполнения долгих операций
+            // Telegram требует ответ в течение ~1 секунды, иначе возникает ошибка "query is too old"
+            try {
+                $bot->answerCallbackQuery('Обработка...');
+            } catch (\Throwable $e) {
+                // Если query уже истек, просто логируем и продолжаем
+                Log::warning('Failed to answer callback query immediately', [
+                    'message' => $e->getMessage(),
+                ]);
+            }
+
             try {
                 $telegramId = $bot->userId();
                 Log::info('Getting user data', ['telegram_id' => $telegramId]);
@@ -94,7 +105,8 @@ final class TelegramBotHandlers
 
                 if (!$user) {
                     Log::error('Failed to create user');
-                    $bot->answerCallbackQuery('Ошибка создания пользователя', show_alert: true);
+                    // Пытаемся показать ошибку пользователю через новое сообщение
+                    $bot->sendMessage('❌ Ошибка создания пользователя. Попробуйте позже.');
                     return;
                 }
                 Log::info('User created successfully', ['user_id' => $user->id]);
@@ -141,8 +153,6 @@ final class TelegramBotHandlers
 
                 $bot->setGlobalData('vpn_message_ids', $messageIds);
 
-                Log::info('Answering callback query');
-                $bot->answerCallbackQuery();
                 Log::info('accept_terms callback completed successfully');
             } catch (\Throwable $e) {
                 Log::error('Error in accept_terms callback', [
@@ -152,26 +162,38 @@ final class TelegramBotHandlers
                     'trace' => $e->getTraceAsString(),
                 ]);
                 
-                $errorMessage = mb_substr($e->getMessage(), 0, 200); // Telegram ограничение на длину сообщения
-                $bot->answerCallbackQuery('Произошла ошибка: ' . $errorMessage, show_alert: true);
-                throw $e;
+                // Отправляем ошибку пользователю через сообщение, так как callback query уже обработан
+                $errorMessage = mb_substr($e->getMessage(), 0, 200);
+                $bot->sendMessage('❌ Произошла ошибка: ' . $errorMessage);
             }
         });
 
         // Обработчик нажатия на кнопку "ПОДКЛЮЧИТЬ ВПН" для существующих пользователей
         $this->bot->onCallbackQueryData('connect_vpn', function (Nutgram $bot) {
             Log::info('connect_vpn callback triggered');
+            
+            // Отвечаем на callback сразу, до выполнения операций
+            try {
+                $bot->answerCallbackQuery();
+            } catch (\Throwable $e) {
+                Log::warning('Failed to answer callback query', ['message' => $e->getMessage()]);
+            }
+            
             $messageIds = $this->vpnConnectionService->sendVpnConnectionMessages($bot, $this->getInstructionsKeyboard(), 'КЛЮЧ_ЗАГЛУШКА');
 
             // Сохраняем ID сообщений в глобальные данные пользователя
             $bot->setGlobalData('vpn_message_ids', $messageIds);
-
-            // Отвечаем на callback, чтобы убрать "часики" на кнопке
-            $bot->answerCallbackQuery();
         });
 
         // Обработчик кнопки "Перенести в приложение"
         $this->bot->onCallbackQueryData('export_config', function (Nutgram $bot) {
+            // Отвечаем на callback сразу
+            try {
+                $bot->answerCallbackQuery('Ссылка отправлена');
+            } catch (\Throwable $e) {
+                Log::warning('Failed to answer callback query', ['message' => $e->getMessage()]);
+            }
+            
             // TODO: Генерация экспортной ссылки с конфигами
             // Пример: https://www.sigmalink.org/redirect/?redirect_to=www.sigmalink.org&token=TOKEN&scheme=v2raytun
 
@@ -181,12 +203,17 @@ final class TelegramBotHandlers
                 "📲 Экспортная ссылка для переноса конфигов:\n\n$exportUrl\n\n⚠️ Внимание: это заглушка, функционал в разработке",
                 parse_mode: 'HTML'
             );
-
-            $bot->answerCallbackQuery('Ссылка отправлена');
         });
 
         // Обработчик кнопки "Вернуться в главное меню"
         $this->bot->onCallbackQueryData('main_menu', function (Nutgram $bot) {
+            // Отвечаем на callback сразу
+            try {
+                $bot->answerCallbackQuery();
+            } catch (\Throwable $e) {
+                Log::warning('Failed to answer callback query', ['message' => $e->getMessage()]);
+            }
+            
             // Получаем ID сообщений для удаления
             $messageIds = $bot->getGlobalData('vpn_message_ids', []);
 
@@ -210,9 +237,6 @@ final class TelegramBotHandlers
 
                 $this->vpnConnectionService->sendMainMenu($bot, $user, $keyboard);
             }
-
-            // Отвечаем на callback
-            $bot->answerCallbackQuery();
         });
 
         // Пример обработчика команды /help

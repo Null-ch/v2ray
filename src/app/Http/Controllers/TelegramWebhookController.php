@@ -7,6 +7,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use App\Services\TelegramService;
+use App\Services\TelegramBotHandlers;
 use Illuminate\Support\Facades\Log;
 
 final readonly class TelegramWebhookController
@@ -48,6 +49,11 @@ final readonly class TelegramWebhookController
                 Log::warning('Empty update received');
                 return response('Empty update', 200);
             }
+            
+            // Регистрируем обработчики перед обработкой обновления
+            // Это нужно делать здесь, так как вебхук обрабатывает обновления по одному
+            $handlers = app(TelegramBotHandlers::class);
+            $handlers->registerHandlers();
             
             Log::info('Processing update with Nutgram');
             $this->telegramService->getBot()->processUpdate($update);
