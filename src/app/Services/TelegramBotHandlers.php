@@ -99,17 +99,40 @@ final class TelegramBotHandlers
                 $name = $bot->user()->first_name;
                 Log::info('User data retrieved', ['username' => $username, 'name' => $name]);
 
-                // Создаем пользователя в БД
-                Log::info('Creating user in database');
-                $user = $this->userService->createUser($telegramId, $username, $name);
+                // Проверяем, не существует ли уже пользователь
+                $existingUser = $this->userService->findUserByTelegramId($telegramId);
+                if ($existingUser) {
+                    Log::info('User already exists, using existing user', [
+                        'user_id' => $existingUser->id,
+                        'telegram_id' => $telegramId,
+                    ]);
+                    $user = $existingUser;
+                } else {
+                    // Создаем пользователя в БД
+                    Log::info('Creating user in database', [
+                        'telegram_id' => $telegramId,
+                        'username' => $username,
+                        'name' => $name,
+                    ]);
+                    $user = $this->userService->createUser($telegramId, $username, $name);
 
-                if (!$user) {
-                    Log::error('Failed to create user');
-                    // Пытаемся показать ошибку пользователю через новое сообщение
-                    $bot->sendMessage('❌ Ошибка создания пользователя. Попробуйте позже.');
-                    return;
+                    if (!$user) {
+                        Log::error('Failed to create user', [
+                            'telegram_id' => $telegramId,
+                            'username' => $username,
+                            'name' => $name,
+                        ]);
+                        // Пытаемся показать ошибку пользователю через новое сообщение
+                        $bot->sendMessage(
+                            '❌ Ошибка создания пользователя. Попробуйте позже или обратитесь в поддержку.'
+                        );
+                        return;
+                    }
+                    Log::info('User created successfully', [
+                        'user_id' => $user->id,
+                        'telegram_id' => $telegramId,
+                    ]);
                 }
-                Log::info('User created successfully', ['user_id' => $user->id]);
 
                 // Получаем модель Xui для тега NL
                 Log::info('Getting Xui model for tag NL');
