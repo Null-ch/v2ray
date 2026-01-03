@@ -28,6 +28,11 @@ final class TelegramService
 
     public function run(): void
     {
+        // Регистрируем обработчики на этом экземпляре Nutgram
+        $handlers = app(TelegramBotHandlers::class);
+        $handlers->registerHandlers();
+
+        // Запускаем long polling
         $this->bot->run();
     }
 }
