@@ -23,7 +23,7 @@ use SergiX44\Nutgram\Telegram\Types\Keyboard\InlineKeyboardMarkup;
  *
  * Или используйте этот класс для организации обработчиков
  */
-final readonly class TelegramBotHandlers
+final class TelegramBotHandlers
 {
     private static bool $handlersRegistered = false;
 
