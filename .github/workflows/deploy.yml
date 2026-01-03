@@ -37,7 +37,7 @@ jobs:
             cd $APP_DIR
             git config --global --add safe.directory $APP_DIR
 
-            # Принудительный pull, отброс локальных изменений
+            # Принудительный pull и сброс локальных изменений
             git fetch origin
             git reset --hard origin/$(git rev-parse --abbrev-ref HEAD)
 
@@ -64,9 +64,13 @@ jobs:
               echo "TELEGRAM_BOT_TOKEN=$BOT_TOKEN" >> .env
             fi
 
-            # Назначаем владельца www-data для всех папок Laravel, чтобы PHP-FPM мог писать
+            # Назначаем владельца www-data для всех папок Laravel
             sudo chown -R www-data:www-data $APP_DIR
-            sudo chmod -R 775 $APP_DIR/storage $APP_DIR/bootstrap/cache
+            # Права на папки и файлы storage и bootstrap/cache
+            sudo find $APP_DIR/storage -type d -exec chmod 775 {} \;
+            sudo find $APP_DIR/bootstrap/cache -type d -exec chmod 775 {} \;
+            sudo find $APP_DIR/storage -type f -exec chmod 664 {} \;
+            sudo find $APP_DIR/bootstrap/cache -type f -exec chmod 664 {} \;
 
             # Миграции базы данных
             if [ "$BUILD_ENV" = "prod" ]; then
