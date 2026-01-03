@@ -62,7 +62,7 @@ final readonly class TelegramBotHandlers
                 $username = $bot->user()->username;
                 $name = $bot->user()->first_name;
 
-                Log::info('onCallbackQueryData accept_terms', $bot->callbackQuery()->toArray());
+                Log::info('onCallbackQueryData accept_terms: ' . json_encode($bot->callbackQuery()->toArray(), JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT));
                 // Создаем пользователя в БД
                 if (!$user = $this->userService->findUserByTelegramId($telegramId)) {
                     $user = $this->userService->createUser($telegramId, $username, $name);
@@ -73,30 +73,30 @@ final readonly class TelegramBotHandlers
                     return;
                 }
 
-                // Получаем модель Xui для тега NL
-                $xuiModel = $this->xuiService->getXuiModelByTag('NL');
+                // // Получаем модель Xui для тега NL
+                // $xuiModel = $this->xuiService->getXuiModelByTag('NL');
                 
-                // Создаем конфигурацию с длительностью 7 дней (604800 секунд)
-                $expiryTime = 7 * 24 * 60 * 60; // 7 дней в секундах
-                $inboundId = $xuiModel->inbound_id; // Используем inbound_id из модели, если указан
+                // // Создаем конфигурацию с длительностью 7 дней (604800 секунд)
+                // $expiryTime = 7 * 24 * 60 * 60; // 7 дней в секундах
+                // $inboundId = $xuiModel->inbound_id; // Используем inbound_id из модели, если указан
                 
-                $createResult = $this->xuiService->createConfig('NL', $user, $inboundId, $expiryTime);
+                // $createResult = $this->xuiService->createConfig('NL', $user, $inboundId, $expiryTime);
                 
-                if (!$createResult['ok']) {
-                    throw new \RuntimeException('Failed to create config: ' . ($createResult['message'] ?? 'Unknown error'));
-                }
+                // if (!$createResult['ok']) {
+                //     throw new \RuntimeException('Failed to create config: ' . ($createResult['message'] ?? 'Unknown error'));
+                // }
                 
-                // Получаем созданную конфигурацию
-                $inboundId = $createResult['data']['inbound_id'];
-                $userConfig = $this->xuiService->getUserConfig('NL', $inboundId, $user->id);
+                // // Получаем созданную конфигурацию
+                // $inboundId = $createResult['data']['inbound_id'];
+                // $userConfig = $this->xuiService->getUserConfig('NL', $inboundId, $user->id);
                 
-                if (!$userConfig['ok']) {
-                    throw new \RuntimeException('Failed to get user config: ' . ($userConfig['message'] ?? 'Unknown error'));
-                }
+                // if (!$userConfig['ok']) {
+                //     throw new \RuntimeException('Failed to get user config: ' . ($userConfig['message'] ?? 'Unknown error'));
+                // }
                 
-                // Формируем ключ/URI из конфигурации
-                $vpnKey = $this->formatVpnConfig($userConfig['data']);
-
+                // // Формируем ключ/URI из конфигурации
+                // $vpnKey = $this->formatVpnConfig($userConfig['data']);
+                $vpnKey = '123';
                 $messageIds = $this->vpnConnectionService->sendVpnConnectionMessages($bot, $this->getInstructionsKeyboard(), $vpnKey);
 
                 $bot->setGlobalData('vpn_message_ids', $messageIds);
@@ -113,9 +113,13 @@ final readonly class TelegramBotHandlers
             //нужно добавить проброс тега (выбран пользователем) и полученный по тегу инбаунд, пользовательский айди (юзер айди)
             $telegramId = $bot->userId();
             $user = $this->userService->findUserByTelegramId($telegramId);
+            if (!$user) {
+                    $bot->answerCallbackQuery('Пользователь не найден', show_alert: true);
+                    return;
+                }
             $xuiModel = $this->xuiService->getXuiModelByTag('NL');
             $inboundId = $xuiModel->inbound_id;
-            $userConfig = $this->xuiService->getUserConfig($xuiModel->tag, $inboundId, $user->id);
+            $userConfig = $this->xuiService->getUserConfig($xuiModel->tag->value, $inboundId, $user->__get('id'));
             $vpnKey = $this->formatVpnConfig($userConfig['data']);
             $messageIds = $this->vpnConnectionService->sendVpnConnectionMessages($bot, $this->getInstructionsKeyboard(), $vpnKey);
 
