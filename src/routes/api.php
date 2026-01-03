@@ -13,6 +13,9 @@ use Illuminate\Support\Facades\Route;
 Route::post('test', [TestController::class, 'create']);
 Route::put('test/{id}', [TestController::class, 'update']);
 
+// Webhook маршруты отключены, используется только polling через команду php artisan telegram:bot
+// Раскомментируйте, если нужно использовать вебхук вместо polling
+/*
 if (!empty(config('services.telegram.bot_token'))) {
     Route::post('telegram/webhook', [TelegramWebhookController::class, 'handle']);
     Route::get('telegram/webhook/test', function () {
@@ -20,6 +23,7 @@ if (!empty(config('services.telegram.bot_token'))) {
         return response()->json(['status' => 'ok', 'message' => 'Webhook endpoint is accessible']);
     });
 }
+*/
 
 Route::prefix('xui')->group(function () {
     Route::prefix('{tag}')->group(function () {

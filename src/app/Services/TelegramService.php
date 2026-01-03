@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Services;
 
 use SergiX44\Nutgram\Nutgram;
+use SergiX44\Nutgram\RunningMode\Polling;
 
 final class TelegramService
 {
@@ -19,6 +20,10 @@ final class TelegramService
         }
 
         $this->bot = new Nutgram($token);
+        
+        // Явно устанавливаем режим polling (long polling)
+        // Это гарантирует, что бот будет использовать getUpdates вместо вебхука
+        $this->bot->setRunningMode(Polling::class);
     }
 
     public function getBot(): Nutgram
@@ -32,7 +37,7 @@ final class TelegramService
         $handlers = app(TelegramBotHandlers::class);
         $handlers->registerHandlers();
 
-        // Запускаем long polling
+        // Запускаем long polling (явно установлен через setRunningMode)
         $this->bot->run();
     }
 }
