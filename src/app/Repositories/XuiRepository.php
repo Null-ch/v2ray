@@ -44,7 +44,23 @@ class XuiRepository extends BaseRepository
     {
         try {
             return DB::transaction(function () use ($xuiDTO) {
-                return $this->updateInstance($xuiDTO);
+                // Фильтруем null значения, чтобы не обновлять поля, которые не были переданы
+                $data = array_filter($xuiDTO->toArray(), function ($value) {
+                    return $value !== null;
+                });
+                
+                // Убеждаемся, что id присутствует для обновления
+                if (!isset($data['id'])) {
+                    return false;
+                }
+                
+                $id = $data['id'];
+                unset($data['id']);
+                
+                return (bool)$this->model
+                    ->newQuery()
+                    ->where('id', $id)
+                    ->update($data);
             });
         } catch (\Throwable $exception) {
             $this->logger->error('XUI update transaction error: ' . $exception->getMessage());
