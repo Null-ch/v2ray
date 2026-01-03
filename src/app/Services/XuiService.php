@@ -50,12 +50,6 @@ final class XuiService
         // Очищаем host от протокола и порта
         $host = $xuiModel->host;
 
-        if (str_starts_with($host, 'https://')) {
-            $host = str_replace('https://', '', $host);
-        } elseif (str_starts_with($host, 'http://')) {
-            $host = str_replace('http://', '', $host);
-        }
-
         // Убираем порт из host если он там есть
         if (str_contains($host, ':')) {
             $host = explode(':', $host)[0];
