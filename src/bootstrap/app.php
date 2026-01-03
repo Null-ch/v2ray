@@ -1,9 +1,10 @@
 <?php
 
+use App\Http\Middleware\CockpitAuth;
 use Illuminate\Foundation\Application;
+use App\Http\Middleware\ForceJsonResponse;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
-use App\Http\Middleware\ForceJsonResponse;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -15,6 +16,9 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->api(prepend: [
             ForceJsonResponse::class,
+        ]);
+        $middleware->alias([
+            'cockpit.auth' => CockpitAuth::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
