@@ -61,11 +61,15 @@ final readonly class TelegramBotHandlers
         Log::info('Registering accept_terms callback handler');
         
         // Регистрируем специфичные обработчики ПЕРЕД общим
+        // ВАЖНО: В Nutgram обработчики onCallbackQueryData имеют приоритет над onCallbackQuery
         $this->bot->onCallbackQueryData('accept_terms', function (Nutgram $bot) {
-            Log::info('accept_terms callback triggered', [
+            error_log('=== accept_terms CALLBACK TRIGGERED === ' . date('Y-m-d H:i:s'));
+            Log::info('=== accept_terms callback triggered ===', [
                 'user_id' => $bot->userId(),
                 'chat_id' => $bot->chatId(),
                 'callback_query_id' => $bot->callbackQuery()?->id,
+                'callback_data' => $bot->callbackQuery()?->data,
+                'timestamp' => now()->toDateTimeString(),
             ]);
 
             try {
@@ -209,17 +213,22 @@ final readonly class TelegramBotHandlers
         });
         
         // Общий обработчик для всех остальных callback_query (регистрируется ПОСЛЕ специфичных)
-        // Это поможет отловить необработанные callback-запросы
+        // ВАЖНО: Этот обработчик должен быть последним и не должен блокировать специфичные обработчики
+        // В Nutgram специфичные обработчики (onCallbackQueryData) имеют приоритет над общими (onCallbackQuery)
+        // Но на всякий случай логируем только необработанные запросы
         $this->bot->onCallbackQuery(function (Nutgram $bot) {
             $callbackData = $bot->callbackQuery()?->data;
-            Log::info('Unhandled callback query received', [
+            
+            // Логируем все callback-запросы для отладки
+            Log::info('General callback query handler triggered', [
                 'data' => $callbackData,
                 'user_id' => $bot->userId(),
                 'chat_id' => $bot->chatId(),
                 'message_id' => $bot->callbackQuery()?->message?->message_id,
             ]);
-            // Отвечаем на callback, чтобы убрать "часики"
-            $bot->answerCallbackQuery();
+            
+            // Если это необработанный callback, отвечаем на него
+            // Но не блокируем специфичные обработчики - они должны сработать первыми
         });
         
         Log::info('All Telegram bot handlers registered');

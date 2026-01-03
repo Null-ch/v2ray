@@ -47,15 +47,20 @@ class AppServiceProvider extends ServiceProvider
 
         // Регистрируем обработчики только один раз
         if (self::$handlersRegistered) {
+            Log::debug('Handlers already registered, skipping');
             return;
         }
 
         try {
-            Log::info('Initializing Telegram bot handlers');
+            Log::info('Initializing Telegram bot handlers', [
+                'handlers_registered_flag' => self::$handlersRegistered,
+            ]);
             $handlers = $this->app->make(TelegramBotHandlers::class);
             $handlers->registerHandlers();
             self::$handlersRegistered = true;
-            Log::info('Telegram bot handlers registered successfully');
+            Log::info('Telegram bot handlers registered successfully', [
+                'handlers_registered_flag' => self::$handlersRegistered,
+            ]);
         } catch (\Throwable $e) {
             Log::error('Failed to register Telegram bot handlers', [
                 'message' => $e->getMessage(),

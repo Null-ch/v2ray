@@ -18,11 +18,16 @@ final readonly class TelegramWebhookController
 
     public function handle(Request $request): Response
     {
-        // Логируем каждый запрос, даже если он пустой
-        Log::info('Webhook endpoint called', [
+        // Логируем каждый запрос в самом начале - это КРИТИЧНО для отладки
+        error_log('=== WEBHOOK CALLED === ' . date('Y-m-d H:i:s'));
+        Log::info('=== WEBHOOK CALLED ===', [
             'method' => $request->method(),
+            'ip' => $request->ip(),
+            'user_agent' => $request->userAgent(),
             'has_content' => $request->hasContent(),
             'content_length' => strlen($request->getContent()),
+            'content_preview' => substr($request->getContent(), 0, 200),
+            'timestamp' => now()->toDateTimeString(),
         ]);
 
         try {
