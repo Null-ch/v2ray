@@ -36,12 +36,6 @@ jobs:
             cd $APP_DIR
             git config --global --add safe.directory $APP_DIR
 
-            # Устанавливаем правильного владельца и права один раз
-            sudo chown -R deploy:www-data $APP_DIR
-            sudo chmod -R 775 $APP_DIR/storage $APP_DIR/bootstrap/cache
-            sudo find $APP_DIR/storage -type f -exec chmod 664 {} \;
-            sudo find $APP_DIR/bootstrap/cache -type f -exec chmod 664 {} \;
-
             # Принудительный pull с отбросом локальных изменений
             git fetch origin
             git reset --hard origin/$(git rev-parse --abbrev-ref HEAD)
@@ -82,7 +76,3 @@ jobs:
             php artisan cache:clear
             php artisan view:clear
             php artisan optimize
-
-            # Финальные права, чтобы PHP-FPM всегда писал
-            sudo chown -R www-data:www-data $APP_DIR
-            sudo chmod -R 775 $APP_DIR/storage $APP_DIR/bootstrap/cache
