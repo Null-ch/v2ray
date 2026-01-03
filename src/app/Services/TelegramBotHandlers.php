@@ -31,8 +31,7 @@ final readonly class TelegramBotHandlers
         private VpnConnectionService $vpnConnectionService,
         private UserService $userService,
         private XuiService $xuiService
-    ) {
-    }
+    ) {}
 
     public function registerHandlers(): void
     {
@@ -62,7 +61,6 @@ final readonly class TelegramBotHandlers
                 $username = $bot->user()->username;
                 $name = $bot->user()->first_name;
 
-                Log::info('onCallbackQueryData accept_terms: ' . json_encode($bot->callbackQuery()->toArray(), JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT));
                 // Создаем пользователя в БД
                 if (!$user = $this->userService->findUserByTelegramId($telegramId)) {
                     $user = $this->userService->createUser($telegramId, $username, $name);
@@ -73,27 +71,28 @@ final readonly class TelegramBotHandlers
                     return;
                 }
 
-                // // Получаем модель Xui для тега NL
-                // $xuiModel = $this->xuiService->getXuiModelByTag('NL');
-                
-                // // Создаем конфигурацию с длительностью 7 дней (604800 секунд)
-                // $expiryTime = 7 * 24 * 60 * 60; // 7 дней в секундах
-                // $inboundId = $xuiModel->inbound_id; // Используем inbound_id из модели, если указан
-                
-                // $createResult = $this->xuiService->createConfig('NL', $user, $inboundId, $expiryTime);
-                
+                Log::info('Получаем модель Xui для тега NL');
+                // Получаем модель Xui для тега NL
+                $xuiModel = $this->xuiService->getXuiModelByTag('NL');
+                Log::info('Получили модель Xui для тега NL' . $xuiModel->tag );
+                // Создаем конфигурацию с длительностью 7 дней (604800 секунд)
+                $expiryTime = 7 * 24 * 60 * 60; // 7 дней в секундах
+                $inboundId = $xuiModel->inbound_id; // Используем inbound_id из модели, если указан
+
+                $createResult = $this->xuiService->createConfig('NL', $user, $inboundId, $expiryTime);
+
                 // if (!$createResult['ok']) {
                 //     throw new \RuntimeException('Failed to create config: ' . ($createResult['message'] ?? 'Unknown error'));
                 // }
-                
+
                 // // Получаем созданную конфигурацию
                 // $inboundId = $createResult['data']['inbound_id'];
                 // $userConfig = $this->xuiService->getUserConfig('NL', $inboundId, $user->id);
-                
+
                 // if (!$userConfig['ok']) {
                 //     throw new \RuntimeException('Failed to get user config: ' . ($userConfig['message'] ?? 'Unknown error'));
                 // }
-                
+
                 // // Формируем ключ/URI из конфигурации
                 // $vpnKey = $this->formatVpnConfig($userConfig['data']);
                 $vpnKey = '123';
@@ -114,13 +113,14 @@ final readonly class TelegramBotHandlers
             $telegramId = $bot->userId();
             $user = $this->userService->findUserByTelegramId($telegramId);
             if (!$user) {
-                    $bot->answerCallbackQuery('Пользователь не найден', show_alert: true);
-                    return;
-                }
+                $bot->answerCallbackQuery('Пользователь не найден', show_alert: true);
+                return;
+            }
             $xuiModel = $this->xuiService->getXuiModelByTag('NL');
             $inboundId = $xuiModel->inbound_id;
-            $userConfig = $this->xuiService->getUserConfig($xuiModel->tag->value, $inboundId, $user->__get('id'));
-            $vpnKey = $this->formatVpnConfig($userConfig['data']);
+            // $userConfig = $this->xuiService->getUserConfig($xuiModel->tag->value, $inboundId, $user->__get('id'));
+            // $vpnKey = $this->formatVpnConfig($userConfig['data']);
+            $vpnKey = '123';
             $messageIds = $this->vpnConnectionService->sendVpnConnectionMessages($bot, $this->getInstructionsKeyboard(), $vpnKey);
 
             // Сохраняем ID сообщений в глобальные данные пользователя
@@ -213,13 +213,13 @@ final readonly class TelegramBotHandlers
         $client = $configData['client'] ?? [];
         $listen = $configData['listen'] ?? '0.0.0.0';
         $port = $configData['port'] ?? 0;
-        
+
         // Формируем базовую информацию о конфигурации
         $configParts = [
             "Protocol: {$protocol}",
             "Server: {$listen}:{$port}",
         ];
-        
+
         // Добавляем информацию о клиенте в зависимости от протокола
         if (in_array($protocol, ['vmess', 'vless'])) {
             $uuid = $client['id'] ?? 'N/A';
@@ -233,13 +233,13 @@ final readonly class TelegramBotHandlers
             $configParts[] = "Method: {$method}";
             $configParts[] = "Password: {$password}";
         }
-        
+
         // Добавляем информацию о сроке действия
         if (isset($client['expiryTime']) && $client['expiryTime'] > 0) {
             $expiryDate = date('Y-m-d H:i:s', $client['expiryTime'] / 1000);
             $configParts[] = "Expires: {$expiryDate}";
         }
-        
+
         return implode("\n", $configParts);
     }
 }
