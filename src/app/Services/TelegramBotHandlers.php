@@ -218,7 +218,7 @@ final readonly class TelegramBotHandlers
     private function formatVpnConfig(array $configData): string
     {
         $protocol = $configData['protocol'] ?? 'unknown';
-        $client = $configData['client'] ?? [];
+        $client = $configData['client'] ?? null;
         $listen = $configData['listen'] ?? '0.0.0.0';
         $port = $configData['port'] ?? 0;
 
@@ -228,23 +228,22 @@ final readonly class TelegramBotHandlers
             "Server: {$listen}:{$port}",
         ];
 
-        // Добавляем информацию о клиенте в зависимости от протокола
-        if (in_array($protocol, ['vmess', 'vless'])) {
-            $uuid = $client['id'] ?? 'N/A';
+        if ($client && in_array($protocol, ['vmess', 'vless'])) {
+            $uuid = $client->id ?? 'N/A';
             $configParts[] = "UUID: {$uuid}";
-        } elseif ($protocol === 'trojan') {
-            $password = $client['password'] ?? 'N/A';
+        } elseif ($client && $protocol === 'trojan') {
+            $password = $client->password ?? 'N/A';
             $configParts[] = "Password: {$password}";
-        } elseif ($protocol === 'shadowsocks') {
-            $password = $client['password'] ?? 'N/A';
-            $method = $client['method'] ?? 'N/A';
+        } elseif ($client && $protocol === 'shadowsocks') {
+            $password = $client->password ?? 'N/A';
+            $method = $client->method ?? 'N/A';
             $configParts[] = "Method: {$method}";
             $configParts[] = "Password: {$password}";
         }
 
         // Добавляем информацию о сроке действия
-        if (isset($client['expiryTime']) && $client['expiryTime'] > 0) {
-            $expiryDate = date('Y-m-d H:i:s', $client['expiryTime'] / 1000);
+        if ($client && isset($client->expiryTime) && $client->expiryTime > 0) {
+            $expiryDate = date('Y-m-d H:i:s', $client->expiryTime / 1000);
             $configParts[] = "Expires: {$expiryDate}";
         }
 
