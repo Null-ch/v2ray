@@ -23,6 +23,7 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           port: ${{ secrets.SERVER_PORT }}
           script: |
+            # Определяем директорию и переменные
             if [ "${{ github.ref }}" = "refs/heads/main" ]; then
               APP_DIR="/var/www/html/v2ray/src"
               BUILD_ENV="prod"
@@ -35,23 +36,25 @@ jobs:
 
             cd $APP_DIR
             git config --global --add safe.directory $APP_DIR
-            git pull origin $(git rev-parse --abbrev-ref HEAD)
+
+            # Принудительный pull, чтобы отбросить локальные изменения
+            git fetch origin
+            git reset --hard origin/$(git rev-parse --abbrev-ref HEAD)
 
             export TELEGRAM_BOT_TOKEN=$BOT_TOKEN
             export APP_ENV=$BUILD_ENV
 
             # Установка зависимостей
             composer install --no-interaction --prefer-dist
-              
+
             # Создание .env если нет
             if [ ! -f .env ]; then
               cp .env.example .env
-              chown www-data:www-data .env
             fi
 
             # Генерация ключа приложения, если пустой
             if ! grep -q '^APP_KEY=' .env || grep -q '^APP_KEY=$' .env; then
-              sudo -u www-data php artisan key:generate --force
+              php artisan key:generate --force
             fi
 
             # Обновление токена Telegram в .env
@@ -61,10 +64,7 @@ jobs:
               echo "TELEGRAM_BOT_TOKEN=$BOT_TOKEN" >> .env
             fi
 
-            # Установка прав на папку проекта
-            chown -R www-data:www-data $APP_DIR
-
-            # Миграции
+            # Миграции базы данных
             if [ "$BUILD_ENV" = "prod" ]; then
               php artisan migrate --force
             else
