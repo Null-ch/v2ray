@@ -15,6 +15,10 @@ Route::put('test/{id}', [TestController::class, 'update']);
 
 if (!empty(config('services.telegram.bot_token'))) {
     Route::post('telegram/webhook', [TelegramWebhookController::class, 'handle']);
+    Route::get('telegram/webhook/test', function () {
+        \Illuminate\Support\Facades\Log::info('Webhook test endpoint called');
+        return response()->json(['status' => 'ok', 'message' => 'Webhook endpoint is accessible']);
+    });
 }
 
 Route::prefix('xui')->group(function () {

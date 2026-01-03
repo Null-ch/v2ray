@@ -59,10 +59,23 @@ final readonly class TelegramBotHandlers
 
         // Обработчик нажатия на кнопку "Принять" для нового пользователя
         Log::info('Registering accept_terms callback handler');
+        
+        // Также регистрируем общий обработчик для всех callback_query
+        $this->bot->onCallbackQuery(function (Nutgram $bot) {
+            $callbackData = $bot->callbackQuery()?->data;
+            Log::info('Callback query received', [
+                'data' => $callbackData,
+                'user_id' => $bot->userId(),
+                'chat_id' => $bot->chatId(),
+                'message_id' => $bot->callbackQuery()?->message?->message_id,
+            ]);
+        });
+        
         $this->bot->onCallbackQueryData('accept_terms', function (Nutgram $bot) {
             Log::info('accept_terms callback triggered', [
                 'user_id' => $bot->userId(),
                 'chat_id' => $bot->chatId(),
+                'callback_query_id' => $bot->callbackQuery()?->id,
             ]);
 
             try {
