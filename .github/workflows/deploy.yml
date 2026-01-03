@@ -24,11 +24,11 @@ jobs:
           port: ${{ secrets.SERVER_PORT }}
           script: |
             if [ "${{ github.ref }}" = "refs/heads/main" ]; then
-              APP_DIR="/var/www/html/v2ray"
+              APP_DIR="/var/www/html/v2ray/src"
               BUILD_ENV="prod"
               BOT_TOKEN="${{ secrets.TELEGRAM_BOT_TOKEN_PROD }}"
             else
-              APP_DIR="/var/www/html/v2ray-test"
+              APP_DIR="/var/www/html/v2ray-test/src"
               BUILD_ENV="dev"
               BOT_TOKEN="${{ secrets.TELEGRAM_BOT_TOKEN_DEV }}"
             fi
