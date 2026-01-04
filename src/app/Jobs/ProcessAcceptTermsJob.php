@@ -60,7 +60,6 @@ final class ProcessAcceptTermsJob implements ShouldQueue
             $createResult = $xuiService->addClient('NL', $inboundId, [
                 'id' => $user->uuid,
                 'email' => $user->id,
-                'expiryTime' => $expiryTimeMs,
                 'subId' => $user->uuid,
             ]);
 
