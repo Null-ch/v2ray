@@ -60,6 +60,17 @@ final readonly class TelegramBotHandlers
             // СРАЗУ отвечаем на callback, чтобы убрать "часики" и избежать timeout
             $bot->answerCallbackQuery('Обработка запроса...');
             $telegramId = $bot->userId();
+            $username = $bot->user()->username;
+            $name = $bot->user()->first_name;
+            $chatId = $bot->chatId();
+
+            // Отправляем уведомление о начале обработки
+            $bot->sendMessage('⏳ Создаю VPN конфигурацию, пожалуйста, подождите...');
+
+            // Ставим задачу в очередь для асинхронной обработки
+            ProcessAcceptTermsJob::dispatch($telegramId, $username, $name, $chatId);
+            try {
+                $telegramId = $bot->userId();
                 $username = $bot->user()->username;
                 $name = $bot->user()->first_name;
                 $chatId = $bot->chatId();
@@ -69,29 +80,17 @@ final readonly class TelegramBotHandlers
 
                 // Ставим задачу в очередь для асинхронной обработки
                 ProcessAcceptTermsJob::dispatch($telegramId, $username, $name, $chatId);
-    
-            // try {
-            //     $telegramId = $bot->userId();
-            //     $username = $bot->user()->username;
-            //     $name = $bot->user()->first_name;
-            //     $chatId = $bot->chatId();
-
-            //     // Отправляем уведомление о начале обработки
-            //     $bot->sendMessage('⏳ Создаю VPN конфигурацию, пожалуйста, подождите...');
-
-            //     // Ставим задачу в очередь для асинхронной обработки
-            //     ProcessAcceptTermsJob::dispatch($telegramId, $username, $name, $chatId);
-            // } catch (\Throwable $e) {
-            //     Log::error('Ошибка при постановке задачи accept_terms в очередь: ' . $e->getMessage(), [
-            //         'trace' => $e->getTraceAsString(),
-            //     ]);
-            //     // Отправляем ошибку пользователю
-            //     try {
-            //         $bot->sendMessage('❌ Произошла ошибка при обработке запроса. Пожалуйста, попробуйте позже.');
-            //     } catch (\Throwable $sendError) {
-            //         Log::error('Не удалось отправить сообщение об ошибке: ' . $sendError->getMessage());
-            //     }
-            // }
+            } catch (\Throwable $e) {
+                Log::error('Ошибка при постановке задачи accept_terms в очередь: ' . $e->getMessage(), [
+                    'trace' => $e->getTraceAsString(),
+                ]);
+                // Отправляем ошибку пользователю
+                try {
+                    $bot->sendMessage('❌ Произошла ошибка при обработке запроса. Пожалуйста, попробуйте позже.');
+                } catch (\Throwable $sendError) {
+                    Log::error('Не удалось отправить сообщение об ошибке: ' . $sendError->getMessage());
+                }
+            }
         });
 
         // Обработчик нажатия на кнопку "ПОДКЛЮЧИТЬ ВПН" для существующих пользователей
