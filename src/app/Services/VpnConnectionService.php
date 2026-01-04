@@ -98,14 +98,14 @@ final readonly class VpnConnectionService
             chat_id: $chatId
         );
 
-        $keyMessage = View::make('telegram.vpn-key', [
-            'key' => $vpnKey,
-        ])->render();
+        // $keyMessage = View::make('telegram.vpn-key', [
+        //     'key' => $vpnKey,
+        // ])->render();
 
-        $keyMsg = $bot->sendMessage(
-            text: trim($keyMessage),
-            chat_id: $chatId
-        );
+        // $keyMsg = $bot->sendMessage(
+        //     text: trim($keyMessage),
+        //     chat_id: $chatId
+        // );
 
         $instructionsMessage = View::make('telegram.vpn-instructions')->render();
 
@@ -117,7 +117,7 @@ final readonly class VpnConnectionService
 
         return [
             'congrats' => $congratsMsg->message_id,
-            'key' => $keyMsg->message_id,
+            // 'key' => $keyMsg->message_id,
             'instructions' => $instructionsMsg->message_id,
         ];
     }
