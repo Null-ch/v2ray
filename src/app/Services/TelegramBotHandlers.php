@@ -200,6 +200,11 @@ final readonly class TelegramBotHandlers
                 $telegramId = $bot->userId();
                 $user = $this->userService->findUserByTelegramId($telegramId);
 
+                if (!$user) {
+                    $bot->answerCallbackQuery();
+                    return;
+                }
+
                 if ($code === 'back') {
                     $keyboard = XuiTag::keyboardFromValues(
                         $user->tags->pluck('tag')->all(),
