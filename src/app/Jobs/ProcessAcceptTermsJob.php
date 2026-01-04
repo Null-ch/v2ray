@@ -4,16 +4,17 @@ declare(strict_types=1);
 
 namespace App\Jobs;
 
-use App\Services\User\UserService;
-use App\Services\VpnConnectionService;
+use Illuminate\Support\Str;
 use App\Services\XuiService;
 use Illuminate\Bus\Queueable;
+use SergiX44\Nutgram\Nutgram;
+use App\Services\User\UserService;
+use Illuminate\Support\Facades\Log;
+use App\Services\VpnConnectionService;
+use Illuminate\Queue\SerializesModels;
+use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
-use Illuminate\Queue\InteractsWithQueue;
-use Illuminate\Queue\SerializesModels;
-use Illuminate\Support\Facades\Log;
-use SergiX44\Nutgram\Nutgram;
 use SergiX44\Nutgram\Telegram\Types\Keyboard\InlineKeyboardButton;
 use SergiX44\Nutgram\Telegram\Types\Keyboard\InlineKeyboardMarkup;
 
@@ -56,14 +57,18 @@ final class ProcessAcceptTermsJob implements ShouldQueue
             $nowMs = round(microtime(true) * 1000);
             $expiryTimeMs = $nowMs + 7 * 24 * 60 * 60 * 1000;
             $inboundId = $xuiModel->inbound_id;
+            $subscriptionName = Str::substr($user->uuid, 0, 6) . $user->id;
 
             $createResult = $xuiService->addClient('NL', $inboundId, [
                 'id' => $user->uuid,
+                'email' => $subscriptionName,
+                'expiryTime' => $expiryTimeMs,
                 'subId' => $user->uuid,
             ]);
 
             $xuiService->updateClient('NL', $inboundId,  $user->uuid, [
                 'id' => $user->uuid,
+                'email' => $subscriptionName,
                 'expiryTime' => $expiryTimeMs,
                 'subId' => $user->uuid,
             ]);
