@@ -70,7 +70,7 @@ final readonly class TelegramBotHandlers
                 $bot->sendMessage('⏳ Создаю VPN конфигурацию, пожалуйста, подождите...');
 
                 // Ставим задачу в очередь для асинхронной обработки
-                ProcessAcceptTermsJob::dispatch($telegramId, $username, $name);
+                ProcessAcceptTermsJob::dispatch($bot, $telegramId, $username, $name);
             } catch (\Throwable $e) {
                 Log::error('Ошибка при постановке задачи accept_terms в очередь: ' . $e->getMessage(), [
                     'trace' => $e->getTraceAsString(),
