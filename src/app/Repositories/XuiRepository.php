@@ -57,10 +57,14 @@ class XuiRepository extends BaseRepository
                 $id = $data['id'];
                 unset($data['id']);
                 
-                return (bool)$this->model
-                    ->newQuery()
-                    ->where('id', $id)
-                    ->update($data);
+                // Используем модель Eloquent вместо query builder, чтобы применялись casts (например, шифрование пароля)
+                $xui = $this->model->find($id);
+                if (!$xui) {
+                    return false;
+                }
+                
+                $xui->fill($data);
+                return $xui->save();
             });
         } catch (\Throwable $exception) {
             $this->logger->error('XUI update transaction error: ' . $exception->getMessage());
