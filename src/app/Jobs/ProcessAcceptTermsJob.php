@@ -53,12 +53,7 @@ final class ProcessAcceptTermsJob implements ShouldQueue
 
             // Получаем модель Xui
             $xuiModel = $xuiService->getXuiModelByTag('NL');
-
-            // Создаем конфигурацию на 7 дней
-            // Текущее время в миллисекундах
             $nowMs = round(microtime(true) * 1000);
-
-            // Добавляем 7 дней в миллисекундах
             $expiryTimeMs = $nowMs + 7 * 24 * 60 * 60 * 1000;
             $inboundId = $xuiModel->inbound_id;
 
@@ -94,17 +89,13 @@ final class ProcessAcceptTermsJob implements ShouldQueue
                 );
 
             // Отправляем пользователю сообщения с VPN
-            $messageIds = $vpnConnectionService->sendVpnConnectionMessagesToChat(
+            $vpnConnectionService->sendVpnConnectionMessagesToChat(
                 $bot,
                 $this->telegramId,
                 $instructionsKeyboard,
                 $userConfig
             );
 
-            $bot->sendMessage(
-                text: '⏳ VPN готов',
-                chat_id: $this->telegramId
-            );
             // Сохраняем ID сообщений (опционально, если нужно)
             // Можно использовать кеш или БД для хранения messageIds по telegramId
         } catch (\Throwable $e) {
