@@ -25,7 +25,6 @@ final class ProcessAcceptTermsJob implements ShouldQueue
         private readonly int $telegramId,
         private readonly ?string $username,
         private readonly ?string $name,
-        private readonly string $chatId
     ) {}
 
     public function handle(
@@ -48,7 +47,7 @@ final class ProcessAcceptTermsJob implements ShouldQueue
             }
 
             if (!$user) {
-                $bot->sendMessage($this->chatId, '❌ Ошибка создания пользователя');
+                $bot->sendMessage((string) $this->telegramId, '❌ Ошибка создания пользователя');
                 return;
             }
 
@@ -97,18 +96,18 @@ final class ProcessAcceptTermsJob implements ShouldQueue
             // Отправляем пользователю сообщения с VPN
             $messageIds = $vpnConnectionService->sendVpnConnectionMessagesToChat(
                 $bot,
-                $this->chatId,
+                (string) $this->telegramId,
                 $instructionsKeyboard,
                 $userConfig
             );
 
             // Сохраняем ID сообщений (опционально, если нужно)
-            // Можно использовать кеш или БД для хранения messageIds по chatId
+            // Можно использовать кеш или БД для хранения messageIds по telegramId
         } catch (\Throwable $e) {
             Log::error('Ошибка при обработке accept_terms в Job: ' . $e->getMessage(), [
                 'trace' => $e->getTraceAsString(),
                 'telegram_id' => $this->telegramId,
-                'chat_id' => $this->chatId,
+                'chat_id' => $this->telegramId,
             ]);
 
             // Отправляем ошибку пользователю
@@ -116,7 +115,7 @@ final class ProcessAcceptTermsJob implements ShouldQueue
                 $token = config('services.telegram.bot_token');
                 if (!empty($token)) {
                     $bot = new Nutgram($token);
-                    $bot->sendMessage($this->chatId, '❌ Произошла ошибка при создании VPN конфигурации. Пожалуйста, попробуйте позже.');
+                    $bot->sendMessage((string) $this->telegramId, '❌ Произошла ошибка при создании VPN конфигурации. Пожалуйста, попробуйте позже.');
                 }
             } catch (\Throwable $sendError) {
                 Log::error('Не удалось отправить сообщение об ошибке: ' . $sendError->getMessage());

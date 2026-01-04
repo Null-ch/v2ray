@@ -64,13 +64,13 @@ final readonly class TelegramBotHandlers
                 $telegramId = $bot->userId();
                 $username = $bot->user()->username;
                 $name = $bot->user()->first_name;
-                $chatId = $bot->chatId();
 
+                Log::info('Callback query accept_terms: ' . json_encode($bot->callbackQuery()->toArray()));
                 // Отправляем уведомление о начале обработки
                 $bot->sendMessage('⏳ Создаю VPN конфигурацию, пожалуйста, подождите...');
 
                 // Ставим задачу в очередь для асинхронной обработки
-                ProcessAcceptTermsJob::dispatch($telegramId, $username, $name, $chatId);
+                ProcessAcceptTermsJob::dispatch($telegramId, $username, $name);
             } catch (\Throwable $e) {
                 Log::error('Ошибка при постановке задачи accept_terms в очередь: ' . $e->getMessage(), [
                     'trace' => $e->getTraceAsString(),
