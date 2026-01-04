@@ -319,4 +319,12 @@ final class XuiService
 
         return "{$host}:2096/sub/{$uuid}";
     }
+
+    public function getConfigImportLink(string $tag, string $uuid)
+    {
+        $configUrl = $this->getSubLink($tag, $uuid);
+        $v2raytunUrl = 'v2raytun://import/' . $configUrl;
+
+        return view('v2raytun-redirect', ['link' => $v2raytunUrl]);
+    }
 }

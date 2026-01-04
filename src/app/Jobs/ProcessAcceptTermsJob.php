@@ -69,6 +69,7 @@ final class ProcessAcceptTermsJob implements ShouldQueue
             }
 
             $userConfig = $xuiService->getSubLink('NL', $user->uuid);
+            $userConfigImportLink = $xuiService->getConfigImportLink('NL', $user->uuid);
 
             // Создаем клавиатуру с инструкциями
             $instructionsKeyboard = InlineKeyboardMarkup::make()
@@ -82,7 +83,7 @@ final class ProcessAcceptTermsJob implements ShouldQueue
                     InlineKeyboardButton::make('Инструкция для Windows', url: 'https://telegra.ph/Instrukciya-po-ustanovke-V2raytun-na-PK--Windows-1011-01-02')
                 )
                 ->addRow(
-                    InlineKeyboardButton::make('📲 Перенести в приложение', callback_data: 'export_config')
+                    InlineKeyboardButton::make('📲 Перенести в приложение', url: "$userConfigImportLink")
                 )
                 ->addRow(
                     InlineKeyboardButton::make('Вернуться в главное меню', callback_data: 'main_menu')
