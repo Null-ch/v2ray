@@ -58,17 +58,8 @@ final readonly class TelegramBotHandlers
         // Обработчик нажатия на кнопку "Принять" для нового пользователя
         $this->bot->onCallbackQueryData('accept_terms', function (Nutgram $bot) {
             // СРАЗУ отвечаем на callback, чтобы убрать "часики" и избежать timeout
-            $bot->answerCallbackQuery('Обработка запроса...');
-            $telegramId = $bot->userId();
-            $username = $bot->user()->username;
-            $name = $bot->user()->first_name;
-            $chatId = $bot->chatId();
+            $bot->answerCallbackQuery();
 
-            // Отправляем уведомление о начале обработки
-            $bot->sendMessage('⏳ Создаю VPN конфигурацию, пожалуйста, подождите...');
-
-            // Ставим задачу в очередь для асинхронной обработки
-            ProcessAcceptTermsJob::dispatch($telegramId, $username, $name, $chatId);
             try {
                 $telegramId = $bot->userId();
                 $username = $bot->user()->username;
