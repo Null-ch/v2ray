@@ -79,31 +79,31 @@ final readonly class TelegramBotHandlers
                 $xuiModel = $this->xuiService->getXuiModelByTag('NL');
 
                 // Создаем конфигурацию на 7 дней
-                $expiryTime = 7 * 24 * 60 * 60; // 7 дней в секундах
+                // Текущее время в миллисекундах
+                $nowMs = round(microtime(true) * 1000);
+
+                // Добавляем 7 дней в миллисекундах
+                $expiryTimeMs = $nowMs + 7 * 24 * 60 * 60 * 1000;
                 $inboundId = $xuiModel->inbound_id;
 
-                $createResult = $this->xuiService->createConfig('NL', $user, $inboundId, $expiryTime);
+                $createResult = $this->xuiService->addClient('NL', $inboundId, [
+                    'id' => $user->uuid,
+                    'email' => $user->id,
+                    'expiryTime' => $expiryTimeMs,
+                    'subId' => $user->uuid,
+                ]);
 
                 if (!$createResult['ok']) {
                     throw new \RuntimeException('Не удалось создать конфигурацию: ' . ($createResult['message'] ?? 'Unknown error'));
                 }
 
-                // Получаем созданную конфигурацию
-                $inboundId = $createResult['data']['inbound_id'];
-                $userConfig = $this->xuiService->getUserConfig('NL', $inboundId, $user->id);
-
-                if (!$userConfig['ok']) {
-                    throw new \RuntimeException('Не удалось получить конфигурацию пользователя: ' . ($userConfig['message'] ?? 'Unknown error'));
-                }
-
-                // Формируем ключ/URI для VPN
-                $vpnKey = $this->formatVpnConfig($userConfig['data']);
+                $userConfig = $this->xuiService->getSubLink('NL', $user->uuid);
 
                 // Отправляем пользователю сообщения с VPN
                 $messageIds = $this->vpnConnectionService->sendVpnConnectionMessages(
                     $bot,
                     $this->getInstructionsKeyboard(),
-                    $vpnKey
+                    $userConfig
                 );
 
                 // Сохраняем ID сообщений в глобальные данные бота
@@ -125,10 +125,11 @@ final readonly class TelegramBotHandlers
                 $bot->answerCallbackQuery('Пользователь не найден', show_alert: true);
                 return;
             }
-            $xuiModel = $this->xuiService->getXuiModelByTag('NL');
-            $inboundId = $xuiModel->inbound_id;
-            $userConfig = $this->xuiService->getUserConfig($xuiModel->tag->value, $inboundId, $user->__get('id'));
-            $vpnKey = $this->formatVpnConfig($userConfig['data']);
+            // $xuiModel = $this->xuiService->getXuiModelByTag('NL');
+            // $inboundId = $xuiModel->inbound_id;
+            // $userConfig = $this->xuiService->getUserConfig($xuiModel->tag->value, $inboundId, $user->__get('id'));
+            // $vpnKey = $this->formatVpnConfig($userConfig['data']);
+            $vpnKey = $this->vpnConnectionService->generateVpnKey();
             $messageIds = $this->vpnConnectionService->sendVpnConnectionMessages($bot, $this->getInstructionsKeyboard(), $vpnKey);
 
             // Сохраняем ID сообщений в глобальные данные пользователя

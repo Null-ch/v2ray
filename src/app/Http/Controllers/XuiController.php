@@ -233,13 +233,21 @@ final class XuiController
             ->header('Content-Disposition', 'inline; filename="ПИВО VPN.txt"');
     }
 
+    public function getSubtLink(Request $request)
+    {
+        $tag = $request->query('tag');
+        $uuid = $request->query('uuid');
+  
+        return  $this->xuiService->getSubLink($tag, $uuid);
+    }
+
     public function getConfigImportLink(Request $request)
     {
         $tag = $request->query('tag');
         $uuid = $request->query('uuid');
-        $model = $this->xuiService->getXuiModelByTag($tag);
-        $configUrl = $this->xuiService->getSubLink($model, $uuid);
+        $configUrl = $this->xuiService->getSubLink($tag, $uuid);
+        $v2raytunUrl = 'v2raytun://import?url=' . $configUrl;
 
-        return redirect("v2raytun://import?url=" . $configUrl);
+        return view('v2raytun-redirect', ['link' => $v2raytunUrl]);
     }
 }

@@ -245,7 +245,6 @@ final class XuiService
 
             foreach ($clientsForInbound as $client) {
                 $uuid = Arr::get($client, 'uuid', '');
-                $email = Arr::get($client, 'email', 'client');
                 $expiry = Arr::get($client, 'expiryTime', 0);
 
                 // Если есть expiryTime и оно меньше текущего времени, пропускаем
@@ -310,8 +309,9 @@ final class XuiService
         return $links;
     }
 
-    public function getSubLink(Xui $xuiModel, string $uuid): string
+    public function getSubLink(string $tag, string $uuid): string
     {
+        $xuiModel = $this->getXuiModel($tag);
         $host = $xuiModel->host;
         if (str_starts_with($host, 'https://')) {
             $host = str_replace('https://', 'http://', $host);

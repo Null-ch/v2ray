@@ -15,6 +15,7 @@ Route::get('/', function () {
 Route::prefix('config')->group(function () {
     Route::get('{tag}/{uuid}', [XuiController::class, 'getConfigs']);
     Route::get('import', [XuiController::class, 'getConfigImportLink']);
+    Route::get('sub', [XuiController::class, 'getSubtLink']);
 });
 
 // Cockpit routes
