@@ -333,7 +333,9 @@ final class XuiService
     {
         $response = $this->getClientTrafficByUserUuid($tag, $uuid);
         $configData = Arr::get($response, 'data');
+        $expirationTime = Arr::get($configData, 'expiryTime');
         Log::info('config data: ' . json_encode($configData));
+        Log::info('expiryTime: ' . "$expirationTime");
         MillisecondsHelper::millisecondsToDaysHours(Arr::get($configData, 'expiryTime'));
 
         return [
