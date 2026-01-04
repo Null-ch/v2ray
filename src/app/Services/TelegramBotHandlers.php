@@ -59,9 +59,7 @@ final readonly class TelegramBotHandlers
         $this->bot->onCallbackQueryData('accept_terms', function (Nutgram $bot) {
             // СРАЗУ отвечаем на callback, чтобы убрать "часики" и избежать timeout
             $bot->answerCallbackQuery('Обработка запроса...');
-
-            try {
-                $telegramId = $bot->userId();
+            $telegramId = $bot->userId();
                 $username = $bot->user()->username;
                 $name = $bot->user()->first_name;
                 $chatId = $bot->chatId();
@@ -71,17 +69,29 @@ final readonly class TelegramBotHandlers
 
                 // Ставим задачу в очередь для асинхронной обработки
                 ProcessAcceptTermsJob::dispatch($telegramId, $username, $name, $chatId);
-            } catch (\Throwable $e) {
-                Log::error('Ошибка при постановке задачи accept_terms в очередь: ' . $e->getMessage(), [
-                    'trace' => $e->getTraceAsString(),
-                ]);
-                // Отправляем ошибку пользователю
-                try {
-                    $bot->sendMessage('❌ Произошла ошибка при обработке запроса. Пожалуйста, попробуйте позже.');
-                } catch (\Throwable $sendError) {
-                    Log::error('Не удалось отправить сообщение об ошибке: ' . $sendError->getMessage());
-                }
-            }
+    
+            // try {
+            //     $telegramId = $bot->userId();
+            //     $username = $bot->user()->username;
+            //     $name = $bot->user()->first_name;
+            //     $chatId = $bot->chatId();
+
+            //     // Отправляем уведомление о начале обработки
+            //     $bot->sendMessage('⏳ Создаю VPN конфигурацию, пожалуйста, подождите...');
+
+            //     // Ставим задачу в очередь для асинхронной обработки
+            //     ProcessAcceptTermsJob::dispatch($telegramId, $username, $name, $chatId);
+            // } catch (\Throwable $e) {
+            //     Log::error('Ошибка при постановке задачи accept_terms в очередь: ' . $e->getMessage(), [
+            //         'trace' => $e->getTraceAsString(),
+            //     ]);
+            //     // Отправляем ошибку пользователю
+            //     try {
+            //         $bot->sendMessage('❌ Произошла ошибка при обработке запроса. Пожалуйста, попробуйте позже.');
+            //     } catch (\Throwable $sendError) {
+            //         Log::error('Не удалось отправить сообщение об ошибке: ' . $sendError->getMessage());
+            //     }
+            // }
         });
 
         // Обработчик нажатия на кнопку "ПОДКЛЮЧИТЬ ВПН" для существующих пользователей
