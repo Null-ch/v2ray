@@ -223,90 +223,100 @@ final class XuiService
     }
 
     public function generateAllConfigs(Xui $xuiModel, array $inboundsWrapper, array $clientsWrapper): array
-{
-    $links = [];
-    $clients = Arr::get($clientsWrapper, 'data', []);
+    {
+        $links = [];
+        $clients = Arr::get($clientsWrapper, 'data', []);
 
-    foreach ($inboundsWrapper as $inboundArray) {
-        $inbound = Arr::get($inboundArray, '0', []);
-        if (!$inbound) continue;
+        foreach ($inboundsWrapper as $inboundArray) {
+            $inbound = Arr::get($inboundArray, '0', []);
+            if (!$inbound) continue;
 
-        $configName = Arr::get($inbound, 'remark');
-        $streamSettingsRaw = Arr::get($inbound, 'streamSettings', '{}');
-        $streamSettingsRaw = trim($streamSettingsRaw, "\" \n\r\t");
-        $stream = json_decode($streamSettingsRaw, true);
-        if (!$stream) continue;
+            $configName = Arr::get($inbound, 'remark');
+            $streamSettingsRaw = Arr::get($inbound, 'streamSettings', '{}');
+            $streamSettingsRaw = trim($streamSettingsRaw, "\" \n\r\t");
+            $stream = json_decode($streamSettingsRaw, true);
+            if (!$stream) continue;
 
-        $security = Arr::get($stream, 'security', 'none');
-        $network = Arr::get($stream, 'network', 'tcp');
-        $port = Arr::get($inbound, 'port', $xuiModel->port ?? 443);
+            $security = Arr::get($stream, 'security', 'none');
+            $network = Arr::get($stream, 'network', 'tcp');
+            $port = Arr::get($inbound, 'port', $xuiModel->port ?? 443);
 
-        $clientsForInbound = array_filter($clients, fn($c) => Arr::get($c, 'inboundId') === Arr::get($inbound, 'id'));
+            $clientsForInbound = array_filter($clients, fn($c) => Arr::get($c, 'inboundId') === Arr::get($inbound, 'id'));
 
-        foreach ($clientsForInbound as $client) {
-            $uuid = Arr::get($client, 'uuid', '');
-            $email = Arr::get($client, 'email', 'client');
-            $expiry = Arr::get($client, 'expiryTime', 0);
+            foreach ($clientsForInbound as $client) {
+                $uuid = Arr::get($client, 'uuid', '');
+                $email = Arr::get($client, 'email', 'client');
+                $expiry = Arr::get($client, 'expiryTime', 0);
 
-            // Если есть expiryTime и оно меньше текущего времени, пропускаем
-            if ($expiry && $expiry < now()->timestamp * 1000) {
-                continue;
+                // Если есть expiryTime и оно меньше текущего времени, пропускаем
+                if ($expiry && $expiry < now()->timestamp * 1000) {
+                    continue;
+                }
+
+                if ($expiry && $expiry > 0) {
+                    $remaining = $expiry - (now()->timestamp * 1000);
+                    $days = floor($remaining / 86400000);
+                    $configName .= " - $days дн."; // Пишем сколько дней осталось
+                }
+
+                $params = [
+                    'type' => $network,
+                    'encryption' => 'none',
+                    'security' => $security,
+                ];
+
+                if ($security === 'reality') {
+                    $reality = Arr::get($stream, 'realitySettings.settings', []);
+                    $params = array_merge($params, [
+                        'pbk' => Arr::get($reality, 'publicKey', ''),
+                        'fp' => Arr::get($reality, 'fingerprint', 'chrome'),
+                        'sni' => Arr::get($stream, 'realitySettings.serverNames.0', 'example.com'),
+                        'sid' => Arr::get($stream, 'realitySettings.shortIds.0', ''),
+                        'spx' => urlencode(Arr::get($reality, 'spiderX', '/')),
+                    ]);
+                }
+
+                if ($network === 'ws') {
+                    $wsSettings = Arr::get($stream, 'wsSettings', []);
+                    $params['path'] = Arr::get($wsSettings, 'path', '/');
+                    $params['host'] = Arr::get($wsSettings, 'headers.Host', parse_url($xuiModel->host, PHP_URL_HOST));
+                }
+
+                if ($network === 'h2') {
+                    $h2Settings = Arr::get($stream, 'httpSettings', []);
+                    $params['path'] = Arr::get($h2Settings, 'path', '/');
+                    $params['host'] = Arr::get($h2Settings, 'host', parse_url($xuiModel->host, PHP_URL_HOST));
+                }
+
+                if ($network === 'grpc') {
+                    $grpcSettings = Arr::get($stream, 'grpcSettings', []);
+                    $params['serviceName'] = Arr::get($grpcSettings, 'serviceName', '');
+                    $params['alpn'] = 'h2';
+                }
+
+                $query = http_build_query($params);
+
+                $links[] = sprintf(
+                    'vless://%s@%s:%d?%s#%s',
+                    $uuid,
+                    parse_url($xuiModel->host, PHP_URL_HOST) ?? $xuiModel->host,
+                    $port,
+                    $query,
+                    $configName
+                );
             }
-
-            if ($expiry && $expiry > 0) {
-                $remaining = $expiry - (now()->timestamp * 1000);
-                $days = floor($remaining / 86400000);
-                $configName .= " - $days дн."; // Пишем сколько дней осталось
-            }
-
-            $params = [
-                'type' => $network,
-                'encryption' => 'none',
-                'security' => $security,
-            ];
-
-            if ($security === 'reality') {
-                $reality = Arr::get($stream, 'realitySettings.settings', []);
-                $params = array_merge($params, [
-                    'pbk' => Arr::get($reality, 'publicKey', ''),
-                    'fp' => Arr::get($reality, 'fingerprint', 'chrome'),
-                    'sni' => Arr::get($stream, 'realitySettings.serverNames.0', 'example.com'),
-                    'sid' => Arr::get($stream, 'realitySettings.shortIds.0', ''),
-                    'spx' => urlencode(Arr::get($reality, 'spiderX', '/')),
-                ]);
-            }
-
-            if ($network === 'ws') {
-                $wsSettings = Arr::get($stream, 'wsSettings', []);
-                $params['path'] = Arr::get($wsSettings, 'path', '/');
-                $params['host'] = Arr::get($wsSettings, 'headers.Host', parse_url($xuiModel->host, PHP_URL_HOST));
-            }
-
-            if ($network === 'h2') {
-                $h2Settings = Arr::get($stream, 'httpSettings', []);
-                $params['path'] = Arr::get($h2Settings, 'path', '/');
-                $params['host'] = Arr::get($h2Settings, 'host', parse_url($xuiModel->host, PHP_URL_HOST));
-            }
-
-            if ($network === 'grpc') {
-                $grpcSettings = Arr::get($stream, 'grpcSettings', []);
-                $params['serviceName'] = Arr::get($grpcSettings, 'serviceName', '');
-                $params['alpn'] = 'h2';
-            }
-
-            $query = http_build_query($params);
-
-            $links[] = sprintf(
-                'vless://%s@%s:%d?%s#%s',
-                $uuid,
-                parse_url($xuiModel->host, PHP_URL_HOST) ?? $xuiModel->host,
-                $port,
-                $query,
-                $configName
-            );
         }
+
+        return $links;
     }
 
-    return $links;
-}
+    public function getSubLink(Xui $xuiModel, string $uuid): string
+    {
+        $host = $xuiModel->host;
+        if (str_starts_with($host, 'https://')) {
+            $host = str_replace('https://', 'http://', $host);
+        }
+
+        return "{$host}:2096/sub/{$uuid}";
+    }
 }

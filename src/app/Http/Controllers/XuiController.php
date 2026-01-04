@@ -235,7 +235,11 @@ final class XuiController
 
     public function getConfigImportLink(Request $request)
     {
-        $configUrl = $request->query('url');
-        return redirect("v2raytun://import?url=" . urlencode($configUrl));
+        $tag = $request->query('tag');
+        $uuid = $request->query('uuid');
+        $model = $this->xuiService->getXuiModelByTag($tag);
+        $configUrl = $this->xuiService->getSubLink($model, $uuid);
+
+        return redirect("v2raytun://import?url=" . $configUrl);
     }
 }

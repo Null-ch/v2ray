@@ -181,7 +181,7 @@ final class XuiApiClient
                         'expiryTime' => Arr::get($clientData, 'expiryTime', 0),
                         'enable'     => Arr::get($clientData, 'enable', true),
                         'tgId'       => Arr::get($clientData, 'tgId', ''),
-                        'subId'      => Arr::get($clientData, 'subId', ''),
+                        'subId'      => Arr::get($clientData, 'id', ''),
                         'comment'    => Arr::get($clientData, 'comment', ''),
                         'reset'      => Arr::get($clientData, 'reset', 0),
                     ]]
@@ -236,7 +236,7 @@ final class XuiApiClient
                         'expiryTime' => Arr::get($clientData, 'expiryTime', 0),
                         'enable'     => Arr::get($clientData, 'enable', true),
                         'tgId'       => Arr::get($clientData, 'tgId', ''),
-                        'subId'      => Arr::get($clientData, 'subId', ''),
+                        'subId'      => Arr::get($clientData, 'id', ''),
                         'comment'    => Arr::get($clientData, 'comment', ''),
                         'reset'      => Arr::get($clientData, 'reset', 0),
                     ]]
