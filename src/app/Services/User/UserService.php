@@ -10,6 +10,7 @@ use Illuminate\Support\Str;
 final readonly class UserService
 {
     private const DAILY_COST = 2;
+    private const MONTHLY_COST = 60;
     private const INITIAL_BALANCE = 14; // 7 дней
 
     public function __construct(private UserRepository $userRepository) {}
@@ -57,6 +58,11 @@ final readonly class UserService
     public function getDailyCost(): int
     {
         return self::DAILY_COST;
+    }
+
+    public function getMonthlyCost(): int
+    {
+        return self::MONTHLY_COST;
     }
 
     public function getInitialBalance(): int

@@ -21,8 +21,7 @@ final readonly class VpnConnectionService
         ?InlineKeyboardMarkup $keyboard = null
     ): void {
         $message = View::make('telegram.welcome', [
-            'dailyCost' => $this->userService->getDailyCost(),
-            'initialBalance' => $this->userService->getInitialBalance(),
+            'monthlyCost' => $this->userService->getMonthlyCost(),
         ])->render();
 
         $bot->sendMessage(trim($message), parse_mode: 'HTML', reply_markup: $keyboard);
