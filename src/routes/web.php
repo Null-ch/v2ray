@@ -14,7 +14,7 @@ Route::get('/', function () {
 
 Route::prefix('config')->group(function () {
     Route::get('{tag}/{uuid}', [XuiController::class, 'getConfigs']);
-    Route::get('import', [XuiController::class, 'getConfigImportLink']);
+    Route::get('import', [XuiController::class, 'getConfigImportLink'])->name('export.link');
     Route::get('sub', [XuiController::class, 'getSubtLink']);
 });
 
