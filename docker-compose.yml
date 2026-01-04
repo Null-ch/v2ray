@@ -10,11 +10,18 @@ services:
     networks:
       - app-network
     depends_on:
-      - db
+      db:
+        condition: service_healthy
     environment:
       COMPOSER_ALLOW_SUPERUSER: 1
       PHP_IDE_CONFIG: serverName=v2ray
       TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN}
+      DB_CONNECTION: mysql
+      DB_HOST: db
+      DB_PORT: 3306
+      DB_DATABASE: v2ray
+      DB_USERNAME: v2ray
+      DB_PASSWORD: CHvcuXdcHECcfMrK
     extra_hosts:
       - "host.docker.internal:host-gateway"
     volumes:
@@ -48,6 +55,11 @@ services:
       - dbdata:/var/lib/mysql
     networks:
       - app-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-proot"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   bot:
     build:
@@ -58,10 +70,19 @@ services:
     environment:
       APP_ENV: ${APP_ENV}
       TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN}
+      DB_CONNECTION: mysql
+      DB_HOST: db
+      DB_PORT: 3306
+      DB_DATABASE: v2ray
+      DB_USERNAME: v2ray
+      DB_PASSWORD: CHvcuXdcHECcfMrK
     networks:
       - app-network
     depends_on:
-      - app
+      db:
+        condition: service_healthy
+      app:
+        condition: service_started
     command: php artisan telegram:bot
     restart: always
     volumes:

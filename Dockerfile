@@ -51,4 +51,7 @@ CMD ["sh", "-c", "\
   else \
     echo 'APP_ENV=$APP_ENV' >> /var/www/html/v2ray/src/.env; \
   fi; \
+  if ! grep -q '^APP_KEY=' /var/www/html/v2ray/src/.env || grep -q '^APP_KEY=$' /var/www/html/v2ray/src/.env; then \
+    php artisan key:generate --force; \
+  fi; \
   exec php-fpm"]

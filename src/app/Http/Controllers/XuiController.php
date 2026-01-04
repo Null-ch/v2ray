@@ -4,24 +4,21 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
+use Illuminate\Support\Arr;
+use App\Services\XuiService;
+use Illuminate\Http\Request;
 use App\Http\Resources\FailResource;
 use App\Http\Resources\SuccessResource;
-use App\Services\XuiService;
-use GuzzleHttp\Cookie\CookieJar;
-use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
-use Illuminate\Support\Facades\Http;
 
 final class XuiController
 {
-    public function __construct(private readonly XuiService $xuiService)
-    {
-    }
+    public function __construct(private readonly XuiService $xuiService) {}
 
     private function getTag(Request $request): string
     {
         $tag = $request->input('tag') ?? $request->route('tag');
-        
+
         if (empty($tag)) {
             throw new \RuntimeException('Tag parameter is required');
         }
@@ -29,16 +26,27 @@ final class XuiController
         return $tag;
     }
 
+    private function getInboundId(Request $request): int
+    {
+        $inboundId = $request->input('inboundId') ?? $request->route('inboundId');
+
+        if (empty($inboundId)) {
+            throw new \RuntimeException('inboundId parameter is required');
+        }
+
+        return (int) $inboundId;
+    }
+
     public function serverStatus(Request $request): JsonResource
     {
         try {
             $tag = $this->getTag($request);
             $status = $this->xuiService->getServerStatus($tag);
-            
+
             if ($status['ok']) {
                 return SuccessResource::make($status['data']);
             }
-            
+
             return FailResource::make(['message' => $status['message'] ?? 'Failed to get server status']);
         } catch (\Throwable $e) {
             return FailResource::make(['message' => $e->getMessage()]);
@@ -50,123 +58,184 @@ final class XuiController
         try {
             $tag = $this->getTag($request);
             $inbounds = $this->xuiService->getInbounds($tag);
-            
+
             if ($inbounds['ok']) {
                 return SuccessResource::make($inbounds['data']);
             }
-            
+
             return FailResource::make(['message' => $inbounds['message'] ?? 'Failed to get inbounds']);
         } catch (\Throwable $e) {
             return FailResource::make(['message' => $e->getMessage()]);
         }
     }
 
-    public function outbounds(Request $request): JsonResource
+    /**
+     * Получает инбаунд по ID
+     *
+     * @param Request $request
+     * @param mixed $inboundId
+     * @return JsonResource
+     */
+    public function getInbound(Request $request, mixed $inboundId): JsonResource
     {
         try {
             $tag = $this->getTag($request);
-            $outbounds = $this->xuiService->getOutbounds($tag);
-            
-            if ($outbounds['ok']) {
-                return SuccessResource::make($outbounds['data']);
+            $inboundId = $this->getInboundId($request);
+            $result = $this->xuiService->getInbound($tag, $inboundId);
+
+            if ($result['ok']) {
+                return SuccessResource::make($result);
             }
-            
-            return FailResource::make(['message' => $outbounds['message'] ?? 'Failed to get outbounds']);
+
+            return FailResource::make(['message' => $result['message'] ?? 'Failed to get inbound']);
         } catch (\Throwable $e) {
             return FailResource::make(['message' => $e->getMessage()]);
         }
     }
 
-    public function panelSettings(Request $request): JsonResource
+    /**
+     * Добавляет клиента в инбаунд
+     *
+     * @param Request $request
+     * @param mixed $inboundId
+     * @return JsonResource
+     */
+    public function addClient(Request $request, mixed $inboundId): JsonResource
     {
         try {
             $tag = $this->getTag($request);
-            $settings = $this->xuiService->getPanelSettings($tag);
-            
-            if ($settings['ok']) {
-                return SuccessResource::make($settings['data']);
+            $inboundId = $this->getInboundId($request);
+
+            $clientData = $request->validate([
+                'id'         => 'required|uuid',
+                'flow'       => 'nullable|string',
+                'limitIp'    => 'nullable|integer',
+                'totalGB'    => 'nullable|integer',
+                'expiryTime' => 'nullable|integer',
+                'enable'     => 'nullable|boolean',
+                'tgId'       => 'nullable|string',
+                'subId'      => 'nullable|string',
+                'comment'    => 'nullable|string',
+                'reset'      => 'nullable|integer',
+            ]);
+
+            $result = $this->xuiService->addClient($tag, $inboundId, $clientData);
+
+            if ($result['ok']) {
+                return SuccessResource::make($result);
             }
-            
-            return FailResource::make(['message' => $settings['message'] ?? 'Failed to get panel settings']);
+
+            return FailResource::make(['message' => $result['message'] ?? 'Failed to add client']);
         } catch (\Throwable $e) {
             return FailResource::make(['message' => $e->getMessage()]);
         }
     }
 
-    public function testNewXuiLogin(): JsonResource
+    /**
+     * Обновляет клиента в инбаунде
+     *
+     * @param Request $request
+     * @param mixed $inboundId
+     * @return JsonResource
+     */
+    public function updateClient(Request $request, mixed $inboundId): JsonResource
     {
         try {
-            $url = 'https://170.168.91.110:41226/QUV0ABFfTB8pNZniIa/login/';
-            $username = 'TJYTZ5ATTl';
-            $password = 'ZFkHCJLM2g';
-
-            $response = Http::withOptions([
-                'verify' => false,
-            ])
-            ->timeout(30)
-            ->asForm()
-            ->post($url, [
-                'username' => $username,
-                'password' => $password,
-                'twoFactorCode' => '',
+            $tag = $this->getTag($request);
+            $inboundId = $this->getInboundId($request);
+            $clientData = $request->validate([
+                'id'         => 'required|uuid',
+                'flow'       => 'nullable|string',
+                'limitIp'    => 'nullable|integer',
+                'totalGB'    => 'nullable|integer',
+                'expiryTime' => 'nullable|integer',
+                'enable'     => 'nullable|boolean',
+                'tgId'       => 'nullable|string',
+                'subId'      => 'nullable|string',
+                'comment'    => 'nullable|string',
+                'reset'      => 'nullable|integer',
             ]);
 
-            return SuccessResource::make([
-                'http_code' => $response->status(),
-                'headers' => $response->headers(),
-                'body' => $response->json() ?? $response->body(),
-                'success' => $response->successful(),
-            ]);
+            $uuid = Arr::get($clientData, 'id');
+            $result = $this->xuiService->updateClient($tag, $inboundId, $uuid, $clientData);
+
+            if ($result['ok']) {
+                return SuccessResource::make($result);
+            }
+
+            return FailResource::make(['message' => $result['message'] ?? 'Failed to update client']);
         } catch (\Throwable $e) {
             return FailResource::make(['message' => $e->getMessage()]);
         }
     }
 
-    public function testNewXuiInbounds(): JsonResource
+    /**
+     * Получает трафик клиента по ID
+     *
+     * @param Request $request
+     * @param mixed $inboundId
+     * @return JsonResource
+     */
+    public function getClientTrafficByUserId(Request $request, mixed $inboundId): JsonResource
     {
         try {
-            $baseUrl = 'https://170.168.91.110:41226/QUV0ABFfTB8pNZniIa';
-            $username = 'TJYTZ5ATTl';
-            $password = 'ZFkHCJLM2g';
-
-            $cookieJar = new CookieJar();
-
-            $client = Http::withOptions([
-                'verify' => false,
-                'cookies' => $cookieJar,
-            ])->timeout(30);
-
-            $loginResponse = $client->asForm()->post($baseUrl . '/login/', [
-                'username' => $username,
-                'password' => $password,
-                'twoFactorCode' => '',
+            $tag = $this->getTag($request);
+            $inboundId = $this->getInboundId($request);
+            $validated = $request->validate([
+                'userId' => 'required|string',
             ]);
 
-            if (!$loginResponse->successful()) {
-                return FailResource::make([
-                    'message' => 'Login failed',
-                    'login_response' => $loginResponse->json() ?? $loginResponse->body(),
-                ]);
+            $result = $this->xuiService->getClientTrafficByUserId($tag, $inboundId, $validated['userId']);
+
+            if ($result['ok']) {
+                return SuccessResource::make($result);
             }
 
-            $inboundsResponse = $client->withHeaders([
-                'Accept' => 'application/json',
-            ])->get($baseUrl . '/panel/api/inbounds/list');
-
-            return SuccessResource::make([
-                'login' => [
-                    'http_code' => $loginResponse->status(),
-                    'body' => $loginResponse->json() ?? $loginResponse->body(),
-                ],
-                'inbounds' => [
-                    'http_code' => $inboundsResponse->status(),
-                    'body' => $inboundsResponse->json() ?? $inboundsResponse->body(),
-                    'success' => $inboundsResponse->successful(),
-                ],
-            ]);
+            return FailResource::make(['message' => $result['message'] ?? 'Failed to get client traffic']);
         } catch (\Throwable $e) {
             return FailResource::make(['message' => $e->getMessage()]);
         }
+    }
+
+    /**
+     * Получает трафик клиента по ID
+     *
+     * @param Request $request
+     * @return JsonResource
+     */
+    public function getClientTrafficByUserUuid(Request $request): JsonResource
+    {
+        try {
+            $tag = $this->getTag($request);
+            $validated = $request->validate([
+                'id' => 'required|string',
+            ]);
+
+            $result = $this->xuiService->getClientTrafficByUserUuid($tag, $validated['id']);
+
+            if ($result['ok']) {
+                return SuccessResource::make($result);
+            }
+
+            return FailResource::make(['message' => $result['message'] ?? 'Failed to get client traffic']);
+        } catch (\Throwable $e) {
+            return FailResource::make(['message' => $e->getMessage()]);
+        }
+    }
+
+    public function getConfigs(string $tag, string $uuid)
+    {
+        $configs = $this->xuiService->getConfigs($tag, $uuid);
+        $configText = implode("\n", $configs);
+
+        return response($configText, 200)
+            ->header('Content-Type', 'text/plain')
+            ->header('Content-Disposition', 'inline; filename="ПИВО VPN.txt"');
+    }
+
+    public function getConfigImportLink(Request $request)
+    {
+        $configUrl = $request->query('url');
+        return redirect("v2raytun://import?url=" . urlencode($configUrl));
     }
 }
-

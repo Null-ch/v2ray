@@ -4,24 +4,20 @@ declare(strict_types=1);
 
 namespace App\Services;
 
-use App\Models\User;
 use App\Models\Xui;
+use Illuminate\Support\Arr;
+use App\Clients\XuiApiClient;
 use App\Repositories\XuiRepository;
-use Illuminate\Support\Facades\Log;
-use XUI\Xray\Inbound\Inbound as InboundClass;
-use XUI\Xui as XuiClient;
 
 final class XuiService
 {
-    /** @var array<string, XuiClient> */
+    /** @var array<string, XuiApiClient> */
     private array $clientCache = [];
 
     /** @var array<string, Xui> */
     private array $modelCache = [];
 
-    public function __construct(private readonly XuiRepository $xuiRepository)
-    {
-    }
+    public function __construct(private readonly XuiRepository $xuiRepository) {}
 
     private function getXuiModel(string $tag): Xui
     {
@@ -45,310 +41,272 @@ final class XuiService
         return $this->getXuiModel($tag);
     }
 
-    private function createXuiClient(Xui $xuiModel): XuiClient
+    /**
+     * Создаёт и аутентифицирует клиент API
+     *
+     * @param Xui $xuiModel
+     * @return XuiApiClient
+     * @throws \RuntimeException
+     */
+    private function createXuiApiClient(Xui $xuiModel): XuiApiClient
     {
-        // Очищаем host от протокола и порта
-        $host = $xuiModel->host;
+        $client = new XuiApiClient($xuiModel);
 
-        if (str_starts_with($host, 'https://')) {
-            $host = str_replace('https://', '', $host);
-        } elseif (str_starts_with($host, 'http://')) {
-            $host = str_replace('http://', '', $host);
+        $loginResult = $client->login(
+            $xuiModel->username,
+            $xuiModel->password
+        );
+
+        if (!$loginResult['ok']) {
+            throw new \RuntimeException(
+                'Failed to login to XUI panel: ' .
+                    ($loginResult['response']['msg'] ?? 'Unknown error')
+            );
         }
 
-        // Убираем порт из host если он там есть
-        if (str_contains($host, ':')) {
-            $host = explode(':', $host)[0];
-        }
-
-        // Создаём директорию для cookies в storage (не в vendor)
-        $cookieDir = storage_path('app/.xui-cookies');
-        if (!is_dir($cookieDir)) {
-            mkdir($cookieDir, 0755, true);
-        }
-
-        // Используем HTTP (без SSL) для избежания проблем с самоподписанными сертификатами
-        $xui = new XuiClient($host, $xuiModel->port, $xuiModel->path, false);
-
-        // Устанавливаем путь к cookie файлу в storage вместо vendor
-        $cookieFile = $cookieDir . '/' . md5($host . ':' . $xuiModel->port) . '.cookie';
-        if (property_exists($xui, 'cookieFile')) {
-            $xui->cookieFile = $cookieFile;
-        }
-
-        $loginResult = $xui->login($xuiModel->username, $xuiModel->password);
-
-        Log::info('CLIENT LOGIN RESULT', ['host' => $host, 'port' => $xuiModel->port, 'path' => $xuiModel->path]);
-
-        Log::info('XUI Login result:', [
-            'ok' => $loginResult->ok ?? 'not set',
-            'response' => json_encode($loginResult->response ?? 'not set'),
-            'error' => $loginResult->error ?? 'not set',
-        ]);
-
-        if (!($loginResult->ok ?? false) || !($loginResult->response->success ?? false)) {
-            throw new \RuntimeException('Failed to login to 3x-ui panel: ' . ($loginResult->response->msg ?? $loginResult->error ?? 'Unknown error'));
-        }
-
-        return $xui;
+        return $client;
     }
 
-    private function getXuiClient(string $tag): XuiClient
+    /**
+     * Получает клиент API по тегу (с кешированием)
+     *
+     * @param string $tag
+     * @return XuiApiClient
+     */
+    public function getXuiApiClient(string $tag): XuiApiClient
     {
         if (isset($this->clientCache[$tag])) {
             return $this->clientCache[$tag];
         }
 
         $xuiModel = $this->getXuiModel($tag);
-        $client = $this->createXuiClient($xuiModel);
+        $client = $this->createXuiApiClient($xuiModel);
         $this->clientCache[$tag] = $client;
 
         return $client;
     }
 
-    public function getXui(string $tag): XuiClient
-    {
-        return $this->getXuiClient($tag);
-    }
 
-    public function getServer(string $tag)
-    {
-        return $this->getXuiClient($tag)->server;
-    }
-
-    public function getXray(string $tag)
-    {
-        return $this->getXuiClient($tag)->xray;
-    }
-
-    public function getPanel(string $tag)
-    {
-        return $this->getXuiClient($tag)->panel;
-    }
-
+    /**
+     * Получает статус сервера
+     *
+     * @param string $tag
+     * @return array
+     */
     public function getServerStatus(string $tag): array
     {
-        $xui = $this->getXuiClient($tag);
-        $result = $xui->server->status();
-
-        return [
-            'ok' => $result->ok ?? false,
-            'data' => $result->response->obj ?? null,
-            'message' => $result->response->msg ?? null,
-        ];
+        $client = $this->getXuiApiClient($tag);
+        return $client->getServerStatus();
     }
 
+    /**
+     * Получает список всех инбаундов
+     *
+     * @param string $tag
+     * @return array
+     */
     public function getInbounds(string $tag): array
     {
-        $xui = $this->getXuiClient($tag);
-        $result = $xui->xray->inbound->list();
-
-        return [
-            'ok' => $result->ok ?? false,
-            'data' => $result->response->obj ?? null,
-            'message' => $result->response->msg ?? null,
-        ];
-    }
-
-    public function getOutbounds(string $tag): array
-    {
-        $xui = $this->getXuiClient($tag);
-        $result = $xui->xray->outbound->list();
-
-        return [
-            'ok' => $result->ok ?? false,
-            'data' => $result->response->obj ?? null,
-            'message' => $result->response->msg ?? null,
-        ];
-    }
-
-    public function getPanelSettings(string $tag): array
-    {
-        $xui = $this->getXuiClient($tag);
-        $result = $xui->panel->settings();
-
-        return [
-            'ok' => $result->ok ?? false,
-            'data' => $result->response->obj ?? null,
-            'message' => $result->response->msg ?? null,
-        ];
+        $client = $this->getXuiApiClient($tag);
+        return $client->getInboundsList();
     }
 
     /**
-     * Create a client configuration in an inbound
-     * 
-     * @param string $tag XUI tag
-     * @param User $user User model
-     * @param int|null $inboundId Inbound ID (if null, uses first inbound)
-     * @param int $expiryTime Expiry time in seconds
+     * Получает инбаунд по ID
+     *
+     * @param string $tag
+     * @param int $inboundId
      * @return array
-     * @throws \RuntimeException
      */
-    public function createConfig(string $tag, User $user, ?int $inboundId = null, int $expiryTime = 0): array
+    public function getInbound(string $tag, int $inboundId): array
     {
-        $xui = $this->getXuiClient($tag);
-        
-        // Get inbounds list
-        $inboundsResult = $this->getInbounds($tag);
-        
-        if (!$inboundsResult['ok'] || empty($inboundsResult['data'])) {
-            throw new \RuntimeException('Failed to get inbounds: ' . ($inboundsResult['message'] ?? 'Unknown error'));
-        }
-
-        $inbounds = $inboundsResult['data'];
-        
-        // Find inbound by ID or use first one
-        $inbound = null;
-        if ($inboundId !== null) {
-            foreach ($inbounds as $inb) {
-                if ($inb->id == $inboundId) {
-                    $inbound = $inb;
-                    break;
-                }
-            }
-            if (!$inbound) {
-                throw new \RuntimeException("Inbound with ID {$inboundId} not found");
-            }
-        } else {
-            $inbound = $inbounds[0] ?? null;
-            if (!$inbound) {
-                throw new \RuntimeException('No inbounds available');
-            }
-            $inboundId = $inbound->id;
-        }
-
-        // Get full inbound configuration
-        $inboundResult = $xui->xray->inbound->get($inboundId);
-        
-        if (!$inboundResult->ok || !$inboundResult->response) {
-            throw new \RuntimeException('Failed to get inbound configuration: ' . ($inboundResult->error ?? 'Unknown error'));
-        }
-
-        $inboundConfig = $inboundResult->response;
-        
-        // Read inbound configuration using Inbound::read()
-        $config = InboundClass::read($inboundConfig);
-        
-        if (!$config) {
-            throw new \RuntimeException('Failed to read inbound configuration');
-        }
-
-        // Check if client already exists
-        $clientEmail = (string) $user->id;
-        if ($config->settings->has_client($clientEmail)) {
-            throw new \RuntimeException("Client with email {$clientEmail} already exists in this inbound");
-        }
-
-        // Add client to settings
-        // For vmess/vless: uuid = user->uuid, email = user->id
-        // For trojan: email = user->id, password will be generated
-        // expiryTime is in seconds, library will multiply by 1000
-        if (in_array($config->protocol, ['vmess', 'vless'])) {
-            $clientUuid = $user->uuid;
-            if (empty($clientUuid)) {
-                throw new \RuntimeException('User UUID is required for vmess/vless protocols');
-            }
-            $config->settings->add_client(
-                enable: true,
-                uuid: $clientUuid,
-                email: $clientEmail,
-                expiry_time: $expiryTime
-            );
-        } elseif ($config->protocol === 'trojan') {
-            // Trojan uses password instead of uuid
-            $config->settings->add_client(
-                enable: true,
-                email: $clientEmail,
-                password: $user->uuid ?? null, // Use uuid as password if available
-                expiry_time: $expiryTime
-            );
-        } elseif ($config->protocol === 'shadowsocks') {
-            // Shadowsocks uses method, password, email in that order
-            $config->settings->add_client(
-                enable: true,
-                method: null, // Use default method
-                password: $user->uuid ?? null,
-                email: $clientEmail,
-                expiry_time: $expiryTime
-            );
-        } else {
-            throw new \RuntimeException("Protocol {$config->protocol} is not supported for client creation");
-        }
-
-        // Update inbound with new client
-        $updateResult = $xui->xray->inbound->update(
-            inbound_id: $inboundId,
-            config: $config
-        );
-
-        if (!$updateResult->ok || !($updateResult->response->success ?? false)) {
-            throw new \RuntimeException('Failed to update inbound: ' . ($updateResult->response->msg ?? $updateResult->error ?? 'Unknown error'));
-        }
-
-        return [
-            'ok' => true,
-            'data' => [
-                'inbound_id' => $inboundId,
-                'client_email' => $clientEmail,
-                'user_id' => $user->id,
-            ],
-            'message' => 'Client successfully added to inbound',
-        ];
+        $client = $this->getXuiApiClient($tag);
+        return $client->getInbound($inboundId);
     }
 
     /**
-     * Get user configuration from inbound
-     * 
-     * @param string $tag XUI tag
-     * @param int $inboundId Inbound ID
-     * @param int $userId User ID (used as client email)
+     * Добавляет клиента в инбаунд
+     *
+     * @param string $tag
+     * @param int $inboundId
+     * @param array $clientData Данные клиента (email, uuid, password и т.д.)
      * @return array
-     * @throws \RuntimeException
      */
-    public function getUserConfig(string $tag, int $inboundId, int $userId): array
+    public function addClient(string $tag, int $inboundId, array $clientData): array
     {
-        $xui = $this->getXuiClient($tag);
-        
-        // Get inbound configuration
-        $inboundResult = $xui->xray->inbound->get($inboundId);
-        
-        if (!$inboundResult->ok || !$inboundResult->response) {
-            throw new \RuntimeException('Failed to get inbound configuration: ' . ($inboundResult->error ?? 'Unknown error'));
-        }
-
-        $inboundConfig = $inboundResult->response;
-        
-        // Read inbound configuration
-        $config = InboundClass::read($inboundConfig);
-        
-        if (!$config) {
-            throw new \RuntimeException('Failed to read inbound configuration');
-        }
-
-        // Get client by email (user ID)
-        $clientEmail = (string) $userId;
-        $client = $config->settings->get_client($clientEmail);
-        
-        if (!$client) {
-            throw new \RuntimeException("Client with email {$clientEmail} not found in inbound {$inboundId}");
-        }
-
-        // Get inbound details for full configuration
-        $inboundData = [
-            'inbound_id' => $inboundId,
-            'protocol' => $config->protocol,
-            'listen' => $config->listen,
-            'port' => $config->port,
-            'client' => $client,
-            'stream_settings' => $config->stream_settings ?? null,
-            'sniffing' => $config->sniffing ?? null,
-        ];
-
-        return [
-            'ok' => true,
-            'data' => $inboundData,
-            'message' => 'Client configuration retrieved successfully',
-        ];
+        $client = $this->getXuiApiClient($tag);
+        return $client->addClient($inboundId, $clientData);
     }
+
+    /**
+     * Обновляет клиента в инбаунде
+     *
+     * @param string $tag
+     * @param int $inboundId
+     * @param string $uuid uuid клиента
+     * @param array $clientData Новые данные клиента
+     * @return array
+     */
+    public function updateClient(string $tag, int $inboundId, string $uuid, array $clientData): array
+    {
+        $client = $this->getXuiApiClient($tag);
+        return $client->updateClient($inboundId, $uuid, $clientData);
+    }
+
+    /**
+     * Получает трафик клиента по ID
+     *
+     * @param string $tag
+     * @param int $inboundId
+     * @param string $userId userId клиента
+     * @return array
+     */
+    public function getClientTrafficByUserId(string $tag, int $inboundId, string $userId): array
+    {
+        $client = $this->getXuiApiClient($tag);
+        return $client->getClientTrafficByUserId($inboundId, $userId);
+    }
+
+    /**
+     * Получает трафик клиента по ID
+     *
+     * @param string $tag
+     * @param string $uuid uuid клиента
+     * @return array
+     */
+    public function getClientTrafficByUserUuid(string $tag, string $uuid): array
+    {
+        $client = $this->getXuiApiClient($tag);
+        return $client->getClientTrafficByUserUuid($uuid);
+    }
+
+    public function collectInbounds(array $clients, string $tag = 'NL'): array
+    {
+        $inbounds = [];
+
+        foreach (Arr::get($clients, 'data', []) as $client) {
+            // Получаем inboundId клиента
+            $inboundId = Arr::get($client, 'inboundId');
+            if (!$inboundId) {
+                continue; // пропускаем если нет inboundId
+            }
+
+            // Берем inbound через getInbound
+            $inbound = $this->getInbound($tag, $inboundId);
+            if (!Arr::get($inbound, 'ok')) {
+                continue; // пропускаем если getInbound вернул ошибку
+            }
+
+            // Берем фактические данные inbound
+            $inboundData = Arr::get($inbound, 'data', []);
+            if (empty($inboundData)) {
+                continue;
+            }
+
+            // Собираем в массив
+            $inbounds[] = [
+                $inboundData,
+            ];
+        }
+
+        return $inbounds;
+    }
+
+    public function getConfigs(string $tag, string $uuid)
+    {
+        $model = $this->getXuiModel($tag);
+        $clientData = $this->getClientTrafficByUserUuid($tag, $uuid);
+        $inbounds = $this->collectInbounds($clientData, $tag);
+        $configs = $this->generateAllConfigs($model, $inbounds, $clientData);
+
+        return $configs;
+    }
+
+    public function generateAllConfigs(Xui $xuiModel, array $inboundsWrapper, array $clientsWrapper): array
+{
+    $links = [];
+    $clients = Arr::get($clientsWrapper, 'data', []);
+
+    foreach ($inboundsWrapper as $inboundArray) {
+        $inbound = Arr::get($inboundArray, '0', []);
+        if (!$inbound) continue;
+
+        $configName = Arr::get($inbound, 'remark');
+        $streamSettingsRaw = Arr::get($inbound, 'streamSettings', '{}');
+        $streamSettingsRaw = trim($streamSettingsRaw, "\" \n\r\t");
+        $stream = json_decode($streamSettingsRaw, true);
+        if (!$stream) continue;
+
+        $security = Arr::get($stream, 'security', 'none');
+        $network = Arr::get($stream, 'network', 'tcp');
+        $port = Arr::get($inbound, 'port', $xuiModel->port ?? 443);
+
+        $clientsForInbound = array_filter($clients, fn($c) => Arr::get($c, 'inboundId') === Arr::get($inbound, 'id'));
+
+        foreach ($clientsForInbound as $client) {
+            $uuid = Arr::get($client, 'uuid', '');
+            $email = Arr::get($client, 'email', 'client');
+            $expiry = Arr::get($client, 'expiryTime', 0);
+
+            // Если есть expiryTime и оно меньше текущего времени, пропускаем
+            if ($expiry && $expiry < now()->timestamp * 1000) {
+                continue;
+            }
+
+            if ($expiry && $expiry > 0) {
+                $remaining = $expiry - (now()->timestamp * 1000);
+                $days = floor($remaining / 86400000);
+                $configName .= " - $days дн."; // Пишем сколько дней осталось
+            }
+
+            $params = [
+                'type' => $network,
+                'encryption' => 'none',
+                'security' => $security,
+            ];
+
+            if ($security === 'reality') {
+                $reality = Arr::get($stream, 'realitySettings.settings', []);
+                $params = array_merge($params, [
+                    'pbk' => Arr::get($reality, 'publicKey', ''),
+                    'fp' => Arr::get($reality, 'fingerprint', 'chrome'),
+                    'sni' => Arr::get($stream, 'realitySettings.serverNames.0', 'example.com'),
+                    'sid' => Arr::get($stream, 'realitySettings.shortIds.0', ''),
+                    'spx' => urlencode(Arr::get($reality, 'spiderX', '/')),
+                ]);
+            }
+
+            if ($network === 'ws') {
+                $wsSettings = Arr::get($stream, 'wsSettings', []);
+                $params['path'] = Arr::get($wsSettings, 'path', '/');
+                $params['host'] = Arr::get($wsSettings, 'headers.Host', parse_url($xuiModel->host, PHP_URL_HOST));
+            }
+
+            if ($network === 'h2') {
+                $h2Settings = Arr::get($stream, 'httpSettings', []);
+                $params['path'] = Arr::get($h2Settings, 'path', '/');
+                $params['host'] = Arr::get($h2Settings, 'host', parse_url($xuiModel->host, PHP_URL_HOST));
+            }
+
+            if ($network === 'grpc') {
+                $grpcSettings = Arr::get($stream, 'grpcSettings', []);
+                $params['serviceName'] = Arr::get($grpcSettings, 'serviceName', '');
+                $params['alpn'] = 'h2';
+            }
+
+            $query = http_build_query($params);
+
+            $links[] = sprintf(
+                'vless://%s@%s:%d?%s#%s',
+                $uuid,
+                parse_url($xuiModel->host, PHP_URL_HOST) ?? $xuiModel->host,
+                $port,
+                $query,
+                $configName
+            );
+        }
+    }
+
+    return $links;
 }
-
+}

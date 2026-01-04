@@ -110,8 +110,8 @@ final class CockpitXuiController extends Controller
         $validated['is_active'] = $request->boolean('is_active', false);
         $validated['tag'] = XuiTag::from($validated['tag']);
 
-        // Если пароль не указан, не обновляем его
-        if (empty($validated['password'])) {
+        // Если пароль не указан или пустой, не обновляем его (удаляем из массива)
+        if (!isset($validated['password']) || empty(trim($validated['password'] ?? ''))) {
             unset($validated['password']);
         }
 
