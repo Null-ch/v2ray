@@ -69,7 +69,7 @@ final class ProcessAcceptTermsJob implements ShouldQueue
             }
 
             $userConfig = $xuiService->getSubLink('NL', $user->uuid);
-            $userConfigImportLink = $xuiService->getConfigImportLink('NL', $user->uuid);
+            $userConfigImportLink = $xuiService->getSubLink('NL', $user->uuid, 'import');
 
             // Создаем клавиатуру с инструкциями
             $instructionsKeyboard = InlineKeyboardMarkup::make()

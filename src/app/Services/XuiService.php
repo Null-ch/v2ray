@@ -309,7 +309,7 @@ final class XuiService
         return $links;
     }
 
-    public function getSubLink(string $tag, string $uuid): string
+    public function getSubLink(string $tag, string $uuid, string $type = 'base'): string
     {
         $xuiModel = $this->getXuiModel($tag);
         $host = $xuiModel->host;
@@ -317,14 +317,13 @@ final class XuiService
             $host = str_replace('https://', 'http://', $host);
         }
 
-        return "{$host}:2096/sub/{$uuid}";
+        $link = "{$host}:2096/sub/{$uuid}";
+
+        if ($type !== 'base') {
+            return 'v2raytun://import/' . $link;
+        }
+
+        return $link;
     }
 
-    public function getConfigImportLink(string $tag, string $uuid)
-    {
-        $configUrl = $this->getSubLink($tag, $uuid);
-        $v2raytunUrl = 'v2raytun://import/' . $configUrl;
-
-        return view('v2raytun-redirect', ['link' => $v2raytunUrl]);
-    }
 }
