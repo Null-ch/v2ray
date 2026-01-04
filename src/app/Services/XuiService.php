@@ -313,9 +313,6 @@ final class XuiService
     {
         $xuiModel = $this->getXuiModel($tag);
         $host = $xuiModel->host;
-        if (str_starts_with($host, 'https://')) {
-            $host = str_replace('https://', 'http://', $host);
-        }
 
         $link = "{$host}:2096/sub/{$uuid}";
 
