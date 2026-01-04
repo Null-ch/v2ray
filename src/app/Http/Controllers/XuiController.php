@@ -246,7 +246,7 @@ final class XuiController
         $tag = $request->query('tag');
         $uuid = $request->query('uuid');
         $configUrl = $this->xuiService->getSubLink($tag, $uuid);
-        $v2raytunUrl = 'v2raytun://import?url=' . $configUrl;
+        $v2raytunUrl = 'v2raytun://import/' . $configUrl;
 
         return view('v2raytun-redirect', ['link' => $v2raytunUrl]);
     }
