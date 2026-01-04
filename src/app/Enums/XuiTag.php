@@ -96,15 +96,15 @@ enum XuiTag: string
      * @param string[] $values ['NL', 'DE']
      */
     public static function keyboardFromValues(
-        array $values,
+        array $tags,
         int $perRow = 2
     ): InlineKeyboardMarkup {
         $keyboard = InlineKeyboardMarkup::make();
         $row = [];
 
-        foreach ($values as $value) {
+        foreach ($tags as $tag) {
             try {
-                $tag = self::from($value);
+                $tag = self::from($tag->value);
             } catch (\ValueError) {
                 continue;
             }
