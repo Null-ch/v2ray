@@ -10,6 +10,7 @@ use Illuminate\Support\Arr;
 use App\Clients\XuiApiClient;
 use App\Helpers\MillisecondsHelper;
 use App\Repositories\XuiRepository;
+use Illuminate\Support\Facades\Log;
 
 final class XuiService
 {
@@ -332,6 +333,7 @@ final class XuiService
     {
         $response = $this->getClientTrafficByUserUuid($tag, $uuid);
         $configData = Arr::get($response, 'data');
+        Log::info('config data: ' . json_encode($configData));
         MillisecondsHelper::millisecondsToDaysHours(Arr::get($configData, 'expiryTime'));
 
         return [
