@@ -88,11 +88,13 @@ final readonly class VpnConnectionService
     ): void {
         $subscriptionInfoArray = $this->xuiService->getSubscriptionInfo($tag, $user->uuid);
         $tag = XuiTag::from($tag);
+        $name = $bot->user()->first_name ?? $user->name ?? $user->tg_tag ?? 'Пользователь';
 
         $message = View::make('telegram.subscription-info', [
             'enable' => Arr::get($subscriptionInfoArray, 'enable'),
             'expiryTime' => Arr::get($subscriptionInfoArray, 'expiryTime'),
             'tag' => $tag->labelWithFlag(),
+            'name' => $name
         ])->render();
 
         $bot->sendMessage(trim($message), parse_mode: 'HTML', reply_markup: $keyboard);
