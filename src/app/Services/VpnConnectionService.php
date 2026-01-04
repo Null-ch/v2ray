@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Services;
 
 use App\Models\User;
+use App\Enums\XuiTag;
+use Illuminate\Support\Arr;
 use App\Services\XuiService;
 use SergiX44\Nutgram\Nutgram;
 use App\Services\User\UserService;
@@ -16,7 +18,7 @@ final readonly class VpnConnectionService
     public function __construct(
         private UserService $userService,
         private XuiService $xuiService
-        ) {}
+    ) {}
 
     public function sendWelcomeMessageForNewUser(
         Nutgram $bot,
@@ -52,6 +54,45 @@ final readonly class VpnConnectionService
             // 'daysRemaining' => $daysRemaining,
             // 'daysWord' => $daysWord,
             // 'dailyCost' => $dailyCost,
+        ])->render();
+
+        $bot->sendMessage(trim($message), parse_mode: 'HTML', reply_markup: $keyboard);
+    }
+
+    public function sendConnectVpnMenu(
+        Nutgram $bot,
+        ?InlineKeyboardMarkup $keyboard = null
+    ): void {
+        $bot->sendMessage('Выберите страну VPN', reply_markup: $keyboard);
+    }
+
+    public function sendGuideMenu(
+        Nutgram $bot,
+        ?InlineKeyboardMarkup $keyboard = null
+    ): void {
+        $bot->sendMessage('Ниже представлены пользовательские инструкции ↓', reply_markup: $keyboard);
+    }
+
+    public function sendChoosingActiveVpnMenu(
+        Nutgram $bot,
+        ?InlineKeyboardMarkup $keyboard = null
+    ): void {
+        $bot->sendMessage('Выберете интересующий VPN', reply_markup: $keyboard);
+    }
+
+    public function sendSubscriptionInfo(
+        Nutgram $bot,
+        User $user,
+        string $tag,
+        ?InlineKeyboardMarkup $keyboard = null
+    ): void {
+        $subscriptionInfoArray = $this->xuiService->getSubscriptionInfo($tag, $user->uuid);
+        $tag = XuiTag::from($tag);
+
+        $message = View::make('telegram.subscription-info', [
+            'enable' => Arr::get($subscriptionInfoArray, 'enable'),
+            'expiryTime' => Arr::get($subscriptionInfoArray, 'expiryTime'),
+            'tag' => $tag->labelWithFlag(),
         ])->render();
 
         $bot->sendMessage(trim($message), parse_mode: 'HTML', reply_markup: $keyboard);
@@ -120,11 +161,5 @@ final readonly class VpnConnectionService
             // 'key' => $keyMsg->message_id,
             'instructions' => $instructionsMsg->message_id,
         ];
-    }
-
-
-    public function generateVpnKey(): string
-    {
-        return 'КЛЮЧ_ЗАГЛУШКА';
     }
 }

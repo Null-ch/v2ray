@@ -4,11 +4,14 @@ declare(strict_types=1);
 
 namespace App\Jobs;
 
+use App\Enums\XuiTag;
 use Illuminate\Support\Str;
 use App\Services\XuiService;
 use Illuminate\Bus\Queueable;
 use SergiX44\Nutgram\Nutgram;
+use App\Services\UserTagService;
 use App\Services\User\UserService;
+use App\Helpers\MillisecondsHelper;
 use Illuminate\Support\Facades\Log;
 use App\Services\VpnConnectionService;
 use Illuminate\Queue\SerializesModels;
@@ -31,17 +34,16 @@ final class ProcessAcceptTermsJob implements ShouldQueue
     public function handle(
         UserService $userService,
         XuiService $xuiService,
-        VpnConnectionService $vpnConnectionService
+        VpnConnectionService $vpnConnectionService,
+        UserTagService $userTagService
     ): void {
         try {
-            // Создаем экземпляр бота для отправки сообщений
             $token = config('services.telegram.bot_token');
             $bot = new Nutgram($token);
             if (empty($token)) {
                 throw new \RuntimeException('Telegram bot token is not configured');
             }
 
-            // Создаем пользователя в БД, если его нет
             $user = $userService->findUserByTelegramId($this->telegramId);
             if (!$user) {
                 $user = $userService->createUser($this->telegramId, $this->username, $this->name);
@@ -52,10 +54,8 @@ final class ProcessAcceptTermsJob implements ShouldQueue
                 return;
             }
 
-            // Получаем модель Xui
             $xuiModel = $xuiService->getXuiModelByTag('NL');
-            $nowMs = round(microtime(true) * 1000);
-            $expiryTimeMs = $nowMs + 7 * 24 * 60 * 60 * 1000;
+            $expiryTimeMs = MillisecondsHelper::daysToMilliseconds(7);
             $inboundId = $xuiModel->inbound_id;
             $subscriptionName = Str::substr($user->uuid, 0, 6) . $user->id;
 
@@ -72,6 +72,8 @@ final class ProcessAcceptTermsJob implements ShouldQueue
                 'expiryTime' => $expiryTimeMs,
                 'subId' => $user->uuid,
             ]);
+
+            $userTagService->addTagToUser($user->id, XuiTag::NL);
 
             if (!$createResult['ok']) {
                 throw new \RuntimeException('Не удалось создать конфигурацию: ' . ($createResult['message'] ?? 'Unknown error'));

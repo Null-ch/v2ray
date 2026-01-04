@@ -5,8 +5,10 @@ declare(strict_types=1);
 namespace App\Services;
 
 use App\Models\Xui;
+use App\Enums\XuiTag;
 use Illuminate\Support\Arr;
 use App\Clients\XuiApiClient;
+use App\Helpers\MillisecondsHelper;
 use App\Repositories\XuiRepository;
 
 final class XuiService
@@ -324,5 +326,18 @@ final class XuiService
         }
 
         return $link;
+    }
+
+    public function getSubscriptionInfo(string $tag, string $uuid)
+    {
+        $response = $this->getClientTrafficByUserUuid($tag, $uuid);
+        $configData = Arr::get($response, 'data');
+        MillisecondsHelper::millisecondsToDaysHours(Arr::get($configData, 'expiryTime'));
+
+        return [
+            'enable' => Arr::get($configData, 'enable', false),
+            'expiryTime' => Arr::get($configData, 'expiryTime'),
+            'tag' => XuiTag::from($tag)->label(),
+        ];        
     }
 }

@@ -1,0 +1,40 @@
+<?php
+
+namespace App\Helpers;
+
+class MillisecondsHelper
+{
+    /**
+     * Добавляет к текущему времени указанное количество дней и возвращает результат в миллисекундах.
+     *
+     * @param int $days
+     * @return int
+     */
+    public static function daysToMilliseconds(int $days): int
+    {
+        $nowMs = round(microtime(true) * 1000);
+        $msToAdd = $days * 24 * 60 * 60 * 1000;
+
+        return $nowMs + $msToAdd;
+    }
+
+    /**
+     * Преобразует миллисекунды в дни и часы (разница от текущего времени).
+     *
+     * @param int|string $milliseconds
+     * @return array ['days' => int, 'hours' => int]
+     */
+    public static function millisecondsToDaysHours(int|string $milliseconds): array
+    {
+        $nowMs = round(microtime(true) * 1000);
+        $diffMs = max(0, (int) $milliseconds - $nowMs); // не отрицать
+
+        $days = floor($diffMs / 1000 / 60 / 60 / 24);
+        $hours = floor(($diffMs / 1000 / 60 / 60) % 24);
+
+        return [
+            'days' => $days,
+            'hours' => $hours,
+        ];
+    }
+}

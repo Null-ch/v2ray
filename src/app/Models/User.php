@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Models\Balance;
 use App\Models\Referral;
 use App\Models\Configuration;
+use App\Models\UserTag;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
@@ -85,6 +86,14 @@ class User extends Authenticatable
     public function configurations()
     {
         return $this->hasMany(Configuration::class);
+    }
+
+    /**
+     * User tags
+     */
+    public function tags()
+    {
+        return $this->hasMany(UserTag::class);
     }
 
     public function getId()

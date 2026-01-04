@@ -55,5 +55,34 @@ class Xui extends Model
     {
         return $this->tag?->label() ?? '';
     }
-}
 
+    public static function activeLabelsWithIcons(): array
+    {
+        $records = self::where('is_active', true)->get();
+
+        $flags = [
+            'NL' => '🇳🇱',
+            'DE' => '🇩🇪',
+            'RU' => '🇷🇺',
+            'GB' => '🇬🇧',
+            'US' => '🇺🇸',
+            'CA' => '🇨🇦',
+            'AU' => '🇦🇺',
+            'NZ' => '🇳🇿',
+            'SG' => '🇸🇬',
+            'HK' => '🇭🇰',
+            'JP' => '🇯🇵',
+            'KR' => '🇰🇷',
+            'CN' => '🇨🇳',
+            'TW' => '🇹🇼',
+        ];
+
+        return $records->map(function (self $xui) use ($flags) {
+            $emoji = $flags[$xui->tag->value] ?? '';
+            return [
+                'label' => trim($emoji . ' ' . $xui->tagLabel),
+                'tag' => $xui->tag->value,
+            ];
+        })->toArray();
+    }
+}
