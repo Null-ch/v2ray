@@ -40,7 +40,7 @@ final readonly class TelegramBotHandlers
 
     public function registerHandlers(): void
     {
-        $this->bot->onCommand('start', function (Nutgram $bot, ?string $payload) {
+        $this->bot->onCommand('start', function (Nutgram $bot) {
             $telegramId = $bot->userId();
             $user = $this->userService->findUserByTelegramId($telegramId);
 
