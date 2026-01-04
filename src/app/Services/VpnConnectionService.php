@@ -12,9 +12,7 @@ use SergiX44\Nutgram\Telegram\Types\Keyboard\InlineKeyboardMarkup;
 
 final readonly class VpnConnectionService
 {
-    public function __construct(private UserService $userService)
-    {
-    }
+    public function __construct(private UserService $userService) {}
 
     public function sendWelcomeMessageForNewUser(
         Nutgram $bot,
@@ -84,20 +82,33 @@ final readonly class VpnConnectionService
 
     public function sendVpnConnectionMessagesToChat(
         Nutgram $bot,
-        string $chatId,
-        ?InlineKeyboardMarkup $instructionsKeyboard = null,
+        int $chatId,
+        ?InlineKeyboardMarkup $instructionsKeyboard,
         string $vpnKey
     ): array {
         $congratsMessage = View::make('telegram.vpn-congratulations')->render();
-        $congratsMsg = $bot->sendMessage($chatId, trim($congratsMessage));
+
+        $congratsMsg = $bot->sendMessage(
+            text: trim($congratsMessage),
+            chat_id: $chatId
+        );
 
         $keyMessage = View::make('telegram.vpn-key', [
             'key' => $vpnKey,
         ])->render();
-        $keyMsg = $bot->sendMessage($chatId, trim($keyMessage));
+
+        $keyMsg = $bot->sendMessage(
+            text: trim($keyMessage),
+            chat_id: $chatId
+        );
 
         $instructionsMessage = View::make('telegram.vpn-instructions')->render();
-        $instructionsMsg = $bot->sendMessage($chatId, trim($instructionsMessage), reply_markup: $instructionsKeyboard);
+
+        $instructionsMsg = $bot->sendMessage(
+            text: trim($instructionsMessage),
+            chat_id: $chatId,
+            reply_markup: $instructionsKeyboard
+        );
 
         return [
             'congrats' => $congratsMsg->message_id,
@@ -105,6 +116,7 @@ final readonly class VpnConnectionService
             'instructions' => $instructionsMsg->message_id,
         ];
     }
+
 
     public function generateVpnKey(): string
     {
