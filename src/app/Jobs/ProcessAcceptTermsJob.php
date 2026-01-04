@@ -22,6 +22,7 @@ final class ProcessAcceptTermsJob implements ShouldQueue
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
     public function __construct(
+        private readonly Nutgram $bot,
         private readonly int $telegramId,
         private readonly ?string $username,
         private readonly ?string $name,
@@ -38,7 +39,6 @@ final class ProcessAcceptTermsJob implements ShouldQueue
             if (empty($token)) {
                 throw new \RuntimeException('Telegram bot token is not configured');
             }
-            $bot = new Nutgram($token);
 
             // Создаем пользователя в БД, если его нет
             $user = $userService->findUserByTelegramId($this->telegramId);
@@ -47,7 +47,7 @@ final class ProcessAcceptTermsJob implements ShouldQueue
             }
 
             if (!$user) {
-                $bot->sendMessage((string) $this->telegramId, '❌ Ошибка создания пользователя');
+                $this->bot->sendMessage('❌ Ошибка создания пользователя', (string) $this->telegramId);
                 return;
             }
 
@@ -95,7 +95,7 @@ final class ProcessAcceptTermsJob implements ShouldQueue
 
             // Отправляем пользователю сообщения с VPN
             $messageIds = $vpnConnectionService->sendVpnConnectionMessagesToChat(
-                $bot,
+                $this->bot,
                 (string) $this->telegramId,
                 $instructionsKeyboard,
                 $userConfig
@@ -112,11 +112,7 @@ final class ProcessAcceptTermsJob implements ShouldQueue
 
             // Отправляем ошибку пользователю
             try {
-                $token = config('services.telegram.bot_token');
-                if (!empty($token)) {
-                    $bot = new Nutgram($token);
-                    $bot->sendMessage((string) $this->telegramId, '❌ Произошла ошибка при создании VPN конфигурации. Пожалуйста, попробуйте позже.');
-                }
+                $this->bot->sendMessage('❌ Произошла ошибка при создании VPN конфигурации. Пожалуйста, попробуйте позже.', (string) $this->telegramId);
             } catch (\Throwable $sendError) {
                 Log::error('Не удалось отправить сообщение об ошибке: ' . $sendError->getMessage());
             }
