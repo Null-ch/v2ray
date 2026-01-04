@@ -64,6 +64,13 @@ final class ProcessAcceptTermsJob implements ShouldQueue
                 'subId' => $user->uuid,
             ]);
 
+            $xuiService->updateClient('NL', $inboundId,  $user->uuid, [
+                'id' => $user->uuid,
+                'email' => $user->id,
+                'expiryTime' => $expiryTimeMs,
+                'subId' => $user->uuid,
+            ]);
+
             if (!$createResult['ok']) {
                 throw new \RuntimeException('Не удалось создать конфигурацию: ' . ($createResult['message'] ?? 'Unknown error'));
             }
