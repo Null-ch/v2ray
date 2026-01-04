@@ -96,7 +96,7 @@ final class ProcessAcceptTermsJob implements ShouldQueue
             // Отправляем пользователю сообщения с VPN
             $messageIds = $vpnConnectionService->sendVpnConnectionMessagesToChat(
                 $bot,
-                (string) $this->telegramId,
+                $this->telegramId,
                 $instructionsKeyboard,
                 $userConfig
             );
