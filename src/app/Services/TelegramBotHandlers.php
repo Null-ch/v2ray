@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Services;
 
-use App\Services\XuiService;
 use App\Jobs\ProcessAcceptTermsJob;
 use SergiX44\Nutgram\Nutgram;
 use App\Services\User\UserService;
@@ -31,7 +30,6 @@ final readonly class TelegramBotHandlers
         private Nutgram $bot,
         private VpnConnectionService $vpnConnectionService,
         private UserService $userService,
-        private XuiService $xuiService
     ) {}
 
     public function registerHandlers(): void

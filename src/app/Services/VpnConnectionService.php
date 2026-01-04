@@ -5,14 +5,18 @@ declare(strict_types=1);
 namespace App\Services;
 
 use App\Models\User;
+use App\Services\XuiService;
+use SergiX44\Nutgram\Nutgram;
 use App\Services\User\UserService;
 use Illuminate\Support\Facades\View;
-use SergiX44\Nutgram\Nutgram;
 use SergiX44\Nutgram\Telegram\Types\Keyboard\InlineKeyboardMarkup;
 
 final readonly class VpnConnectionService
 {
-    public function __construct(private UserService $userService) {}
+    public function __construct(
+        private UserService $userService,
+        private XuiService $xuiService
+        ) {}
 
     public function sendWelcomeMessageForNewUser(
         Nutgram $bot,
@@ -30,6 +34,7 @@ final readonly class VpnConnectionService
         User $user,
         ?InlineKeyboardMarkup $keyboard = null
     ): void {
+        //TODO:Переписать приветственное меню, Сделать кнопку "Мои конфигурации" по нажатию будут показаны конфигурации и кнопки, чтобы перейти к ним
         $balance = $user->balance?->balance ?? 0;
         $dailyCost = $this->userService->getDailyCost();
         $activeKeysCount = $user->configurations()->count();
@@ -42,11 +47,11 @@ final readonly class VpnConnectionService
 
         $message = View::make('telegram.welcome-back', [
             'name' => $name,
-            'activeKeysCount' => $activeKeysCount,
-            'balance' => $balance,
-            'daysRemaining' => $daysRemaining,
-            'daysWord' => $daysWord,
-            'dailyCost' => $dailyCost,
+            // 'activeKeysCount' => $activeKeysCount,
+            // 'balance' => $balance,
+            // 'daysRemaining' => $daysRemaining,
+            // 'daysWord' => $daysWord,
+            // 'dailyCost' => $dailyCost,
         ])->render();
 
         $bot->sendMessage(trim($message), parse_mode: 'HTML', reply_markup: $keyboard);
