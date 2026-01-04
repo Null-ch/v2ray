@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Services;
 
 use App\Services\XuiService;
+use App\Jobs\ProcessAcceptTermsJob;
 use SergiX44\Nutgram\Nutgram;
 use App\Services\User\UserService;
 use Illuminate\Support\Facades\Log;
@@ -57,62 +58,29 @@ final readonly class TelegramBotHandlers
         // Обработчик нажатия на кнопку "Принять" для нового пользователя
         $this->bot->onCallbackQueryData('accept_terms', function (Nutgram $bot) {
             // СРАЗУ отвечаем на callback, чтобы убрать "часики" и избежать timeout
-            $bot->answerCallbackQuery();
+            $bot->answerCallbackQuery('Обработка запроса...');
 
             try {
                 $telegramId = $bot->userId();
                 $username = $bot->user()->username;
                 $name = $bot->user()->first_name;
+                $chatId = $bot->chatId();
 
-                // Создаем пользователя в БД, если его нет
-                $user = $this->userService->findUserByTelegramId($telegramId);
-                if (!$user) {
-                    $user = $this->userService->createUser($telegramId, $username, $name);
-                }
+                // Отправляем уведомление о начале обработки
+                $bot->sendMessage('⏳ Создаю VPN конфигурацию, пожалуйста, подождите...');
 
-                if (!$user) {
-                    $bot->sendMessage('❌ Ошибка создания пользователя');
-                    return;
-                }
-
-                // Получаем модель Xui
-                $xuiModel = $this->xuiService->getXuiModelByTag('NL');
-
-                // Создаем конфигурацию на 7 дней
-                // Текущее время в миллисекундах
-                $nowMs = round(microtime(true) * 1000);
-
-                // Добавляем 7 дней в миллисекундах
-                $expiryTimeMs = $nowMs + 7 * 24 * 60 * 60 * 1000;
-                $inboundId = $xuiModel->inbound_id;
-
-                $createResult = $this->xuiService->addClient('NL', $inboundId, [
-                    'id' => $user->uuid,
-                    'email' => $user->id,
-                    'expiryTime' => $expiryTimeMs,
-                    'subId' => $user->uuid,
-                ]);
-
-                if (!$createResult['ok']) {
-                    throw new \RuntimeException('Не удалось создать конфигурацию: ' . ($createResult['message'] ?? 'Unknown error'));
-                }
-
-                $userConfig = $this->xuiService->getSubLink('NL', $user->uuid);
-
-                // Отправляем пользователю сообщения с VPN
-                $messageIds = $this->vpnConnectionService->sendVpnConnectionMessages(
-                    $bot,
-                    $this->getInstructionsKeyboard(),
-                    $userConfig
-                );
-
-                // Сохраняем ID сообщений в глобальные данные бота
-                $bot->setGlobalData('vpn_message_ids', $messageIds);
+                // Ставим задачу в очередь для асинхронной обработки
+                ProcessAcceptTermsJob::dispatch($telegramId, $username, $name, $chatId);
             } catch (\Throwable $e) {
-                Log::error('Ошибка при обработке accept_terms: ' . $e->getMessage(), ['trace' => $e->getTraceAsString()]);
-                // Callback уже ответили, отправляем ошибку обычным сообщением (без stacktrace - слишком длинный)
-                $bot->sendMessage('❌ Произошла ошибка: ' . $e->getMessage());
-                throw $e;
+                Log::error('Ошибка при постановке задачи accept_terms в очередь: ' . $e->getMessage(), [
+                    'trace' => $e->getTraceAsString(),
+                ]);
+                // Отправляем ошибку пользователю
+                try {
+                    $bot->sendMessage('❌ Произошла ошибка при обработке запроса. Пожалуйста, попробуйте позже.');
+                } catch (\Throwable $sendError) {
+                    Log::error('Не удалось отправить сообщение об ошибке: ' . $sendError->getMessage());
+                }
             }
         });
 

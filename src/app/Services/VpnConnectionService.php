@@ -83,6 +83,30 @@ final readonly class VpnConnectionService
         ];
     }
 
+    public function sendVpnConnectionMessagesToChat(
+        Nutgram $bot,
+        string $chatId,
+        ?InlineKeyboardMarkup $instructionsKeyboard = null,
+        string $vpnKey
+    ): array {
+        $congratsMessage = View::make('telegram.vpn-congratulations')->render();
+        $congratsMsg = $bot->sendMessage($chatId, trim($congratsMessage));
+
+        $keyMessage = View::make('telegram.vpn-key', [
+            'key' => $vpnKey,
+        ])->render();
+        $keyMsg = $bot->sendMessage($chatId, trim($keyMessage));
+
+        $instructionsMessage = View::make('telegram.vpn-instructions')->render();
+        $instructionsMsg = $bot->sendMessage($chatId, trim($instructionsMessage), reply_markup: $instructionsKeyboard);
+
+        return [
+            'congrats' => $congratsMsg->message_id,
+            'key' => $keyMsg->message_id,
+            'instructions' => $instructionsMsg->message_id,
+        ];
+    }
+
     public function generateVpnKey(): string
     {
         return 'КЛЮЧ_ЗАГЛУШКА';
