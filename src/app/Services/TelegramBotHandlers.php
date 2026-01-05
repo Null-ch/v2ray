@@ -60,11 +60,11 @@ final readonly class TelegramBotHandlers
                             InlineKeyboardButton::make('Подключить VPN', callback_data: 'connect_vpn'),
                             InlineKeyboardButton::make('Мои VPN', callback_data: 'user_vpn')
                         )
-                        ->addRow(InlineKeyboardButton::make('Вернуться в главное меню', callback_data: 'main_menu'));
+                        ->addRow(InlineKeyboardButton::make('🏠 Главное меню', callback_data: 'main_menu'));
                 } else {
                     $keyboard = InlineKeyboardMarkup::make()
                         ->addRow(InlineKeyboardButton::make('Подключить VPN', callback_data: 'connect_vpn'))
-                        ->addRow(InlineKeyboardButton::make('Вернуться в главное меню', callback_data: 'main_menu'));
+                        ->addRow(InlineKeyboardButton::make('🏠 Главное меню', callback_data: 'main_menu'));
                 }
 
                 $this->vpnConnectionService->sendMainMenu($bot, $user, $keyboard);
@@ -108,7 +108,7 @@ final readonly class TelegramBotHandlers
             }, $tags);
 
             $extraRows = [
-                [InlineKeyboardButton::make('Вернуться в главное меню', callback_data: 'main_menu')]
+                [InlineKeyboardButton::make('🏠 Главное меню', callback_data: 'main_menu')]
             ];
 
             $keyboard = $this->telegramService::buildInlineKeyboard($tagButtons, 2, $extraRows);
@@ -197,35 +197,62 @@ final readonly class TelegramBotHandlers
         $this->bot->onCallbackQueryData(
             'vpn:tag:{code}',
             function (Nutgram $bot, string $code) {
-                $telegramId = $bot->userId();
-                $user = $this->userService->findUserByTelegramId($telegramId);
+                $user = $this->userService
+                    ->findUserByTelegramId($bot->userId());
 
                 if (!$user) {
                     $bot->answerCallbackQuery();
                     return;
                 }
 
-                if ($code === 'back') {
-                    $keyboard = XuiTag::keyboardFromValues(
-                        $user->tags->pluck('tag')->all(),
-                        2
-                    );
-
-                    $keyboard->addRow(InlineKeyboardButton::make('Назад', callback_data: 'vpn:back'));
-                    $this->vpnConnectionService->sendChoosingActiveVpnMenu($bot, $keyboard);
-                    $bot->answerCallbackQuery();
-
+                try {
+                    $tag = XuiTag::from($code);
+                } catch (\ValueError) {
+                    $bot->answerCallbackQuery('Неизвестный VPN');
                     return;
                 }
 
-                $tag = XuiTag::from($code);
-                $keyboard = InlineKeyboardMarkup::make()
-                    ->addRow(InlineKeyboardButton::make('Назад', callback_data: 'vpn:back'))
-                    ->addRow(InlineKeyboardButton::make('Вернуться в главное меню', callback_data: 'main_menu'));
-                $this->vpnConnectionService->sendSubscriptionInfo($bot, $user, $tag->value, $keyboard);
-                $bot->answerCallbackQuery();
+                $keyboard = InlineKeyboardMarkup::make()->addRow(
+                    InlineKeyboardButton::make(
+                        '⬅️ Назад к VPN',
+                        callback_data: 'vpn:back'
+                    )
+                );
 
-                return;
+                $this->vpnConnectionService
+                    ->sendSubscriptionInfo($bot, $user, $tag->value, $keyboard);
+
+                $bot->answerCallbackQuery();
+            }
+        );
+
+        $this->bot->onCallbackQueryData(
+            'vpn:back',
+            function (Nutgram $bot) {
+                $user = $this->userService
+                    ->findUserByTelegramId($bot->userId());
+
+                if (!$user) {
+                    $bot->answerCallbackQuery();
+                    return;
+                }
+
+                $keyboard = XuiTag::keyboardFromValues(
+                    $user->tags->pluck('tag')->all(),
+                    2
+                );
+
+                $keyboard->addRow(
+                    InlineKeyboardButton::make(
+                        '🏠 Главное меню',
+                        callback_data: 'main_menu'
+                    )
+                );
+
+                $this->vpnConnectionService
+                    ->sendChoosingActiveVpnMenu($bot, $keyboard);
+
+                $bot->answerCallbackQuery();
             }
         );
     }
@@ -238,7 +265,7 @@ final readonly class TelegramBotHandlers
                 InlineKeyboardButton::make('Приложение для iPhone/iOS', url: 'https://apps.apple.com/ru/app/v2raytun/id6476628951')
             )
             ->addRow(InlineKeyboardButton::make('Инструкция для Windows', url: 'https://telegra.ph/Instrukciya-po-ustanovke-V2raytun-na-PK--Windows-1011-01-02'))
-            ->addRow(InlineKeyboardButton::make('Вернуться в главное меню', callback_data: 'main_menu'));
+            ->addRow(InlineKeyboardButton::make('🏠 Главное меню', callback_data: 'main_menu'));
     }
 
     private function clearChat(array $messageIds, Nutgram $bot): void
