@@ -94,6 +94,7 @@ final class XuiService
      * Получает статус сервера
      *
      * @param string $tag
+     * 
      * @return array
      */
     public function getServerStatus(string $tag): array
@@ -106,6 +107,7 @@ final class XuiService
      * Получает список всех инбаундов
      *
      * @param string $tag
+     * 
      * @return array
      */
     public function getInbounds(string $tag): array
@@ -119,6 +121,7 @@ final class XuiService
      *
      * @param string $tag
      * @param int $inboundId
+     * 
      * @return array
      */
     public function getInbound(string $tag, int $inboundId): array
@@ -133,6 +136,7 @@ final class XuiService
      * @param string $tag
      * @param int $inboundId
      * @param array $clientData Данные клиента (email, uuid, password и т.д.)
+     * 
      * @return array
      */
     public function addClient(string $tag, int $inboundId, array $clientData): array
@@ -148,6 +152,7 @@ final class XuiService
      * @param int $inboundId
      * @param string $uuid uuid клиента
      * @param array $clientData Новые данные клиента
+     * 
      * @return array
      */
     public function updateClient(string $tag, int $inboundId, string $uuid, array $clientData): array
@@ -162,6 +167,7 @@ final class XuiService
      * @param string $tag
      * @param int $inboundId
      * @param string $userId userId клиента
+     * 
      * @return array
      */
     public function getClientTrafficByUserId(string $tag, int $inboundId, string $userId): array
@@ -175,6 +181,7 @@ final class XuiService
      *
      * @param string $tag
      * @param string $uuid uuid клиента
+     * 
      * @return array
      */
     public function getClientTrafficByUserUuid(string $tag, string $uuid): array
