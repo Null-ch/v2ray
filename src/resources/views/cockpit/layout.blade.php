@@ -85,6 +85,12 @@
                             <p>Рефералы</p>
                         </a>
                     </li>
+                    <li class="nav-item">
+                        <a href="{{ route('cockpit.pricing.index') }}" class="nav-link {{ request()->routeIs('cockpit.pricing.*') ? 'active' : '' }}">
+                            <i class="nav-icon fas fa-tags"></i>
+                            <p>Тарифы</p>
+                        </a>
+                    </li>
                 </ul>
             </nav>
         </div>

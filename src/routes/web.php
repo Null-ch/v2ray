@@ -7,6 +7,7 @@ use App\Http\Controllers\Cockpit\CockpitXuiController;
 use App\Http\Controllers\Cockpit\CockpitUserController;
 use App\Http\Controllers\Cockpit\CockpitBalanceController;
 use App\Http\Controllers\Cockpit\CockpitReferralController;
+use App\Http\Controllers\Cockpit\CockpitPricingController;
 
 Route::get('/', function () {
     return view('welcome');
@@ -41,5 +42,8 @@ Route::prefix('cockpit')->group(function () {
 
         // Referral CRUD routes
         Route::resource('referral', CockpitReferralController::class);
+
+        // Pricing CRUD routes
+        Route::resource('pricing', CockpitPricingController::class);
     });
 });

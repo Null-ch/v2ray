@@ -27,7 +27,7 @@ class MillisecondsHelper
     public static function millisecondsToDaysHours(int|string $milliseconds): array
     {
         $nowMs = round(microtime(true) * 1000);
-        $diffMs = max(0, (int) $milliseconds - $nowMs); // не отрицать
+        $diffMs = max(0, (int) $milliseconds - $nowMs);
 
         $days = floor($diffMs / 1000 / 60 / 60 / 24);
         $hours = floor(($diffMs / 1000 / 60 / 60) % 24);
