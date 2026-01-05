@@ -65,17 +65,20 @@ final readonly class TelegramBotHandlers
                             InlineKeyboardButton::make('Подключить VPN', callback_data: 'connect_vpn'),
                             InlineKeyboardButton::make('Мои VPN', callback_data: 'user_vpn')
                         )
-                        ->addRow(InlineKeyboardButton::make('🏠 Главное меню', callback_data: 'main_menu'));
+                        ->addRow($this->getMainMenuButton());
                 } else {
                     $keyboard = InlineKeyboardMarkup::make()
                         ->addRow(InlineKeyboardButton::make('Подключить VPN', callback_data: 'connect_vpn'))
-                        ->addRow(InlineKeyboardButton::make('🏠 Главное меню', callback_data: 'main_menu'));
+                        ->addRow($this->getMainMenuButton());
                 }
 
                 $this->vpnConnectionService->sendMainMenu($bot, $user, $keyboard);
             }
         });
 
+        /**
+         * Обработка принятия соглашений
+         */
         $this->bot->onCallbackQueryData('accept_terms', function (Nutgram $bot) {
             $bot->answerCallbackQuery($bot->callbackQuery()->id, '⏳ Создаю VPN конфигурацию, пожалуйста, подождите...');
 
@@ -83,7 +86,6 @@ final readonly class TelegramBotHandlers
                 $telegramId = $bot->userId();
                 $username = $bot->user()->username;
                 $name = $bot->user()->first_name;
-                // $bot->sendMessage('⏳ Создаю VPN конфигурацию, пожалуйста, подождите...');
 
                 ProcessAcceptTermsJob::dispatch(
                     telegramId: $telegramId,
@@ -102,6 +104,9 @@ final readonly class TelegramBotHandlers
             }
         });
 
+        /**
+         * Обработка кнопки "Подключить VPN". Предлагает список стран на выбор
+         */
         $this->bot->onCallbackQueryData('connect_vpn', function (Nutgram $bot) {
             $buttons = Xui::activeButtons();
             $keyboard = InlineKeyboardMarkup::make();
@@ -117,19 +122,9 @@ final readonly class TelegramBotHandlers
             return;
         });
 
-        // Обработчик кнопки "Перенести в приложение"
-        $this->bot->onCallbackQueryData('export_config', function (Nutgram $bot) {
-            // TODO: Получить экспортную ссылку по тегу и юиду
-            $exportUrl = 'https://www.sigmalink.org/redirect/?redirect_to=www.sigmalink.org&token=PLACEHOLDER_TOKEN&scheme=v2raytun';
-            $bot->sendMessage(
-                "📲 Экспортная ссылка для переноса конфигов:\n\n$exportUrl\n\n⚠️ Внимание: это заглушка, функционал в разработке",
-                parse_mode: 'HTML'
-            );
-
-            $bot->answerCallbackQuery('Ссылка отправлена');
-        });
-
-
+        /**
+         * Обработка кнопки "Главное меню"
+         */
         $this->bot->onCallbackQueryData('main_menu', function (Nutgram $bot) {
             $messageIds = $bot->getGlobalData('vpn_message_ids', []);
             $this->clearChat($messageIds, $bot);
@@ -163,6 +158,9 @@ final readonly class TelegramBotHandlers
             return;
         });
 
+        /**
+         * Обработка кнопки "Инструкции"
+         */
         $this->bot->onCallbackQueryData('guidelines', function (Nutgram $bot) {
             $messageIds = $bot->getGlobalData('vpn_message_ids', []);
             $keyboard = $this->getInstructionsKeyboard();
@@ -173,7 +171,11 @@ final readonly class TelegramBotHandlers
             return;
         });
 
+        /**
+         * Обработка кнопки "Мои VPN". Ищет активные VPN, показывает сначала страну для выбора
+         */
         $this->bot->onCallbackQueryData('user_vpn', function (Nutgram $bot) {
+            $bot->answerCallbackQuery();
             $messageIds = $bot->getGlobalData('vpn_message_ids', []);
             $this->clearChat($messageIds, $bot);
             $telegramId = $bot->userId();
@@ -184,19 +186,16 @@ final readonly class TelegramBotHandlers
                 2
             );
 
-            $keyboard->addRow(
-                InlineKeyboardButton::make(
-                    '🏠 Главное меню',
-                    callback_data: 'main_menu'
-                )
-            );
-
+            $keyboard->addRow($this->getMainMenuButton());
             $this->vpnConnectionService->sendChoosingActiveVpnMenu($bot, $keyboard);
             $bot->answerCallbackQuery();
 
             return;
         });
 
+        /**
+         * Обработка кнопки "Мои VPN -> страна". Ищет VPN по тегу страны и отображает информацию о нем
+         */
         $this->bot->onCallbackQueryData(
             'vpn:tag:{code}',
             function (Nutgram $bot, string $code) {
@@ -225,11 +224,14 @@ final readonly class TelegramBotHandlers
             }
         );
 
+        /**
+         * Обработка кнопки "Назад" к списку активных стран-vpn пользователя (на экране информации о текущемм выбранном vpn)
+         */
         $this->bot->onCallbackQueryData(
             'vpn:back',
             function (Nutgram $bot) {
-                $user = $this->userService
-                    ->findUserByTelegramId($bot->userId());
+                $bot->answerCallbackQuery();
+                $user = $this->userService->findUserByTelegramId($bot->userId());
 
                 if (!$user) {
                     $bot->answerCallbackQuery();
@@ -241,21 +243,17 @@ final readonly class TelegramBotHandlers
                     2
                 );
 
-                $keyboard->addRow(
-                    InlineKeyboardButton::make(
-                        '🏠 Главное меню',
-                        callback_data: 'main_menu'
-                    )
-                );
-
-                $this->vpnConnectionService
-                    ->sendChoosingActiveVpnMenu($bot, $keyboard);
-
+                $keyboard->addRow($this->getMainMenuButton());
+                $this->vpnConnectionService->sendChoosingActiveVpnMenu($bot, $keyboard);
                 $bot->answerCallbackQuery();
+
                 return;
             }
         );
 
+        /**
+         * Обработка кнопки "Продлить\Подключить" отображает список тарифов
+         */
         $this->bot->onCallbackQueryData(
             'vpn:pricing:{code}',
             function (Nutgram $bot, string $code) {
@@ -287,30 +285,24 @@ final readonly class TelegramBotHandlers
                     $buttonText = sprintf(
                         '%s - %s ₽ (%s %s)',
                         $pricing->title,
-                        number_format($pricing->price, 0, '.', ' '),
+                        number_format((float) $pricing->price, 0, '.', ' '),
                         $pricing->duration,
                         $pricing->duration == 1 ? 'день' : ($pricing->duration < 5 ? 'дня' : 'дней')
                     );
-                    $keyboard->addRow(
-                        InlineKeyboardButton::make(
-                            $buttonText,
-                            callback_data: Callback::PAYMENT_PRICING->withMultiple((string)$pricing->id, $code)
-                        )
-                    );
+                    $keyboard->addRow(InlineKeyboardButton::make($buttonText,callback_data: Callback::PAYMENT_PRICING->withMultiple((string)$pricing->id, $code)));
                 }
 
-                $keyboard->addRow(
-                    InlineKeyboardButton::make('🏠 Главное меню', callback_data: 'main_menu')
-                );
-
-                $this->vpnConnectionService
-                    ->sendPricingInfo($bot, $user, $pricings, $tag->value, $keyboard);
-
+                $keyboard->addRow($this->getMainMenuButton());
+                $this->vpnConnectionService->sendPricingInfo($bot, $user, $pricings, $tag->value, $keyboard);
                 $bot->answerCallbackQuery();
+
                 return;
             }
         );
 
+        /**
+         * Обработка кнопки "Оплатить" выбранный тариф
+         */
         $this->bot->onCallbackQueryData(
             'payment:pricing:{pricing_id}:{code}',
             function (Nutgram $bot, string $pricingId, string $code) {
@@ -361,15 +353,8 @@ final readonly class TelegramBotHandlers
 
                     if ($payment->confirmation_url) {
                         $keyboard = InlineKeyboardMarkup::make()
-                            ->addRow(
-                                InlineKeyboardButton::make(
-                                    '💳 Перейти к оплате',
-                                    url: $payment->confirmation_url
-                                )
-                            )
-                            ->addRow(
-                                InlineKeyboardButton::make('🏠 Главное меню', callback_data: 'main_menu')
-                            );
+                            ->addRow(InlineKeyboardButton::make('💳 Перейти к оплате',url: $payment->confirmation_url))
+                            ->addRow($this->getMainMenuButton());
 
                         $message = sprintf(
                             "💳 Создан платеж на сумму %s ₽\n\n%s\n\nНажмите кнопку ниже для перехода к оплате:",
@@ -396,6 +381,25 @@ final readonly class TelegramBotHandlers
                 }
             }
         );
+
+        /**
+         * TODO: Реализовать обработку кнопки "Перенести в приложение"
+         */
+        $this->bot->onCallbackQueryData('export_config', function (Nutgram $bot) {
+            // TODO: Получить экспортную ссылку по тегу и юиду
+            $exportUrl = 'https://www.sigmalink.org/redirect/?redirect_to=www.sigmalink.org&token=PLACEHOLDER_TOKEN&scheme=v2raytun';
+            $bot->sendMessage(
+                "📲 Экспортная ссылка для переноса конфигов:\n\n$exportUrl\n\n⚠️ Внимание: это заглушка, функционал в разработке",
+                parse_mode: 'HTML'
+            );
+
+            $bot->answerCallbackQuery('Ссылка отправлена');
+        });
+    }
+
+    private function getMainMenuButton(): InlineKeyboardButton
+    {
+        return InlineKeyboardButton::make('🏠 Главное меню', callback_data: 'main_menu');
     }
 
     private function getInstructionsKeyboard(): InlineKeyboardMarkup
