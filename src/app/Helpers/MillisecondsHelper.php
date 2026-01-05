@@ -37,4 +37,15 @@ class MillisecondsHelper
             'hours' => $hours,
         ];
     }
+
+    /**
+     * Преобразует миллисекунды в полное количество дней.
+     *
+     * @param int|string $milliseconds
+     * @return int
+     */
+    public static function millisecondsToDays(int|string $milliseconds): int
+    {
+        return (int) round((int)$milliseconds / 1000 / 60 / 60 / 24);
+    }
 }

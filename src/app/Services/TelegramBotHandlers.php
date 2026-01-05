@@ -5,14 +5,15 @@ declare(strict_types=1);
 namespace App\Services;
 
 use App\Models\Xui;
-use App\Models\Pricing;
 use App\Enums\XuiTag;
 use App\Enums\Callback;
+use App\Models\Pricing;
 use App\Services\XuiService;
 use SergiX44\Nutgram\Nutgram;
 use App\Services\TelegramService;
-use App\Services\User\UserService;
 use App\Services\YooKassaService;
+use App\Services\User\UserService;
+use App\Helpers\MillisecondsHelper;
 use App\Jobs\ProcessAcceptTermsJob;
 use Illuminate\Support\Facades\Log;
 use SergiX44\Nutgram\Telegram\Types\Keyboard\InlineKeyboardButton;
@@ -282,13 +283,15 @@ final readonly class TelegramBotHandlers
                 $keyboard = InlineKeyboardMarkup::make();
 
                 foreach ($pricings as $pricing) {
+                    $days = MillisecondsHelper::millisecondsToDays($pricing->duration);
                     $buttonText = sprintf(
                         '%s - %s ₽ (%s %s)',
                         $pricing->title,
                         number_format((float) $pricing->price, 0, '.', ' '),
-                        $pricing->duration,
-                        $pricing->duration == 1 ? 'день' : ($pricing->duration < 5 ? 'дня' : 'дней')
+                        $days,
+                        $days == 1 ? 'день' : ($days < 5 ? 'дня' : 'дней')
                     );
+
                     $keyboard->addRow(InlineKeyboardButton::make($buttonText,callback_data: Callback::PAYMENT_PRICING->withMultiple((string)$pricing->id, $code)));
                 }
 
@@ -353,7 +356,7 @@ final readonly class TelegramBotHandlers
 
                     if ($payment->confirmation_url) {
                         $keyboard = InlineKeyboardMarkup::make()
-                            ->addRow(InlineKeyboardButton::make('💳 Перейти к оплате',url: $payment->confirmation_url))
+                            ->addRow(InlineKeyboardButton::make('💳 Перейти к оплате', url: $payment->confirmation_url))
                             ->addRow($this->getMainMenuButton());
 
                         $message = sprintf(
