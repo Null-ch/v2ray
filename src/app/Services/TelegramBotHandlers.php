@@ -104,38 +104,60 @@ final readonly class TelegramBotHandlers
         });
 
         /**
+         * Обработка команды /invite
+         */
+        $this->bot->onCommand('invite', function (Nutgram $bot) {
+            $messageIds = $bot->getGlobalData('vpn_message_ids', []);
+            $this->clearChat($messageIds, $bot);
+            $telegramId = $bot->userId();
+            $user = $this->userService->findUserByTelegramId($telegramId);
+
+            if (!$user) {
+                $bot->sendMessage('❌ Пользователь не найден');
+                return;
+            }
+
+            $userTags = $user->tags->pluck('tag')->all();
+
+            if (empty($userTags)) {
+                $bot->sendMessage('❌ У вас нет активных подписок для реферальной программы');
+                return;
+            }
+
+            $keyboard = $this->createReferralTagKeyboard($userTags, 2);
+            $keyboard->addRow($this->getMainMenuButton());
+            
+            $messageId = $this->vpnConnectionService->sendChoosingActiveVpnMenu($bot, $keyboard);
+            $bot->setGlobalData('vpn_message_ids', [$messageId]);
+        });
+
+        /**
          * Обработка кнопки "Пригласить друга"
          */
         $this->bot->onCallbackQueryData('invite', function (Nutgram $bot) {
             $bot->answerCallbackQuery();
+            $messageIds = $bot->getGlobalData('vpn_message_ids', []);
+            $this->clearChat($messageIds, $bot);
             $telegramId = $bot->userId();
             $user = $this->userService->findUserByTelegramId($telegramId);
 
-            if (!$user || !$user->referral_code) {
-                $bot->sendMessage('❌ Не удалось получить реферальную ссылку');
+            if (!$user) {
+                $bot->sendMessage('❌ Пользователь не найден');
                 return;
             }
 
-            $botUsername = config('services.telegram.bot_username');
-            if (!$botUsername) {
-                // Попытка получить имя бота из API
-                try {
-                    $botInfo = $bot->getMe();
-                    $botUsername = $botInfo->username;
-                } catch (\Throwable $e) {
-                    Log::error('Не удалось получить имя бота: ' . $e->getMessage());
-                    $bot->sendMessage('❌ Не удалось сформировать реферальную ссылку');
-                    return;
-                }
+            $userTags = $user->tags->pluck('tag')->all();
+
+            if (empty($userTags)) {
+                $bot->sendMessage('❌ У вас нет активных подписок для реферальной программы');
+                return;
             }
 
-            $referralLink = "https://t.me/{$botUsername}?start={$user->referral_code}";
+            $keyboard = $this->createReferralTagKeyboard($userTags, 2);
+            $keyboard->addRow($this->getMainMenuButton());
             
-            $message = "👭 Ваша реферальная ссылка:\n\n";
-            $message .= "<code>{$referralLink}</code>\n\n";
-            $message .= "За каждого, кто подключит VPN, Вы получите на баланс 2 дня подписки 👉";
-
-            $bot->sendMessage($message, parse_mode: 'HTML');
+            $messageId = $this->vpnConnectionService->sendChoosingActiveVpnMenu($bot, $keyboard);
+            $bot->setGlobalData('vpn_message_ids', [$messageId]);
         });
 
         /**
@@ -502,6 +524,77 @@ final readonly class TelegramBotHandlers
 
             $bot->answerCallbackQuery('Ссылка отправлена');
         });
+
+        /**
+         * Обработка выбора тега для реферальной программы
+         */
+        $this->bot->onCallbackQueryData(
+            'referral:tag:{code}',
+            function (Nutgram $bot, string $code) {
+                $bot->answerCallbackQuery();
+                $messageIds = $bot->getGlobalData('vpn_message_ids', []);
+                $this->clearChat($messageIds, $bot);
+                $telegramId = $bot->userId();
+                $user = $this->userService->findUserByTelegramId($telegramId);
+
+                if (!$user) {
+                    $bot->sendMessage('❌ Пользователь не найден');
+                    return;
+                }
+
+                if (!$user->referral_code) {
+                    $bot->sendMessage('❌ Не удалось получить реферальный код');
+                    return;
+                }
+
+                try {
+                    $tag = XuiTag::from($code);
+                } catch (\ValueError) {
+                    $bot->sendMessage('❌ Неизвестный VPN');
+                    return;
+                }
+
+                // Проверяем, что у пользователя есть этот тег
+                $userHasTag = $user->tags->contains(function ($userTag) use ($code) {
+                    return $userTag->tag->value === $code;
+                });
+
+                if (!$userHasTag) {
+                    $bot->sendMessage('❌ У вас нет активной подписки для этой страны');
+                    return;
+                }
+
+                // Сохраняем выбранный тег для реферальной программы
+                $user->update(['referral_tag' => $code]);
+
+                // Получаем имя бота
+                $botUsername = config('services.telegram.bot_username');
+                if (!$botUsername) {
+                    try {
+                        $botInfo = $bot->getMe();
+                        $botUsername = $botInfo->username;
+                    } catch (\Throwable $e) {
+                        Log::error('Не удалось получить имя бота: ' . $e->getMessage());
+                        $bot->sendMessage('❌ Не удалось сформировать реферальную ссылку');
+                        return;
+                    }
+                }
+
+                $referralLink = "https://t.me/{$botUsername}?start={$user->referral_code}";
+                $shareUrl = "https://t.me/share/url?url=" . urlencode($referralLink) . "&text=" . urlencode("За каждого, кто подключит VPN, Вы получите на баланс 2 дня подписки, а все приглашенные 7 дней бесплатного VPN");
+
+                $message = "За каждого, кто подключит VPN, Вы получите на баланс 2 дня подписки, а все приглашенные 7 дней бесплатного VPN";
+
+                $keyboard = InlineKeyboardMarkup::make()
+                    ->addRow(InlineKeyboardButton::make('Пригласить', url: $shareUrl))
+                    ->addRow($this->getMainMenuButton());
+
+                $sentMessage = $bot->sendMessage($message, reply_markup: $keyboard);
+                if ($sentMessage && $sentMessage->message_id) {
+                    $bot->setGlobalData('vpn_message_ids', [$sentMessage->message_id]);
+                }
+            }
+        );
     }
 
     private function getMainMenuButton(): InlineKeyboardButton
@@ -516,6 +609,43 @@ final readonly class TelegramBotHandlers
             ->addRow(InlineKeyboardButton::make('🖥️ Инструкция для Windows', url: 'https://telegra.ph/Instrukciya-po-ustanovke-V2raytun-na-PK--Windows-1011-01-02'))
             ->addRow(InlineKeyboardButton::make('🖥️ Инструкция для Windows', url: 'https://telegra.ph/Instrukciya-po-ustanovke-V2raytun-na-PK--Windows-1011-01-02'))
             ->addRow(InlineKeyboardButton::make('🏠 Главное меню', callback_data: 'main_menu'));
+    }
+
+    /**
+     * Создает клавиатуру для выбора тега реферальной программы
+     *
+     * @param array $tags
+     * @param int $perRow
+     * @return InlineKeyboardMarkup
+     */
+    private function createReferralTagKeyboard(array $tags, int $perRow = 2): InlineKeyboardMarkup
+    {
+        $keyboard = InlineKeyboardMarkup::make();
+        $row = [];
+
+        foreach ($tags as $tag) {
+            try {
+                $tagEnum = XuiTag::from($tag->value);
+            } catch (\ValueError) {
+                continue;
+            }
+
+            $row[] = InlineKeyboardButton::make(
+                $tagEnum->labelWithFlag(),
+                callback_data: Callback::REFERRAL_TAG->with($tagEnum->value)
+            );
+
+            if (count($row) === $perRow) {
+                $keyboard->addRow(...$row);
+                $row = [];
+            }
+        }
+
+        if ($row) {
+            $keyboard->addRow(...$row);
+        }
+
+        return $keyboard;
     }
 
     private function clearChat(array $messageIds, Nutgram $bot): void

@@ -10,6 +10,7 @@ enum Callback: string
     case VPN_BACK = 'vpn:back';
     case VPN_PRICING = 'vpn:pricing';
     case PAYMENT_PRICING = 'payment:pricing';
+    case REFERRAL_TAG = 'referral:tag';
 
     public function with(?string $value = null): string
     {

@@ -6,6 +6,7 @@ namespace App\Jobs;
 
 use App\Enums\XuiTag;
 use App\Models\Referral;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Str;
 use App\Services\XuiService;
 use Illuminate\Bus\Queueable;
@@ -56,6 +57,33 @@ final class ProcessAcceptTermsJob implements ShouldQueue
                         'user_id' => $this->referrerId,
                         'referred_user_id' => $user->id,
                     ]);
+
+                    // Добавляем 2 дня к выбранной конфигурации реферера
+                    $referrer = \App\Models\User::find($this->referrerId);
+                    if ($referrer && $referrer->referral_tag) {
+                        try {
+                            $tag = $referrer->referral_tag;
+                            $uuid = $referrer->uuid;
+                            $clientDataResponse = $xuiService->getClientTrafficByUserUuid($tag, $uuid);
+                            $clientDataArray = Arr::get($clientDataResponse, 'data');
+
+                            if (count($clientDataArray) > 0) {
+                                $client = $clientDataArray[0];
+                                // Добавляем 2 дня в миллисекундах (2 * 24 * 60 * 60 * 1000)
+                                $twoDaysInMs = 2 * 24 * 60 * 60 * 1000;
+                                $client['expiryTime'] += $twoDaysInMs;
+                                $client['id'] = $uuid;
+                                $inboundId = Arr::get($client, 'inboundId');
+                                $xuiService->updateClient($tag, $inboundId, $uuid, $client);
+                            }
+                        } catch (\Throwable $e) {
+                            Log::error('Ошибка при добавлении 2 дней рефереру: ' . $e->getMessage(), [
+                                'referrer_id' => $this->referrerId,
+                                'tag' => $referrer->referral_tag ?? null,
+                                'trace' => $e->getTraceAsString(),
+                            ]);
+                        }
+                    }
                 }
             }
 

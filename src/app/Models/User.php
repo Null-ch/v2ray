@@ -25,6 +25,7 @@ class User extends Authenticatable
         'uuid',
         'referrer_id',
         'referral_code',
+        'referral_tag',
     ];
 
     /**
