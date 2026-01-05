@@ -13,7 +13,8 @@
         "laravel/tinker": "^2.10.1",
         "laravel/ui": "^4.6",
         "nutgram/nutgram": "^4.39",
-        "spatie/laravel-data": "^4.18"
+        "spatie/laravel-data": "^4.18",
+        "yoomoney/yookassa-sdk-php": "^3.12"
     },
     "require-dev": {
         "fakerphp/faker": "^1.23",

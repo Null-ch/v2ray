@@ -2,8 +2,10 @@
 
 namespace App\Providers;
 
+use App\Clients\YooKassaClient;
 use App\Services\TelegramBotHandlers;
 use App\Services\VpnConnectionService;
+use App\Services\YooKassaService;
 use SergiX44\Nutgram\Nutgram;
 use App\Services\TelegramService;
 use Illuminate\Support\ServiceProvider;
@@ -28,6 +30,20 @@ class AppServiceProvider extends ServiceProvider
             });
 
             $this->app->singleton(VpnConnectionService::class);
+        }
+
+        // Регистрируем YooKassa клиент и сервис
+        $shopId = config('services.yookassa.shop_id');
+        $secretKey = config('services.yookassa.secret_key');
+        
+        if (!empty($shopId) && !empty($secretKey)) {
+            $this->app->singleton(YooKassaClient::class, function ($app) use ($shopId, $secretKey) {
+                return new YooKassaClient($shopId, $secretKey);
+            });
+
+            $this->app->singleton(YooKassaService::class, function ($app) {
+                return new YooKassaService($app->make(YooKassaClient::class));
+            });
         }
     }
 

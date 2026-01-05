@@ -35,6 +35,7 @@ final readonly class TelegramBotHandlers
         private Nutgram $bot,
         private VpnConnectionService $vpnConnectionService,
         private UserService $userService,
+        private PricingService $pricingService,
         private TelegramService $telegramService,
         private XuiService $xuiService,
     ) {}
@@ -128,9 +129,7 @@ final readonly class TelegramBotHandlers
 
         $this->bot->onCallbackQueryData('main_menu', function (Nutgram $bot) {
             $messageIds = $bot->getGlobalData('vpn_message_ids', []);
-
             $this->clearChat($messageIds, $bot);
-
             $telegramId = $bot->userId();
             $user = $this->userService->findUserByTelegramId($telegramId);
 
@@ -196,15 +195,16 @@ final readonly class TelegramBotHandlers
         });
 
         $this->bot->onCallbackQueryData(
-            'vpn:tag:{code}',
+            'vpn:connect:{code}',
             function (Nutgram $bot, string $code) {
-                $user = $this->userService
-                    ->findUserByTelegramId($bot->userId());
+                $user = $this->userService->findUserByTelegramId($bot->userId());
 
                 if (!$user) {
                     $bot->answerCallbackQuery();
                     return;
                 }
+
+                $prices = $this->pricingService->getAll();
 
                 try {
                     $tag = XuiTag::from($code);
@@ -253,16 +253,43 @@ final readonly class TelegramBotHandlers
                 $bot->answerCallbackQuery();
             }
         );
+
+        $this->bot->onCallbackQueryData(
+            'vpn:pricing:{code}',
+            function (Nutgram $bot, string $code) {
+                $user = $this->userService
+                    ->findUserByTelegramId($bot->userId());
+
+                if (!$user) {
+                    $bot->answerCallbackQuery();
+                    return;
+                }
+
+                try {
+                    $tag = XuiTag::from($code);
+                } catch (\ValueError) {
+                    $bot->answerCallbackQuery('Неизвестный VPN');
+                    return;
+                }
+
+                $keyboard = InlineKeyboardMarkup::make()
+                    ->addRow(InlineKeyboardButton::make('🔃 Продлить VPN', callback_data: Callback::VPN_PRICING->with($code)))
+                    ->addRow(InlineKeyboardButton::make('⬅️ Назад к VPN', callback_data: Callback::VPN_BACK->value));
+
+                $this->vpnConnectionService
+                    ->sendSubscriptionInfo($bot, $user, $tag->value, $keyboard);
+
+                $bot->answerCallbackQuery();
+            }
+        );
     }
 
     private function getInstructionsKeyboard(): InlineKeyboardMarkup
     {
         return InlineKeyboardMarkup::make()
-            ->addRow(
-                InlineKeyboardButton::make('Приложение для Android', url: 'https://play.google.com/store/apps/details?id=com.v2raytun.android&pcampaignid=web_share'),
-                InlineKeyboardButton::make('Приложение для iPhone/iOS', url: 'https://apps.apple.com/ru/app/v2raytun/id6476628951')
-            )
-            ->addRow(InlineKeyboardButton::make('Инструкция для Windows', url: 'https://telegra.ph/Instrukciya-po-ustanovke-V2raytun-na-PK--Windows-1011-01-02'))
+            ->addRow(InlineKeyboardButton::make('🤖 Приложение для Android', url: 'https://play.google.com/store/apps/details?id=com.v2raytun.android&pcampaignid=web_share'))
+            ->addRow(InlineKeyboardButton::make('🖥️ Инструкция для Windows', url: 'https://telegra.ph/Instrukciya-po-ustanovke-V2raytun-na-PK--Windows-1011-01-02'))
+            ->addRow(InlineKeyboardButton::make('🖥️ Инструкция для Windows', url: 'https://telegra.ph/Instrukciya-po-ustanovke-V2raytun-na-PK--Windows-1011-01-02'))
             ->addRow(InlineKeyboardButton::make('🏠 Главное меню', callback_data: 'main_menu'));
     }
 
@@ -274,19 +301,5 @@ final readonly class TelegramBotHandlers
             } catch (\Throwable $e) {
             }
         }
-    }
-
-    /**
-     * Безопасно получить значение из массива или объекта
-     */
-    private function getValue(mixed $data, string $key, mixed $default = null): mixed
-    {
-        if (is_array($data)) {
-            return $data[$key] ?? $default;
-        }
-        if (is_object($data)) {
-            return $data->$key ?? $default;
-        }
-        return $default;
     }
 }

@@ -8,6 +8,7 @@ use App\Http\Controllers\Cockpit\CockpitUserController;
 use App\Http\Controllers\Cockpit\CockpitBalanceController;
 use App\Http\Controllers\Cockpit\CockpitReferralController;
 use App\Http\Controllers\Cockpit\CockpitPricingController;
+use App\Http\Controllers\PaymentController;
 
 Route::get('/', function () {
     return view('welcome');
@@ -46,4 +47,12 @@ Route::prefix('cockpit')->group(function () {
         // Pricing CRUD routes
         Route::resource('pricing', CockpitPricingController::class);
     });
+});
+
+// Payment routes
+Route::prefix('payment')->group(function () {
+    Route::get('/', [PaymentController::class, 'show'])->name('payment.show');
+    Route::post('/', [PaymentController::class, 'create'])->name('payment.create');
+    Route::get('/{payment}/return', [PaymentController::class, 'return'])->name('payment.return');
+    Route::get('/{payment}/status', [PaymentController::class, 'status'])->name('payment.status');
 });

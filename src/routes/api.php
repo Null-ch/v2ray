@@ -31,3 +31,10 @@ Route::prefix('xui')->group(function () {
         Route::get('inbounds/{inboundId}/clients/trafficId', [XuiController::class, 'getClientTrafficByUserUuid']);
     });
 });
+
+// Payment API routes
+Route::prefix('payment')->group(function () {
+    Route::post('/', [\App\Http\Controllers\PaymentController::class, 'create'])->name('api.payment.create');
+    Route::get('/{payment}/status', [\App\Http\Controllers\PaymentController::class, 'status'])->name('api.payment.status');
+    Route::post('/webhook', [\App\Http\Controllers\PaymentController::class, 'webhook'])->name('api.payment.webhook');
+});

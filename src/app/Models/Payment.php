@@ -1,0 +1,75 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+
+class Payment extends Model
+{
+    use HasFactory;
+
+    public const STATUS_PENDING = 'pending';
+    public const STATUS_SUCCEEDED = 'succeeded';
+    public const STATUS_CANCELED = 'canceled';
+
+    protected $fillable = [
+        'user_id',
+        'yookassa_payment_id',
+        'amount',
+        'description',
+        'status',
+        'yookassa_status',
+        'confirmation_url',
+        'metadata',
+    ];
+
+    /**
+     * Get the attributes that should be cast.
+     *
+     * @return array<string, string>
+     */
+    protected function casts(): array
+    {
+        return [
+            'amount' => 'decimal:2',
+            'metadata' => 'array',
+        ];
+    }
+
+    /**
+     * Владелец платежа
+     */
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class);
+    }
+
+    /**
+     * Проверяет, является ли платеж успешным
+     */
+    public function isSucceeded(): bool
+    {
+        return $this->status === self::STATUS_SUCCEEDED;
+    }
+
+    /**
+     * Проверяет, является ли платеж отмененным
+     */
+    public function isCanceled(): bool
+    {
+        return $this->status === self::STATUS_CANCELED;
+    }
+
+    /**
+     * Проверяет, находится ли платеж в ожидании
+     */
+    public function isPending(): bool
+    {
+        return $this->status === self::STATUS_PENDING;
+    }
+}
+

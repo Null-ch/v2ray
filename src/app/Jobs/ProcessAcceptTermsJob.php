@@ -82,34 +82,19 @@ final class ProcessAcceptTermsJob implements ShouldQueue
             $userConfig = $xuiService->getSubLink('NL', $user->uuid);
             $userConfigImportLink = $xuiService->getSubLink('NL', $user->uuid, 'import');
 
-            // Создаем клавиатуру с инструкциями
             $instructionsKeyboard = InlineKeyboardMarkup::make()
-                ->addRow(
-                    InlineKeyboardButton::make('Приложение для Android', url: 'https://play.google.com/store/apps/details?id=com.v2raytun.android&pcampaignid=web_share')
-                )
-                ->addRow(
-                    InlineKeyboardButton::make('Приложение для iPhone/iOS', url: 'https://apps.apple.com/ru/app/v2raytun/id6476628951')
-                )
-                ->addRow(
-                    InlineKeyboardButton::make('Инструкция для Windows', url: 'https://telegra.ph/Instrukciya-po-ustanovke-V2raytun-na-PK--Windows-1011-01-02')
-                )
-                ->addRow(
-                    InlineKeyboardButton::make('📲 Перенести в приложение', url: "$userConfigImportLink")
-                )
-                ->addRow(
-                    InlineKeyboardButton::make('Вернуться в главное меню', callback_data: 'main_menu')
-                );
+                ->addRow(InlineKeyboardButton::make('🤖 Приложение для Android', url: 'https://play.google.com/store/apps/details?id=com.v2raytun.android&pcampaignid=web_share'),)
+                ->addRow(InlineKeyboardButton::make('🍎 Приложение для iPhone/iOS', url: 'https://apps.apple.com/ru/app/v2raytun/id6476628951'))
+                ->addRow(InlineKeyboardButton::make('🖥️ Инструкция для Windows', url: 'https://telegra.ph/Instrukciya-po-ustanovke-V2raytun-na-PK--Windows-1011-01-02'))
+                ->addRow(InlineKeyboardButton::make('📲 Перенести в приложение', url: "$userConfigImportLink"))
+                ->addRow(InlineKeyboardButton::make('🏠 Вернуться в главное меню', callback_data: 'main_menu'));
 
-            // Отправляем пользователю сообщения с VPN
             $vpnConnectionService->sendVpnConnectionMessagesToChat(
                 $bot,
                 $this->telegramId,
                 $instructionsKeyboard,
                 $userConfig
             );
-
-            // Сохраняем ID сообщений (опционально, если нужно)
-            // Можно использовать кеш или БД для хранения messageIds по telegramId
         } catch (\Throwable $e) {
             Log::error('Ошибка при обработке accept_terms в Job: ' . $e->getMessage(), [
                 'trace' => $e->getTraceAsString(),
@@ -117,7 +102,6 @@ final class ProcessAcceptTermsJob implements ShouldQueue
                 'chat_id' => $this->telegramId,
             ]);
 
-            // Отправляем ошибку пользователю
             try {
                 $bot->sendMessage('❌ Произошла ошибка при создании VPN конфигурации. Пожалуйста, попробуйте позже.', (string) $this->telegramId);
             } catch (\Throwable $sendError) {

@@ -96,6 +96,14 @@ class User extends Authenticatable
         return $this->hasMany(UserTag::class);
     }
 
+    /**
+     * User payments
+     */
+    public function payments()
+    {
+        return $this->hasMany(Payment::class);
+    }
+
     public function getId()
     {
         return $this->id;

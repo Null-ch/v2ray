@@ -6,6 +6,7 @@ namespace App\Repositories;
 
 use App\DTO\PricingDTO;
 use App\Models\Pricing;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
@@ -82,6 +83,14 @@ class PricingRepository extends BaseRepository
             ->newQuery()
             ->orderBy('created_at', 'desc')
             ->paginate($perPage);
+    }
+
+    public function getAll(): Collection
+    {
+        return $this->model
+            ->newQuery()
+            ->orderBy('created_at', 'desc')
+            ->get();
     }
 
     public function findById(int $id): ?Model
