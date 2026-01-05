@@ -21,16 +21,6 @@ final class YooKassaClient
         $this->client->setAuth($shopId, $secretKey);
     }
 
-    /**
-     * Создает платеж в YooKassa и возвращает PaymentInterface
-     *
-     * @param float $amount
-     * @param string $description
-     * @param array $metadata
-     * @param string|null $returnUrl
-     * @return PaymentInterface
-     * @throws \RuntimeException
-     */
     public function createPayment(
         float $amount,
         string $description,
@@ -40,13 +30,14 @@ final class YooKassaClient
         try {
             $builder = CreatePaymentRequest::builder();
 
-            // Устанавливаем сумму и валюту через Amount
+            // Сумма и валюта
             $builder->setAmount([
                 'value' => number_format($amount, 2, '.', ''),
                 'currency' => 'RUB',
             ]);
 
-            // Метаданные (можно передать id пользователя, заказа и т.д.)
+            // Метаданные (в том числе описание)
+            $metadata = array_merge($metadata, ['description' => $description]);
             $builder->setMetadata($metadata);
 
             // Подтверждение через редирект
@@ -55,15 +46,11 @@ final class YooKassaClient
                 'return_url' => $returnUrl ?? route('payment.return'),
             ]);
 
-            $builder->setCapture(true); // Автозахват
+            $builder->setCapture(true); // автозахват
 
-            // В SDK 3.x description передаётся как поле в массиве параметров
-            $builder->setDescription($description); // ❌ вот этого больше нет
-
-            // Строим запрос
             $request = $builder->build();
 
-            // Метод createPayment сразу возвращает PaymentInterface
+            // В SDK 3.x createPayment уже возвращает PaymentInterface
             $payment = $this->client->createPayment($request);
 
             Log::info('YooKassa payment created', [
