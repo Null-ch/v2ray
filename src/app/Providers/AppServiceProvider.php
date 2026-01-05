@@ -33,6 +33,7 @@ class AppServiceProvider extends ServiceProvider
         }
 
         // Регистрируем YooKassa клиент и сервис
+        // Важно: регистрируем только если конфигурация настроена
         $shopId = config('services.yookassa.shop_id');
         $secretKey = config('services.yookassa.secret_key');
         
@@ -44,6 +45,9 @@ class AppServiceProvider extends ServiceProvider
             $this->app->singleton(YooKassaService::class, function ($app) {
                 return new YooKassaService($app->make(YooKassaClient::class));
             });
+        } else {
+            // Если конфигурация не настроена, не регистрируем сервисы
+            // TelegramBotHandlers не будет создан, если YooKassaService не зарегистрирован
         }
     }
 
@@ -55,6 +59,14 @@ class AppServiceProvider extends ServiceProvider
         $token = config('services.telegram.bot_token');
 
         if (empty($token) || !$this->app->bound(TelegramService::class) || !$this->app->bound(VpnConnectionService::class)) {
+            return;
+        }
+
+        // Проверяем, зарегистрирован ли YooKassaService (нужен для TelegramBotHandlers)
+        if (!$this->app->bound(YooKassaService::class)) {
+            // Если YooKassa не настроен, регистрируем заглушку или пропускаем инициализацию
+            // В зависимости от требований можно либо выбросить исключение, либо пропустить
+            // Для работы бота без платежей можно зарегистрировать заглушку
             return;
         }
 
