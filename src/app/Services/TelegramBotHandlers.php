@@ -43,7 +43,30 @@ final readonly class TelegramBotHandlers
     {
         Log::info('Registering Telegram bot handlers');
         
+        // Обработчик на сообщения с командой /start (включая параметры)
+        // Используем onMessage как основной обработчик для надежности
+        $this->bot->onMessage(function (Nutgram $bot) {
+            $text = $bot->message()?->text ?? '';
+            if (preg_match('/^\/start(\s|$)/i', $text)) {
+                Log::info('Start command detected via onMessage', [
+                    'text' => $text,
+                    'telegram_id' => $bot->userId(),
+                ]);
+                $this->handleStartCommand($bot);
+            }
+        });
+        
+        // Также регистрируем через onCommand для совместимости
         $this->bot->onCommand('start', function (Nutgram $bot) {
+            Log::info('Start command detected via onCommand', [
+                'telegram_id' => $bot->userId(),
+            ]);
+            $this->handleStartCommand($bot);
+        });
+    }
+    
+    private function handleStartCommand(Nutgram $bot): void
+    {
             $telegramId = $bot->userId();
             
             Log::info('=== START COMMAND HANDLER CALLED ===', [
@@ -183,7 +206,7 @@ final readonly class TelegramBotHandlers
             Log::info('=== START COMMAND HANDLER FINISHED ===', [
                 'telegram_id' => $telegramId,
             ]);
-        });
+    }
 
         /**
          * Обработка команды /invite
