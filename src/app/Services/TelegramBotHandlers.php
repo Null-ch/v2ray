@@ -363,7 +363,7 @@ final readonly class TelegramBotHandlers
 
                         $message = sprintf(
                             "💳 Создан платеж на сумму %s ₽\n\n%s\n\nНажмите кнопку ниже для перехода к оплате:",
-                            number_format($pricing->price, 2, '.', ' '),
+                            number_format((float) $pricing->price, 2, '.', ' '),
                             $description
                         );
 

@@ -2,7 +2,7 @@
 
 @foreach($pricings as $pricing)
 ⏱ Длительность: {{ $pricing->title }}
-💰 Цена: {{ number_format($pricing->price, 2, '.', ' ') }} ₽
+💰 Цена: {{ number_format($pricing->price) }} ₽
 
 @endforeach
 Выберите тарифный план для оплаты:
