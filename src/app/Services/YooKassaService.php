@@ -25,7 +25,6 @@ final class YooKassaService
         private readonly YooKassaClient $client,
         private readonly TelegramService $telegramService,
         private readonly XuiService $xuiService,
-        private readonly VpnConnectionService $vpnConnectionService
     ) {}
 
     /**
