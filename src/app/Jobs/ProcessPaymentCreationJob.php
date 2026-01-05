@@ -93,6 +93,10 @@ final class ProcessPaymentCreationJob implements ShouldQueue
             );
 
             if ($payment->confirmation_url) {
+                // Удаляем предыдущие сообщения с клавиатурами
+                $messageIds = $bot->getGlobalData('vpn_message_ids', []);
+                $this->clearChat($messageIds, $bot, (string) $this->telegramId);
+
                 $keyboard = InlineKeyboardMarkup::make()
                     ->addRow(InlineKeyboardButton::make('💳 Перейти к оплате', url: $payment->confirmation_url))
                     ->addRow(InlineKeyboardButton::make('🏠 Главное меню', callback_data: 'main_menu'));
@@ -108,6 +112,8 @@ final class ProcessPaymentCreationJob implements ShouldQueue
                 // Сохраняем ID сообщения с кнопкой оплаты в платеже
                 if ($sentMessage && $sentMessage->message_id) {
                     $payment->update(['telegram_message_id' => $sentMessage->message_id]);
+                    // Сохраняем ID в global data для последующего удаления
+                    $bot->setGlobalData('vpn_message_ids', [$sentMessage->message_id]);
                 }
             } else {
                 $bot->sendMessage('❌ Ошибка при создании платежа', (string) $this->telegramId);
@@ -133,6 +139,25 @@ final class ProcessPaymentCreationJob implements ShouldQueue
             }
 
             throw $e;
+        }
+    }
+
+    /**
+     * Удаляет сообщения из чата
+     *
+     * @param array $messageIds
+     * @param Nutgram $bot
+     * @param string $chatId
+     * @return void
+     */
+    private function clearChat(array $messageIds, Nutgram $bot, string $chatId): void
+    {
+        foreach ($messageIds as $messageId) {
+            try {
+                $bot->deleteMessage($chatId, $messageId);
+            } catch (\Throwable $e) {
+                // Игнорируем ошибки удаления
+            }
         }
     }
 }

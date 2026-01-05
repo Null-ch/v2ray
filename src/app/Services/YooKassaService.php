@@ -6,11 +6,15 @@ namespace App\Services;
 
 use App\Models\User;
 use App\Models\Payment;
+use App\Enums\XuiTag;
+use App\Helpers\MillisecondsHelper;
 use Illuminate\Support\Arr;
 use App\Clients\YooKassaClient;
 use App\Services\TelegramService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\View;
+use SergiX44\Nutgram\Nutgram;
 use YooKassa\Model\Payment\PaymentStatus;
 use SergiX44\Nutgram\Telegram\Types\Keyboard\InlineKeyboardButton;
 use SergiX44\Nutgram\Telegram\Types\Keyboard\InlineKeyboardMarkup;
@@ -20,7 +24,8 @@ final class YooKassaService
     public function __construct(
         private readonly YooKassaClient $client,
         private readonly TelegramService $telegramService,
-        private readonly XuiService $xuiService
+        private readonly XuiService $xuiService,
+        private readonly VpnConnectionService $vpnConnectionService
     ) {}
 
     /**
@@ -254,24 +259,60 @@ final class YooKassaService
                 }
             }
 
-            // Отправляем сообщение об успешном платеже
-            $successMessage = sprintf(
-                "✅ Платеж успешно завершен!\n\n💳 Сумма: %s ₽\n📝 Описание: %s\n\nСредства зачислены на ваш баланс.",
-                number_format((float) $payment->amount),
-                $payment->description
-            );
+            // Удаляем предыдущие сообщения с клавиатурами
+            $messageIds = $bot->getGlobalData('vpn_message_ids', []);
+            $this->clearChat($messageIds, $bot, $user->tg_id);
+
+            // Получаем информацию о подписке, если есть тег VPN
+            $vpnTag = $payment->getVpnTag();
+            $totalDays = null;
+            $daysWord = null;
+            
+            if ($vpnTag) {
+                try {
+                    $clientDataResponse = $this->xuiService->getClientTrafficByUserUuid($vpnTag, $user->uuid);
+                    $clientDataArray = Arr::get($clientDataResponse, 'data');
+                    $expiryTimeMs = Arr::get($clientDataArray, '0.expiryTime');
+                    
+                    if ($expiryTimeMs) {
+                        $expiryTime = MillisecondsHelper::millisecondsToDaysHours($expiryTimeMs);
+                        $totalDays = Arr::get($expiryTime, 'days', 0);
+                        if ($totalDays > 0) {
+                            $daysWord = $this->getDaysWord($totalDays);
+                        }
+                    }
+                } catch (\Throwable $e) {
+                    Log::debug('Failed to get subscription info for payment notification', [
+                        'payment_id' => $payment->id,
+                        'vpn_tag' => $vpnTag,
+                        'error' => $e->getMessage(),
+                    ]);
+                }
+            }
+
+            // Формируем сообщение с помощью blade шаблона
+            $successMessage = View::make('telegram.payment-success', [
+                'amount' => $payment->amount,
+                'description' => $payment->description,
+                'totalDays' => $totalDays,
+                'daysWord' => $daysWord,
+            ])->render();
 
             $keyboard = InlineKeyboardMarkup::make();
             
             // Добавляем кнопку "Перенести в приложение" если есть тег VPN
-            $vpnTag = $payment->getVpnTag();
             if ($vpnTag) {
                 $userConfigImportLink = $this->xuiService->getSubLink($vpnTag, $user->uuid, 'import');
                 $keyboard->addRow(InlineKeyboardButton::make('📲 Перенести в приложение', url: $userConfigImportLink));
             }
             
             $keyboard->addRow(InlineKeyboardButton::make('🏠 Главное меню', callback_data: 'main_menu'));
-            $bot->sendMessage($successMessage, chat_id: $user->tg_id, reply_markup: $keyboard);
+            $sentMessage = $bot->sendMessage(trim($successMessage), chat_id: $user->tg_id, reply_markup: $keyboard);
+            
+            // Сохраняем ID нового сообщения
+            if ($sentMessage && $sentMessage->message_id) {
+                $bot->setGlobalData('vpn_message_ids', [$sentMessage->message_id]);
+            }
 
             // Помечаем в метаданных, что уведомление отправлено
             $metadata['notification_sent'] = true;
@@ -341,5 +382,38 @@ final class YooKassaService
         }
 
         return $this->updatePaymentStatus($payment);
+    }
+
+    /**
+     * Удаляет сообщения из чата
+     *
+     * @param array $messageIds
+     * @param Nutgram $bot
+     * @param int|string $chatId
+     * @return void
+     */
+    private function clearChat(array $messageIds, Nutgram $bot, int|string $chatId): void
+    {
+        foreach ($messageIds as $messageId) {
+            try {
+                $bot->deleteMessage($chatId, $messageId);
+            } catch (\Throwable $e) {
+                // Игнорируем ошибки удаления
+            }
+        }
+    }
+
+    /**
+     * Получает правильное склонение слова "день"
+     *
+     * @param int $days
+     * @return string
+     */
+    private function getDaysWord(int $days): string
+    {
+        $cases = [2, 0, 1, 1, 1, 2];
+        $titles = ['день', 'дня', 'дней'];
+
+        return $titles[($days % 100 > 4 && $days % 100 < 20) ? 2 : $cases[min($days % 10, 5)]];
     }
 }

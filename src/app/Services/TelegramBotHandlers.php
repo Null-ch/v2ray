@@ -52,9 +52,14 @@ final readonly class TelegramBotHandlers
             // }
 
             if (!$user) {
+                $messageIds = $bot->getGlobalData('vpn_message_ids', []);
+                $this->clearChat($messageIds, $bot);
                 $keyboard = InlineKeyboardMarkup::make()->addRow(InlineKeyboardButton::make('✅Принять', callback_data: 'accept_terms'));
-                $this->vpnConnectionService->sendWelcomeMessageForNewUser($bot, $keyboard);
+                $messageId = $this->vpnConnectionService->sendWelcomeMessageForNewUser($bot, $keyboard);
+                $bot->setGlobalData('vpn_message_ids', [$messageId]);
             } else {
+                $messageIds = $bot->getGlobalData('vpn_message_ids', []);
+                $this->clearChat($messageIds, $bot);
                 $activeConfigs = $user->tags();
                 if ($activeConfigs) {
                     $keyboard = InlineKeyboardMarkup::make()
@@ -69,7 +74,8 @@ final readonly class TelegramBotHandlers
                         ->addRow($this->getMainMenuButton());
                 }
 
-                $this->vpnConnectionService->sendMainMenu($bot, $user, $keyboard);
+                $messageId = $this->vpnConnectionService->sendMainMenu($bot, $user, $keyboard);
+                $bot->setGlobalData('vpn_message_ids', [$messageId]);
             }
         });
 
@@ -105,6 +111,8 @@ final readonly class TelegramBotHandlers
          * Обработка кнопки "Подключить VPN". Предлагает список стран на выбор
          */
         $this->bot->onCallbackQueryData('connect_vpn', function (Nutgram $bot) {
+            $messageIds = $bot->getGlobalData('vpn_message_ids', []);
+            $this->clearChat($messageIds, $bot);
             $user = $this->userService->findUserByTelegramId($bot->userId());
             
             // Получаем активные теги пользователя
@@ -121,7 +129,8 @@ final readonly class TelegramBotHandlers
             }
 
             $keyboard->addRow(InlineKeyboardButton::make('🏠 Главное меню', callback_data: 'main_menu'));
-            $this->vpnConnectionService->sendConnectVpnMenu($bot, $keyboard);
+            $messageId = $this->vpnConnectionService->sendConnectVpnMenu($bot, $keyboard);
+            $bot->setGlobalData('vpn_message_ids', [$messageId]);
             $bot->answerCallbackQuery();
 
             return;
@@ -149,7 +158,8 @@ final readonly class TelegramBotHandlers
                     )
                     ->addRow(InlineKeyboardButton::make('Инструкции', callback_data: 'guidelines'));
 
-                $this->vpnConnectionService->sendMainMenu($bot, $user, $keyboard);
+                $messageId = $this->vpnConnectionService->sendMainMenu($bot, $user, $keyboard);
+                $bot->setGlobalData('vpn_message_ids', [$messageId]);
                 $bot->answerCallbackQuery();
                 return;
             }
@@ -157,7 +167,8 @@ final readonly class TelegramBotHandlers
             $keyboard = InlineKeyboardMarkup::make()
                 ->addRow(InlineKeyboardButton::make('Подключить VPN', callback_data: 'connect_vpn'))
                 ->addRow(InlineKeyboardButton::make('Инструкции', callback_data: 'guidelines'));
-            $this->vpnConnectionService->sendMainMenu($bot, $user, $keyboard);
+            $messageId = $this->vpnConnectionService->sendMainMenu($bot, $user, $keyboard);
+            $bot->setGlobalData('vpn_message_ids', [$messageId]);
             $bot->answerCallbackQuery();
 
             return;
@@ -171,7 +182,8 @@ final readonly class TelegramBotHandlers
             $messageIds = $bot->getGlobalData('vpn_message_ids', []);
             $keyboard = $this->getInstructionsKeyboard();
             $this->clearChat($messageIds, $bot);
-            $this->vpnConnectionService->sendGuideMenu($bot, $keyboard);
+            $messageId = $this->vpnConnectionService->sendGuideMenu($bot, $keyboard);
+            $bot->setGlobalData('vpn_message_ids', [$messageId]);
 
             return;
         });
@@ -192,7 +204,8 @@ final readonly class TelegramBotHandlers
             );
 
             $keyboard->addRow($this->getMainMenuButton());
-            $this->vpnConnectionService->sendChoosingActiveVpnMenu($bot, $keyboard);
+            $messageId = $this->vpnConnectionService->sendChoosingActiveVpnMenu($bot, $keyboard);
+            $bot->setGlobalData('vpn_message_ids', [$messageId]);
             $bot->answerCallbackQuery();
 
             return;
@@ -204,6 +217,8 @@ final readonly class TelegramBotHandlers
         $this->bot->onCallbackQueryData(
             'vpn:tag:{code}',
             function (Nutgram $bot, string $code) {
+                $messageIds = $bot->getGlobalData('vpn_message_ids', []);
+                $this->clearChat($messageIds, $bot);
                 $user = $this->userService->findUserByTelegramId($bot->userId());
 
                 if (!$user) {
@@ -225,7 +240,8 @@ final readonly class TelegramBotHandlers
                     ->addRow(InlineKeyboardButton::make('📲 Перенести в приложение', url: $userConfigImportLink))
                     ->addRow(InlineKeyboardButton::make('⬅️ Назад к VPN', callback_data: Callback::VPN_BACK->value));
 
-                $this->vpnConnectionService->sendSubscriptionInfo($bot, $user, $tag->value, $keyboard);
+                $messageId = $this->vpnConnectionService->sendSubscriptionInfo($bot, $user, $tag->value, $keyboard);
+                $bot->setGlobalData('vpn_message_ids', [$messageId]);
                 $bot->answerCallbackQuery();
 
                 return;
@@ -239,6 +255,8 @@ final readonly class TelegramBotHandlers
             'vpn:back',
             function (Nutgram $bot) {
                 $bot->answerCallbackQuery();
+                $messageIds = $bot->getGlobalData('vpn_message_ids', []);
+                $this->clearChat($messageIds, $bot);
                 $user = $this->userService->findUserByTelegramId($bot->userId());
 
                 if (!$user) {
@@ -252,7 +270,8 @@ final readonly class TelegramBotHandlers
                 );
 
                 $keyboard->addRow($this->getMainMenuButton());
-                $this->vpnConnectionService->sendChoosingActiveVpnMenu($bot, $keyboard);
+                $messageId = $this->vpnConnectionService->sendChoosingActiveVpnMenu($bot, $keyboard);
+                $bot->setGlobalData('vpn_message_ids', [$messageId]);
                 $bot->answerCallbackQuery();
 
                 return;
@@ -266,6 +285,8 @@ final readonly class TelegramBotHandlers
             'vpn:pricing:{code}',
             function (Nutgram $bot, string $code) {
                 $bot->answerCallbackQuery();
+                $messageIds = $bot->getGlobalData('vpn_message_ids', []);
+                $this->clearChat($messageIds, $bot);
                 $user = $this->userService->findUserByTelegramId($bot->userId());
 
                 if (!$user) {
@@ -305,7 +326,8 @@ final readonly class TelegramBotHandlers
                 }
 
                 $keyboard->addRow($this->getMainMenuButton());
-                $this->vpnConnectionService->sendPricingInfo($bot, $user, $pricings, $tag->value, $keyboard);
+                $messageId = $this->vpnConnectionService->sendPricingInfo($bot, $user, $pricings, $tag->value, $keyboard);
+                $bot->setGlobalData('vpn_message_ids', [$messageId]);
                 $bot->answerCallbackQuery();
 
                 return;

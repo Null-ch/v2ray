@@ -26,19 +26,20 @@ final readonly class VpnConnectionService
     public function sendWelcomeMessageForNewUser(
         Nutgram $bot,
         ?InlineKeyboardMarkup $keyboard = null
-    ): void {
+    ): int {
         $message = View::make('telegram.welcome', [
             'monthlyCost' => $this->userService->getMonthlyCost(),
         ])->render();
 
-        $bot->sendMessage(trim($message), parse_mode: 'HTML', reply_markup: $keyboard);
+        $sentMessage = $bot->sendMessage(trim($message), parse_mode: 'HTML', reply_markup: $keyboard);
+        return $sentMessage->message_id;
     }
 
     public function sendMainMenu(
         Nutgram $bot,
         User $user,
         ?InlineKeyboardMarkup $keyboard = null
-    ): void {
+    ): int {
         //TODO:Переписать приветственное меню, Сделать кнопку "Мои конфигурации" по нажатию будут показаны конфигурации и кнопки, чтобы перейти к ним
         $balance = $user->balance?->balance ?? 0;
         $dailyCost = $this->userService->getDailyCost();
@@ -59,28 +60,32 @@ final readonly class VpnConnectionService
             // 'dailyCost' => $dailyCost,
         ])->render();
 
-        $bot->sendMessage(trim($message), parse_mode: 'HTML', reply_markup: $keyboard);
+        $sentMessage = $bot->sendMessage(trim($message), parse_mode: 'HTML', reply_markup: $keyboard);
+        return $sentMessage->message_id;
     }
 
     public function sendConnectVpnMenu(
         Nutgram $bot,
         ?InlineKeyboardMarkup $keyboard = null
-    ): void {
-        $bot->sendMessage('Выберите страну VPN', reply_markup: $keyboard);
+    ): int {
+        $sentMessage = $bot->sendMessage('Выберите страну VPN', reply_markup: $keyboard);
+        return $sentMessage->message_id;
     }
 
     public function sendGuideMenu(
         Nutgram $bot,
         ?InlineKeyboardMarkup $keyboard = null
-    ): void {
-        $bot->sendMessage('Ниже представлены пользовательские инструкции ↓', reply_markup: $keyboard);
+    ): int {
+        $sentMessage = $bot->sendMessage('Ниже представлены пользовательские инструкции ↓', reply_markup: $keyboard);
+        return $sentMessage->message_id;
     }
 
     public function sendChoosingActiveVpnMenu(
         Nutgram $bot,
         ?InlineKeyboardMarkup $keyboard = null
-    ): void {
-        $bot->sendMessage('Выберете интересующий VPN', reply_markup: $keyboard);
+    ): int {
+        $sentMessage = $bot->sendMessage('Выберете интересующий VPN', reply_markup: $keyboard);
+        return $sentMessage->message_id;
     }
 
     public function sendSubscriptionInfo(
@@ -88,7 +93,7 @@ final readonly class VpnConnectionService
         User $user,
         string $tag,
         ?InlineKeyboardMarkup $keyboard = null
-    ): void {
+    ): int {
         $subscriptionInfoArray = $this->xuiService->getSubscriptionInfo($tag, $user->uuid);
         $tag = XuiTag::from($tag);
         $name = $bot->user()->first_name ?? $user->name ?? $user->tg_tag ?? 'Пользователь';
@@ -103,7 +108,8 @@ final readonly class VpnConnectionService
             'name' => $name
         ])->render();
 
-        $bot->sendMessage(trim($message), parse_mode: 'HTML', reply_markup: $keyboard);
+        $sentMessage = $bot->sendMessage(trim($message), parse_mode: 'HTML', reply_markup: $keyboard);
+        return $sentMessage->message_id;
     }
 
     public function sendPricingInfo(
@@ -112,7 +118,7 @@ final readonly class VpnConnectionService
         Collection $pricings,
         string $tag,
         ?InlineKeyboardMarkup $keyboard = null
-    ): void {
+    ): int {
         $tag = XuiTag::from($tag);
         $name = $bot->user()->first_name ?? $user->name ?? $user->tg_tag ?? 'Пользователь';
 
@@ -122,7 +128,8 @@ final readonly class VpnConnectionService
             'name' => $name
         ])->render();
 
-        $bot->sendMessage(trim($message), parse_mode: 'HTML', reply_markup: $keyboard);
+        $sentMessage = $bot->sendMessage(trim($message), parse_mode: 'HTML', reply_markup: $keyboard);
+        return $sentMessage->message_id;
     }
 
     private function getDaysWord(int $days): string
