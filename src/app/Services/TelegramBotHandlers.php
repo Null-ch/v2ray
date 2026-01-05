@@ -207,8 +207,6 @@ final readonly class TelegramBotHandlers
                     return;
                 }
 
-                $prices = $this->pricingService->getAll();
-
                 try {
                     $tag = XuiTag::from($code);
                 } catch (\ValueError) {
@@ -217,13 +215,13 @@ final readonly class TelegramBotHandlers
                 }
 
                 $keyboard = InlineKeyboardMarkup::make()
-                    ->addRow(InlineKeyboardButton::make('🔃 Продлить VPN', callback_data: Callback::VPN_PRICING->with($code)))
+                    // ->addRow(InlineKeyboardButton::make('🔃 Продлить VPN', callback_data: Callback::VPN_PRICING->with($code)))
                     ->addRow(InlineKeyboardButton::make('⬅️ Назад к VPN', callback_data: Callback::VPN_BACK->value));
 
-                $this->vpnConnectionService
-                    ->sendSubscriptionInfo($bot, $user, $tag->value, $keyboard);
-
+                $this->vpnConnectionService->sendSubscriptionInfo($bot, $user, $tag->value, $keyboard);
                 $bot->answerCallbackQuery();
+
+                return;
             }
         );
 
@@ -254,6 +252,7 @@ final readonly class TelegramBotHandlers
                     ->sendChoosingActiveVpnMenu($bot, $keyboard);
 
                 $bot->answerCallbackQuery();
+                return;
             }
         );
 
@@ -261,8 +260,7 @@ final readonly class TelegramBotHandlers
             'vpn:pricing:{code}',
             function (Nutgram $bot, string $code) {
                 $bot->answerCallbackQuery();
-                $user = $this->userService
-                    ->findUserByTelegramId($bot->userId());
+                $user = $this->userService->findUserByTelegramId($bot->userId());
 
                 if (!$user) {
                     $bot->answerCallbackQuery();
@@ -309,6 +307,7 @@ final readonly class TelegramBotHandlers
                     ->sendPricingInfo($bot, $user, $pricings, $tag->value, $keyboard);
 
                 $bot->answerCallbackQuery();
+                return;
             }
         );
 
