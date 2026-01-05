@@ -6,6 +6,7 @@ namespace App\Services;
 
 use App\Models\Xui;
 use App\Enums\XuiTag;
+use App\Enums\Callback;
 use App\Services\XuiService;
 use SergiX44\Nutgram\Nutgram;
 use App\Services\TelegramService;
@@ -212,12 +213,9 @@ final readonly class TelegramBotHandlers
                     return;
                 }
 
-                $keyboard = InlineKeyboardMarkup::make()->addRow(
-                    InlineKeyboardButton::make(
-                        '⬅️ Назад к VPN',
-                        callback_data: 'vpn:back'
-                    )
-                );
+                $keyboard = InlineKeyboardMarkup::make()
+                    ->addRow(InlineKeyboardButton::make('🔃 Продлить VPN', callback_data: Callback::VPN_PRICING->with($code)))
+                    ->addRow(InlineKeyboardButton::make('⬅️ Назад к VPN', callback_data: Callback::VPN_BACK->value));
 
                 $this->vpnConnectionService
                     ->sendSubscriptionInfo($bot, $user, $tag->value, $keyboard);

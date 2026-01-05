@@ -8,6 +8,7 @@ enum Callback: string
     case VPN_CONNECT_TAG = 'vpn:connect:tag';
     case VPN_GUIDE = 'vpn:guide';
     case VPN_BACK = 'vpn:back';
+    case VPN_PRICING = 'vpn:pricing:tag';
 
     public function with(?string $value = null): string
     {
