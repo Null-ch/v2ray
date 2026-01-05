@@ -201,7 +201,7 @@ final class YooKassaService
                 ];
 
                 $xuiModel = $this->xuiService->getXuiModelByTag($tag);
-                $this->xuiService->addClient($tag, $xuiModel->getInboundId(), $client);
+                $this->xuiService->addClient($tag, $xuiModel->inbound_id, $client);
                 $this->userTagService->addTagToUser($user->id, XuiTag::from($tag));
             }
 
