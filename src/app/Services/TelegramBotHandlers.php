@@ -44,17 +44,13 @@ final readonly class TelegramBotHandlers
         $this->bot->onCommand('start', function (Nutgram $bot) {
             $telegramId = $bot->userId();
             $user = $this->userService->findUserByTelegramId($telegramId);
+            $text = $bot->message()?->getText() ?? '';
+            $payload = trim(str_replace('/start', '', $text)) ?: null;
 
-            // Обработка реферального кода
-            // В Nutgram параметры команды можно получить из текста сообщения
-            $messageText = $bot->message()?->text ?? '';
-            $payload = null;
-            
-            // Парсим параметр из команды /start REFERRAL_CODE
-            if (preg_match('/\/start\s+(.+)/', $messageText, $matches)) {
-                $payload = trim($matches[1]);
+            if ($payload !== null) {
+                $payload = trim($payload);
             }
-            
+
             $referrerId = null;
 
             if ($payload && !$user) {
@@ -69,6 +65,7 @@ final readonly class TelegramBotHandlers
                 // Сохраняем referrerId в глобальных данных бота для использования в ProcessAcceptTermsJob
                 if ($referrerId) {
                     $bot->setGlobalData('referrer_id', $referrerId);
+                    $bot->setGlobalData('referral_code', $payload);
                 }
 
                 $messageIds = $bot->getGlobalData('vpn_message_ids', []);
@@ -126,7 +123,7 @@ final readonly class TelegramBotHandlers
 
             $keyboard = $this->createReferralTagKeyboard($userTags, 2);
             $keyboard->addRow($this->getMainMenuButton());
-            
+
             $messageId = $this->vpnConnectionService->sendChoosingActiveVpnMenu($bot, $keyboard);
             $bot->setGlobalData('vpn_message_ids', [$messageId]);
         });
@@ -155,7 +152,7 @@ final readonly class TelegramBotHandlers
 
             $keyboard = $this->createReferralTagKeyboard($userTags, 2);
             $keyboard->addRow($this->getMainMenuButton());
-            
+
             $messageId = $this->vpnConnectionService->sendChoosingActiveVpnMenu($bot, $keyboard);
             $bot->setGlobalData('vpn_message_ids', [$messageId]);
         });
@@ -512,20 +509,6 @@ final readonly class TelegramBotHandlers
         );
 
         /**
-         * TODO: Реализовать обработку кнопки "Перенести в приложение"
-         */
-        $this->bot->onCallbackQueryData('export_config', function (Nutgram $bot) {
-            // TODO: Получить экспортную ссылку по тегу и юиду
-            $exportUrl = 'https://www.sigmalink.org/redirect/?redirect_to=www.sigmalink.org&token=PLACEHOLDER_TOKEN&scheme=v2raytun';
-            $bot->sendMessage(
-                "📲 Экспортная ссылка для переноса конфигов:\n\n$exportUrl\n\n⚠️ Внимание: это заглушка, функционал в разработке",
-                parse_mode: 'HTML'
-            );
-
-            $bot->answerCallbackQuery('Ссылка отправлена');
-        });
-
-        /**
          * Обработка выбора тега для реферальной программы
          */
         $this->bot->onCallbackQueryData(
@@ -581,8 +564,7 @@ final readonly class TelegramBotHandlers
                 }
 
                 $referralLink = "https://t.me/{$botUsername}?start={$user->referral_code}";
-                $shareUrl = "https://t.me/share/url?url=" . urlencode($referralLink) . "&text=" . urlencode("Дешевый VPN! 7 дней бесплатно, подписка на месяц 80Р!");
-
+                $shareUrl = "https://t.me/share/url?" . "text=" . urlencode("Дешевый VPN! 7 дней бесплатно, подписка на месяц 80Р!") . '&url=' . urlencode($referralLink);
                 $message = "За каждого, кто подключит VPN, Вы получите на баланс 2 дня подписки, а все приглашенные 7 дней бесплатного VPN";
 
                 $keyboard = InlineKeyboardMarkup::make()

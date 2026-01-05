@@ -50,7 +50,7 @@ final class ProcessAcceptTermsJob implements ShouldQueue
             $user = $userService->findUserByTelegramId($this->telegramId);
             if (!$user) {
                 $user = $userService->createUser($this->telegramId, $this->username, $this->name, $this->referrerId);
-                
+
                 // Создаем запись в таблице referrals, если пользователь был приглашен
                 if ($user && $this->referrerId) {
                     Referral::create([
@@ -59,7 +59,7 @@ final class ProcessAcceptTermsJob implements ShouldQueue
                     ]);
 
                     // Добавляем 2 дня к выбранной конфигурации реферера
-                    $referrer = \App\Models\User::find($this->referrerId);
+                    $referrer = $userService->findUserById($this->referrerId);
                     if ($referrer && $referrer->referral_tag) {
                         try {
                             $tag = $referrer->referral_tag;
@@ -70,7 +70,7 @@ final class ProcessAcceptTermsJob implements ShouldQueue
                             if (count($clientDataArray) > 0) {
                                 $client = $clientDataArray[0];
                                 // Добавляем 2 дня в миллисекундах (2 * 24 * 60 * 60 * 1000)
-                                $twoDaysInMs = 2 * 24 * 60 * 60 * 1000;
+                                $twoDaysInMs = MillisecondsHelper::daysToMilliseconds(2);
                                 $client['expiryTime'] += $twoDaysInMs;
                                 $client['id'] = $uuid;
                                 $inboundId = Arr::get($client, 'inboundId');

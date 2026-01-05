@@ -23,6 +23,12 @@ final readonly class UserService
         return $user;
     }
 
+    public function findUserById(int $id): ?User
+    {
+        $user = $this->userRepository->findById($id);
+        return $user;
+    }
+
     public function findUserByReferralCode(string $referralCode): ?User
     {
         $user = $this->userRepository->findByReferralCode($referralCode);
