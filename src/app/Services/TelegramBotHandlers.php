@@ -292,7 +292,7 @@ final readonly class TelegramBotHandlers
                     $keyboard->addRow(
                         InlineKeyboardButton::make(
                             $buttonText,
-                            callback_data: Callback::PAYMENT_PRICING->withMultiple((string)$pricing->id, $code)
+                            callback_data: Callback::PAYMENT_PRICING->withMultiple((string) $pricing->id, $code)
                         )
                     );
                 }

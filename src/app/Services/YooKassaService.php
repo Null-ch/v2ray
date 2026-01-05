@@ -4,13 +4,12 @@ declare(strict_types=1);
 
 namespace App\Services;
 
-use App\Clients\YooKassaClient;
-use App\Models\Payment;
 use App\Models\User;
+use App\Models\Payment;
+use App\Clients\YooKassaClient;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
-use YooKassa\Model\PaymentInterface;
-use YooKassa\Model\PaymentStatus;
+use YooKassa\Model\Payment\PaymentStatus;
 
 final class YooKassaService
 {
@@ -121,7 +120,6 @@ final class YooKassaService
             'status' => $status,
         ]);
 
-        // Если платеж успешно оплачен, обновляем баланс пользователя
         if ($status === Payment::STATUS_SUCCEEDED && $oldStatus !== Payment::STATUS_SUCCEEDED) {
             $this->processSuccessfulPayment($payment);
         }
