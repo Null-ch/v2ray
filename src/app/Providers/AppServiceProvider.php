@@ -2,13 +2,14 @@
 
 namespace App\Providers;
 
+use App\Services\XuiService;
+use SergiX44\Nutgram\Nutgram;
 use App\Clients\YooKassaClient;
+use App\Services\UserTagService;
+use App\Services\TelegramService;
+use App\Services\YooKassaService;
 use App\Services\TelegramBotHandlers;
 use App\Services\VpnConnectionService;
-use App\Services\YooKassaService;
-use SergiX44\Nutgram\Nutgram;
-use App\Services\TelegramService;
-use App\Services\XuiService;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -44,7 +45,7 @@ class AppServiceProvider extends ServiceProvider
             });
 
             $this->app->singleton(YooKassaService::class, function ($app) {
-                return new YooKassaService($app->make(YooKassaClient::class),$app->make(TelegramService::class), $app->make(XuiService::class),);
+                return new YooKassaService($app->make(YooKassaClient::class),$app->make(TelegramService::class), $app->make(XuiService::class), $app->make(UserTagService::class));
             });
         } else {
             // Если конфигурация не настроена, не регистрируем сервисы

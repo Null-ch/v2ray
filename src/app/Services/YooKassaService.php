@@ -25,6 +25,7 @@ final class YooKassaService
         private readonly YooKassaClient $client,
         private readonly TelegramService $telegramService,
         private readonly XuiService $xuiService,
+        private readonly UserTagService $userTagService,
     ) {}
 
     /**
@@ -201,13 +202,12 @@ final class YooKassaService
 
                 $xuiModel = $this->xuiService->getXuiModelByTag($tag);
                 $this->xuiService->addClient($tag, $xuiModel->getInboundId(), $client);
+                $this->userTagService->addTagToUser($user->id, XuiTag::from($tag));
             }
 
             $payment->update(['processed_at' => now()]);
             DB::commit();
             $this->notifyPaymentSuccess($payment);
-
-            return;
         } catch (\Exception $e) {
             DB::rollBack();
             Log::error('Failed to process successful payment', [
@@ -325,8 +325,6 @@ final class YooKassaService
                 'user_id' => $user->id,
                 'telegram_id' => $user->tg_id,
             ]);
-
-            return;
         } catch (\Throwable $e) {
             // Не прерываем процесс, если не удалось отправить уведомление
             Log::error('Failed to send payment success notification to Telegram', [
