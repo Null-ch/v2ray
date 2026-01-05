@@ -42,7 +42,7 @@ final readonly class TelegramBotHandlers
     public function registerHandlers(): void
     {
         Log::info('Registering Telegram bot handlers');
-        
+
         // Обработчик на сообщения с командой /start (включая параметры)
         // Используем onMessage как основной обработчик для надежности
         $this->bot->onMessage(function (Nutgram $bot) {
@@ -55,7 +55,7 @@ final readonly class TelegramBotHandlers
                 $this->handleStartCommand($bot);
             }
         });
-        
+
         // Также регистрируем через onCommand для совместимости
         $this->bot->onCommand('start', function (Nutgram $bot) {
             Log::info('Start command detected via onCommand', [
@@ -63,150 +63,6 @@ final readonly class TelegramBotHandlers
             ]);
             $this->handleStartCommand($bot);
         });
-    }
-    
-    private function handleStartCommand(Nutgram $bot): void
-    {
-            $telegramId = $bot->userId();
-            
-            Log::info('=== START COMMAND HANDLER CALLED ===', [
-                'telegram_id' => $telegramId,
-                'user_id' => $bot->userId(),
-            ]);
-
-            // Получаем текст сообщения
-            $text = $bot->message()?->text ?? '';
-            $payload = null;
-            
-            Log::info('Start command received - initial', [
-                'telegram_id' => $telegramId,
-                'text' => $text,
-                'text_length' => strlen($text),
-            ]);
-
-            // Парсим параметр из команды /start PAYLOAD
-            // Пробуем разные варианты парсинга
-            if (preg_match('/^\/start[@\w]*\s+(.+)$/i', $text, $matches)) {
-                $payload = trim($matches[1]);
-                Log::info('Payload extracted from text (pattern 1)', [
-                    'telegram_id' => $telegramId,
-                    'payload' => $payload,
-                ]);
-            } elseif (preg_match('/^\/start\s+(.+)$/i', $text, $matches)) {
-                $payload = trim($matches[1]);
-                Log::info('Payload extracted from text (pattern 2)', [
-                    'telegram_id' => $telegramId,
-                    'payload' => $payload,
-                ]);
-            } else {
-                // Пробуем получить из текста напрямую, если текст не начинается с /start
-                $parts = explode(' ', trim($text));
-                if (count($parts) > 1 && $parts[0] === '/start') {
-                    $payload = trim(implode(' ', array_slice($parts, 1)));
-                    Log::info('Payload extracted by splitting', [
-                        'telegram_id' => $telegramId,
-                        'payload' => $payload,
-                    ]);
-                }
-            }
-            
-            if ($payload && $payload !== '') {
-                Log::info('Payload found', [
-                    'telegram_id' => $telegramId,
-                    'payload' => $payload,
-                ]);
-            } else {
-                Log::info('No payload found', [
-                    'telegram_id' => $telegramId,
-                    'text' => $text,
-                ]);
-            }
-
-            $user = $this->userService->findUserByTelegramId($telegramId);
-
-            $referrerId = null;
-
-            if ($payload && $payload !== '') {
-                if (!$user) {
-                    // Пытаемся найти пользователя по реферальному коду
-                    $referrer = $this->userService->findUserByReferralCode($payload);
-                    if ($referrer) {
-                        $referrerId = $referrer->id;
-                        Log::info('Referrer found', [
-                            'telegram_id' => $telegramId,
-                            'referral_code' => $payload,
-                            'referrer_id' => $referrerId,
-                        ]);
-                    } else {
-                        Log::warning('Referrer not found for referral code', [
-                            'telegram_id' => $telegramId,
-                            'referral_code' => $payload,
-                        ]);
-                    }
-                }
-            }
-
-            try {
-                if (!$user) {
-                    // Сохраняем referrerId в глобальных данных бота для использования в ProcessAcceptTermsJob
-                    if ($referrerId) {
-                        $bot->setGlobalData('referrer_id', $referrerId);
-                        $bot->setGlobalData('referral_code', $payload);
-                    }
-
-                    $messageIds = $bot->getGlobalData('vpn_message_ids', []);
-                    $this->clearChat($messageIds, $bot);
-                    $keyboard = InlineKeyboardMarkup::make()->addRow(InlineKeyboardButton::make('✅Принять', callback_data: 'accept_terms'));
-                    $messageId = $this->vpnConnectionService->sendWelcomeMessageForNewUser($bot, $keyboard);
-                    $bot->setGlobalData('vpn_message_ids', [$messageId]);
-                } else {
-                    $messageIds = $bot->getGlobalData('vpn_message_ids', []);
-                    $this->clearChat($messageIds, $bot);
-
-                    $userTags = $user->tags()
-                        ->pluck('tag')
-                        ->toArray();
-
-                    $keyboard = InlineKeyboardMarkup::make();
-
-                    if (!empty($userTags)) {
-                        $keyboard->addRow(InlineKeyboardButton::make('Мои VPN', callback_data: 'user_vpn'));
-                    }
-
-                    if (Xui::activeNotOwnedByUser($userTags)->isNotEmpty()) {
-                        $keyboard->addRow(InlineKeyboardButton::make('Подключить VPN', callback_data: 'connect_vpn'));
-                    }
-
-                    $keyboard->addRow(InlineKeyboardButton::make('👥 Пригласить друга', callback_data: 'invite'));
-                    $keyboard->addRow($this->getMainMenuButton());
-                    $messageId = $this->vpnConnectionService->sendMainMenu($bot, $user, $keyboard);
-                    $bot->setGlobalData('vpn_message_ids', [$messageId]);
-
-                    return;
-                }
-            } catch (\Throwable $e) {
-                Log::error('Error in start command handler', [
-                    'telegram_id' => $telegramId,
-                    'error' => $e->getMessage(),
-                    'file' => $e->getFile(),
-                    'line' => $e->getLine(),
-                    'trace' => $e->getTraceAsString(),
-                ]);
-                
-                try {
-                    $bot->sendMessage('❌ Произошла ошибка. Пожалуйста, попробуйте позже.', chat_id: $telegramId);
-                } catch (\Throwable $sendError) {
-                    Log::error('Failed to send error message', [
-                        'error' => $sendError->getMessage(),
-                        'telegram_id' => $telegramId,
-                    ]);
-                }
-            }
-            
-            Log::info('=== START COMMAND HANDLER FINISHED ===', [
-                'telegram_id' => $telegramId,
-            ]);
-    }
 
         /**
          * Обработка команды /invite
@@ -685,8 +541,151 @@ final readonly class TelegramBotHandlers
                 }
             }
         );
-        
+
         Log::info('All Telegram bot handlers registered successfully');
+    }
+
+    private function handleStartCommand(Nutgram $bot): void
+    {
+        $telegramId = $bot->userId();
+
+        Log::info('=== START COMMAND HANDLER CALLED ===', [
+            'telegram_id' => $telegramId,
+            'user_id' => $bot->userId(),
+        ]);
+
+        // Получаем текст сообщения
+        $text = $bot->message()?->text ?? '';
+        $payload = null;
+
+        Log::info('Start command received - initial', [
+            'telegram_id' => $telegramId,
+            'text' => $text,
+            'text_length' => strlen($text),
+        ]);
+
+        // Парсим параметр из команды /start PAYLOAD
+        // Пробуем разные варианты парсинга
+        if (preg_match('/^\/start[@\w]*\s+(.+)$/i', $text, $matches)) {
+            $payload = trim($matches[1]);
+            Log::info('Payload extracted from text (pattern 1)', [
+                'telegram_id' => $telegramId,
+                'payload' => $payload,
+            ]);
+        } elseif (preg_match('/^\/start\s+(.+)$/i', $text, $matches)) {
+            $payload = trim($matches[1]);
+            Log::info('Payload extracted from text (pattern 2)', [
+                'telegram_id' => $telegramId,
+                'payload' => $payload,
+            ]);
+        } else {
+            // Пробуем получить из текста напрямую, если текст не начинается с /start
+            $parts = explode(' ', trim($text));
+            if (count($parts) > 1 && $parts[0] === '/start') {
+                $payload = trim(implode(' ', array_slice($parts, 1)));
+                Log::info('Payload extracted by splitting', [
+                    'telegram_id' => $telegramId,
+                    'payload' => $payload,
+                ]);
+            }
+        }
+
+        if ($payload && $payload !== '') {
+            Log::info('Payload found', [
+                'telegram_id' => $telegramId,
+                'payload' => $payload,
+            ]);
+        } else {
+            Log::info('No payload found', [
+                'telegram_id' => $telegramId,
+                'text' => $text,
+            ]);
+        }
+
+        $user = $this->userService->findUserByTelegramId($telegramId);
+
+        $referrerId = null;
+
+        if ($payload && $payload !== '') {
+            if (!$user) {
+                // Пытаемся найти пользователя по реферальному коду
+                $referrer = $this->userService->findUserByReferralCode($payload);
+                if ($referrer) {
+                    $referrerId = $referrer->id;
+                    Log::info('Referrer found', [
+                        'telegram_id' => $telegramId,
+                        'referral_code' => $payload,
+                        'referrer_id' => $referrerId,
+                    ]);
+                } else {
+                    Log::warning('Referrer not found for referral code', [
+                        'telegram_id' => $telegramId,
+                        'referral_code' => $payload,
+                    ]);
+                }
+            }
+        }
+
+        try {
+            if (!$user) {
+                // Сохраняем referrerId в глобальных данных бота для использования в ProcessAcceptTermsJob
+                if ($referrerId) {
+                    $bot->setGlobalData('referrer_id', $referrerId);
+                    $bot->setGlobalData('referral_code', $payload);
+                }
+
+                $messageIds = $bot->getGlobalData('vpn_message_ids', []);
+                $this->clearChat($messageIds, $bot);
+                $keyboard = InlineKeyboardMarkup::make()->addRow(InlineKeyboardButton::make('✅Принять', callback_data: 'accept_terms'));
+                $messageId = $this->vpnConnectionService->sendWelcomeMessageForNewUser($bot, $keyboard);
+                $bot->setGlobalData('vpn_message_ids', [$messageId]);
+            } else {
+                $messageIds = $bot->getGlobalData('vpn_message_ids', []);
+                $this->clearChat($messageIds, $bot);
+
+                $userTags = $user->tags()
+                    ->pluck('tag')
+                    ->toArray();
+
+                $keyboard = InlineKeyboardMarkup::make();
+
+                if (!empty($userTags)) {
+                    $keyboard->addRow(InlineKeyboardButton::make('Мои VPN', callback_data: 'user_vpn'));
+                }
+
+                if (Xui::activeNotOwnedByUser($userTags)->isNotEmpty()) {
+                    $keyboard->addRow(InlineKeyboardButton::make('Подключить VPN', callback_data: 'connect_vpn'));
+                }
+
+                $keyboard->addRow(InlineKeyboardButton::make('👥 Пригласить друга', callback_data: 'invite'));
+                $keyboard->addRow($this->getMainMenuButton());
+                $messageId = $this->vpnConnectionService->sendMainMenu($bot, $user, $keyboard);
+                $bot->setGlobalData('vpn_message_ids', [$messageId]);
+
+                return;
+            }
+        } catch (\Throwable $e) {
+            Log::error('Error in start command handler', [
+                'telegram_id' => $telegramId,
+                'error' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+
+            try {
+                $bot->sendMessage('❌ Произошла ошибка. Пожалуйста, попробуйте позже.', chat_id: $telegramId);
+            } catch (\Throwable $sendError) {
+                Log::error('Failed to send error message', [
+                    'error' => $sendError->getMessage(),
+                    'telegram_id' => $telegramId,
+                ]);
+            }
+        }
+
+        Log::info('=== START COMMAND HANDLER FINISHED ===', [
+            'telegram_id' => $telegramId,
+        ]);
     }
 
     private function getMainMenuButton(): InlineKeyboardButton
