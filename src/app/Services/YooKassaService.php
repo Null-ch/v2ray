@@ -169,14 +169,12 @@ final class YooKassaService
             $clientDataResponse = $this->xuiService->getClientTrafficByUserUuid($tag, $user->uuid);
             $clientDataArray = Arr::get($clientDataResponse, 'data');
             $client = $clientDataArray[0];
-            Log::info('clientDataArray: ' . json_encode($client));
             $client['expiryTime'] += $payment->getDuration();
-            $inbloundId = Arr::get($clientDataResponse, 'inboundId');
+            $inbloundId = Arr::get($client, 'inboundId');
             $uuid = $user->uuid;
             $this->xuiService->updateClient($tag, $inbloundId, $uuid, $client);
             DB::commit();
 
-            // Отправляем уведомление в Telegram об успешном платеже
             $this->notifyPaymentSuccess($payment);
         } catch (\Exception $e) {
             DB::rollBack();

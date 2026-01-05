@@ -384,7 +384,7 @@ final readonly class TelegramBotHandlers
                         );
 
                         $sentMessage = $bot->sendMessage($message, reply_markup: $keyboard);
-                        
+
                         // Сохраняем ID сообщения с кнопкой оплаты в платеже
                         if ($sentMessage && $sentMessage->message_id) {
                             $payment->update(['telegram_message_id' => $sentMessage->message_id]);
