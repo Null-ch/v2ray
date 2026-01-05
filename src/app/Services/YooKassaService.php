@@ -261,7 +261,16 @@ final class YooKassaService
                 $payment->description
             );
 
-            $keyboard = InlineKeyboardMarkup::make()->addRow(InlineKeyboardButton::make('🏠 Главное меню', callback_data: 'main_menu'));
+            $keyboard = InlineKeyboardMarkup::make();
+            
+            // Добавляем кнопку "Перенести в приложение" если есть тег VPN
+            $vpnTag = $payment->getVpnTag();
+            if ($vpnTag) {
+                $userConfigImportLink = $this->xuiService->getSubLink($vpnTag, $user->uuid, 'import');
+                $keyboard->addRow(InlineKeyboardButton::make('📲 Перенести в приложение', url: $userConfigImportLink));
+            }
+            
+            $keyboard->addRow(InlineKeyboardButton::make('🏠 Главное меню', callback_data: 'main_menu'));
             $bot->sendMessage($successMessage, chat_id: $user->tg_id, reply_markup: $keyboard);
 
             // Помечаем в метаданных, что уведомление отправлено

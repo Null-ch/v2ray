@@ -58,16 +58,21 @@ class Xui extends Model
         return $this->tag?->label() ?? '';
     }
 
-    public static function activeButtons(): array
+    public static function activeButtons(array $excludeTags = []): array
     {
         return self::query()
             ->where('is_active', true)
             ->get()
-            ->map(function (self $xui) {
+            ->map(function (self $xui) use ($excludeTags) {
 
                 try {
                     $tag = XuiTag::from($xui->tag->value);
                 } catch (\ValueError) {
+                    return null;
+                }
+
+                // Пропускаем VPN, которые уже активны у пользователя
+                if (in_array($tag->value, $excludeTags, true)) {
                     return null;
                 }
 

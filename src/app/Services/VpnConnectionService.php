@@ -226,4 +226,16 @@ final readonly class VpnConnectionService
             ? 2
             : $cases[min($number % 10, 5)]];
     }
+
+    /**
+     * Получает ссылку для импорта конфигурации пользователя
+     *
+     * @param User $user
+     * @param string $tag
+     * @return string
+     */
+    public function getUserConfigImportLink(User $user, string $tag): string
+    {
+        return $this->xuiService->getSubLink($tag, $user->uuid, 'import');
+    }
 }

@@ -105,7 +105,15 @@ final readonly class TelegramBotHandlers
          * Обработка кнопки "Подключить VPN". Предлагает список стран на выбор
          */
         $this->bot->onCallbackQueryData('connect_vpn', function (Nutgram $bot) {
-            $buttons = Xui::activeButtons();
+            $user = $this->userService->findUserByTelegramId($bot->userId());
+            
+            // Получаем активные теги пользователя
+            $activeTags = [];
+            if ($user) {
+                $activeTags = $user->tags->pluck('tag')->map(fn($tag) => $tag->value)->toArray();
+            }
+            
+            $buttons = Xui::activeButtons($activeTags);
             $keyboard = InlineKeyboardMarkup::make();
 
             foreach (array_chunk($buttons, 2) as $row) {
@@ -210,8 +218,11 @@ final readonly class TelegramBotHandlers
                     return;
                 }
 
+                $userConfigImportLink = $this->vpnConnectionService->getUserConfigImportLink($user, $tag->value);
+                
                 $keyboard = InlineKeyboardMarkup::make()
                     ->addRow(InlineKeyboardButton::make('🔃 Продлить VPN', callback_data: Callback::VPN_PRICING->with($code)))
+                    ->addRow(InlineKeyboardButton::make('📲 Перенести в приложение', url: $userConfigImportLink))
                     ->addRow(InlineKeyboardButton::make('⬅️ Назад к VPN', callback_data: Callback::VPN_BACK->value));
 
                 $this->vpnConnectionService->sendSubscriptionInfo($bot, $user, $tag->value, $keyboard);
