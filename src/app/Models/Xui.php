@@ -5,8 +5,10 @@ declare(strict_types=1);
 namespace App\Models;
 
 use App\Enums\XuiTag;
+use App\Enums\Callback;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use SergiX44\Nutgram\Telegram\Types\Keyboard\InlineKeyboardButton;
 
 class Xui extends Model
 {
@@ -56,33 +58,26 @@ class Xui extends Model
         return $this->tag?->label() ?? '';
     }
 
-    public static function activeLabelsWithIcons(): array
+    public static function activeButtons(): array
     {
-        $records = self::where('is_active', true)->get();
+        return self::query()
+            ->where('is_active', true)
+            ->get()
+            ->map(function (self $xui) {
 
-        $flags = [
-            'NL' => '🇳🇱',
-            'DE' => '🇩🇪',
-            'RU' => '🇷🇺',
-            'GB' => '🇬🇧',
-            'US' => '🇺🇸',
-            'CA' => '🇨🇦',
-            'AU' => '🇦🇺',
-            'NZ' => '🇳🇿',
-            'SG' => '🇸🇬',
-            'HK' => '🇭🇰',
-            'JP' => '🇯🇵',
-            'KR' => '🇰🇷',
-            'CN' => '🇨🇳',
-            'TW' => '🇹🇼',
-        ];
+                try {
+                    $tag = XuiTag::from($xui->tag->value);
+                } catch (\ValueError) {
+                    return null;
+                }
 
-        return $records->map(function (self $xui) use ($flags) {
-            $emoji = $flags[$xui->tag->value] ?? '';
-            return [
-                'label' => trim($emoji . ' ' . $xui->tagLabel),
-                'tag' => $xui->tag->value,
-            ];
-        })->toArray();
+                return InlineKeyboardButton::make(
+                    text: $tag->labelWithFlag(),
+                    callback_data: Callback::VPN_CONNECT_TAG->with($tag->value)
+                );
+            })
+            ->filter()
+            ->values()
+            ->toArray();
     }
 }

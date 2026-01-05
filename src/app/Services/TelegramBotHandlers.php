@@ -98,23 +98,18 @@ final readonly class TelegramBotHandlers
         });
 
         $this->bot->onCallbackQueryData('connect_vpn', function (Nutgram $bot) {
-            $tags = Xui::activeLabelsWithIcons();
+            $buttons = Xui::activeButtons();
+            $keyboard = InlineKeyboardMarkup::make();
 
-            $tagButtons = array_map(function ($item) {
-                return [
-                    'label' => $item['label'],
-                    'callback_data' => $item['tag'],
-                ];
-            }, $tags);
+            foreach (array_chunk($buttons, 2) as $row) {
+                $keyboard->addRow(...$row);
+            }
 
-            $extraRows = [
-                [InlineKeyboardButton::make('🏠 Главное меню', callback_data: 'main_menu')]
-            ];
-
-            $keyboard = $this->telegramService::buildInlineKeyboard($tagButtons, 2, $extraRows);
+            $keyboard->addRow(InlineKeyboardButton::make('🏠 Главное меню', callback_data: 'main_menu'));
             $this->vpnConnectionService->sendConnectVpnMenu($bot, $keyboard);
-
             $bot->answerCallbackQuery();
+
+            return;
         });
 
         // Обработчик кнопки "Перенести в приложение"
@@ -186,7 +181,12 @@ final readonly class TelegramBotHandlers
                 2
             );
 
-            $keyboard->addRow(InlineKeyboardButton::make('Назад', callback_data: 'vpn:back'));
+            $keyboard->addRow(
+                InlineKeyboardButton::make(
+                    '🏠 Главное меню',
+                    callback_data: 'main_menu'
+                )
+            );
 
             $this->vpnConnectionService->sendChoosingActiveVpnMenu($bot, $keyboard);
             $bot->answerCallbackQuery();
