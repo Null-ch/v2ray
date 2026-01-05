@@ -47,6 +47,10 @@ final readonly class TelegramBotHandlers
     public function registerHandlers(): void
     {
         $this->bot->onCommand('start', function (Nutgram $bot) {
+            if ($this->shouldAbortCallback($bot)) {
+                return;
+            }
+
             $telegramId = $bot->userId();
             $user = $this->userService->findUserByTelegramId($telegramId);
 
@@ -81,6 +85,10 @@ final readonly class TelegramBotHandlers
          * Обработка принятия соглашений
          */
         $this->bot->onCallbackQueryData('accept_terms', function (Nutgram $bot) {
+            if ($this->shouldAbortCallback($bot)) {
+                return;
+            }
+
             $bot->answerCallbackQuery($bot->callbackQuery()->id, '⏳ Создаю VPN конфигурацию, пожалуйста, подождите...');
 
             try {
@@ -109,6 +117,10 @@ final readonly class TelegramBotHandlers
          * Обработка кнопки "Подключить VPN". Предлагает список стран на выбор
          */
         $this->bot->onCallbackQueryData('connect_vpn', function (Nutgram $bot) {
+            if ($this->shouldAbortCallback($bot)) {
+                return;
+            }
+
             $buttons = Xui::activeButtons();
             $keyboard = InlineKeyboardMarkup::make();
 
@@ -127,6 +139,10 @@ final readonly class TelegramBotHandlers
          * Обработка кнопки "Главное меню"
          */
         $this->bot->onCallbackQueryData('main_menu', function (Nutgram $bot) {
+            if ($this->shouldAbortCallback($bot)) {
+                return;
+            }
+
             $messageIds = $bot->getGlobalData('vpn_message_ids', []);
             $this->clearChat($messageIds, $bot);
             $telegramId = $bot->userId();
@@ -163,11 +179,15 @@ final readonly class TelegramBotHandlers
          * Обработка кнопки "Инструкции"
          */
         $this->bot->onCallbackQueryData('guidelines', function (Nutgram $bot) {
+            if ($this->shouldAbortCallback($bot)) {
+                return;
+            }
+
+            $bot->answerCallbackQuery();
             $messageIds = $bot->getGlobalData('vpn_message_ids', []);
             $keyboard = $this->getInstructionsKeyboard();
             $this->clearChat($messageIds, $bot);
             $this->vpnConnectionService->sendGuideMenu($bot, $keyboard);
-            $bot->answerCallbackQuery();
 
             return;
         });
@@ -176,6 +196,10 @@ final readonly class TelegramBotHandlers
          * Обработка кнопки "Мои VPN". Ищет активные VPN, показывает сначала страну для выбора
          */
         $this->bot->onCallbackQueryData('user_vpn', function (Nutgram $bot) {
+            if ($this->shouldAbortCallback($bot)) {
+                return;
+            }
+
             $bot->answerCallbackQuery();
             $messageIds = $bot->getGlobalData('vpn_message_ids', []);
             $this->clearChat($messageIds, $bot);
@@ -200,6 +224,10 @@ final readonly class TelegramBotHandlers
         $this->bot->onCallbackQueryData(
             'vpn:tag:{code}',
             function (Nutgram $bot, string $code) {
+                if ($this->shouldAbortCallback($bot)) {
+                    return;
+                }
+
                 $user = $this->userService->findUserByTelegramId($bot->userId());
 
                 if (!$user) {
@@ -231,6 +259,10 @@ final readonly class TelegramBotHandlers
         $this->bot->onCallbackQueryData(
             'vpn:back',
             function (Nutgram $bot) {
+                if ($this->shouldAbortCallback($bot)) {
+                    return;
+                }
+
                 $bot->answerCallbackQuery();
                 $user = $this->userService->findUserByTelegramId($bot->userId());
 
@@ -258,6 +290,10 @@ final readonly class TelegramBotHandlers
         $this->bot->onCallbackQueryData(
             'vpn:pricing:{code}',
             function (Nutgram $bot, string $code) {
+                if ($this->shouldAbortCallback($bot)) {
+                    return;
+                }
+
                 $bot->answerCallbackQuery();
                 $user = $this->userService->findUserByTelegramId($bot->userId());
 
@@ -311,6 +347,10 @@ final readonly class TelegramBotHandlers
         $this->bot->onCallbackQueryData(
             'payment:pricing:{pricing_id}:{code}',
             function (Nutgram $bot, string $pricingId, string $code) {
+                if ($this->shouldAbortCallback($bot)) {
+                    return;
+                }
+
                 $bot->answerCallbackQuery();
                 $user = $this->userService
                     ->findUserByTelegramId($bot->userId());
@@ -424,5 +464,35 @@ final readonly class TelegramBotHandlers
             } catch (\Throwable $e) {
             }
         }
+    }
+
+    /**
+     * Проверяет, нужно ли прервать выполнение обработчика callback query
+     * (например, если query слишком старое или уже обработано)
+     *
+     * @param Nutgram $bot
+     * @param int $maxAgeSeconds
+     * @return bool true — нужно прервать выполнение, false — можно продолжать
+     */
+    private function shouldAbortCallback(Nutgram $bot, int $maxAgeSeconds = 50): bool
+    {
+        $callback = $bot->callbackQuery();
+
+        if (!$callback) {
+            return true;
+        }
+
+        if (time() - $callback->date > $maxAgeSeconds) {
+            return true;
+        }
+
+        try {
+            $bot->answerCallbackQuery();
+        } catch (\Exception $e) {
+            Log::warning('Failed to answer callback query', ['error' => $e->getMessage()]);
+            return true;
+        }
+
+        return false;
     }
 }
