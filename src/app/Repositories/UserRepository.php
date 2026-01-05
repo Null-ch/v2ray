@@ -82,4 +82,12 @@ class UserRepository extends BaseRepository
             ->where('id', $id)
             ->first();
     }
+
+    public function findByReferralCode(string $referralCode): ?Model
+    {
+        return $this->model
+            ->newQuery()
+            ->where('referral_code', $referralCode)
+            ->first();
+    }
 }

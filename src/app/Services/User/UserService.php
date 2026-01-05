@@ -23,7 +23,13 @@ final readonly class UserService
         return $user;
     }
 
-    public function createUser(int $telegramId, ?string $username = null, ?string $name = null): ?User
+    public function findUserByReferralCode(string $referralCode): ?User
+    {
+        $user = $this->userRepository->findByReferralCode($referralCode);
+        return $user;
+    }
+
+    public function createUser(int $telegramId, ?string $username = null, ?string $name = null, ?int $referrerId = null): ?User
     {
         $userDTO = UserDTO::from([
             'tg_id' => $telegramId,
@@ -32,6 +38,7 @@ final readonly class UserService
             'uuid' => Str::uuid()->toString(),
             'is_active' => true,
             'referral_code' => Str::random(10),
+            'referrer_id' => $referrerId,
         ]);
 
         $user = $this->userRepository->createInstance($userDTO);

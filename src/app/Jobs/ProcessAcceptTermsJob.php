@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Jobs;
 
 use App\Enums\XuiTag;
+use App\Models\Referral;
 use Illuminate\Support\Str;
 use App\Services\XuiService;
 use Illuminate\Bus\Queueable;
@@ -29,6 +30,7 @@ final class ProcessAcceptTermsJob implements ShouldQueue
         private readonly int $telegramId,
         private readonly ?string $username,
         private readonly ?string $name,
+        private readonly ?int $referrerId = null,
     ) {}
 
     public function handle(
@@ -46,7 +48,15 @@ final class ProcessAcceptTermsJob implements ShouldQueue
 
             $user = $userService->findUserByTelegramId($this->telegramId);
             if (!$user) {
-                $user = $userService->createUser($this->telegramId, $this->username, $this->name);
+                $user = $userService->createUser($this->telegramId, $this->username, $this->name, $this->referrerId);
+                
+                // Создаем запись в таблице referrals, если пользователь был приглашен
+                if ($user && $this->referrerId) {
+                    Referral::create([
+                        'user_id' => $this->referrerId,
+                        'referred_user_id' => $user->id,
+                    ]);
+                }
             }
 
             if (!$user) {

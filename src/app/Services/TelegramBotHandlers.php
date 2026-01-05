@@ -45,12 +45,32 @@ final readonly class TelegramBotHandlers
             $telegramId = $bot->userId();
             $user = $this->userService->findUserByTelegramId($telegramId);
 
-            //TODO:Реализация рефералов тут
-            // if ($payload && !$user) {
-            //     $bot->sendMessage("Привет! Ваш стартовый параметр: $payload");
-            // }
+            // Обработка реферального кода
+            // В Nutgram параметры команды можно получить из текста сообщения
+            $messageText = $bot->message()?->text ?? '';
+            $payload = null;
+            
+            // Парсим параметр из команды /start REFERRAL_CODE
+            if (preg_match('/\/start\s+(.+)/', $messageText, $matches)) {
+                $payload = trim($matches[1]);
+            }
+            
+            $referrerId = null;
+
+            if ($payload && !$user) {
+                // Пытаемся найти пользователя по реферальному коду
+                $referrer = $this->userService->findUserByReferralCode($payload);
+                if ($referrer) {
+                    $referrerId = $referrer->id;
+                }
+            }
 
             if (!$user) {
+                // Сохраняем referrerId в глобальных данных бота для использования в ProcessAcceptTermsJob
+                if ($referrerId) {
+                    $bot->setGlobalData('referrer_id', $referrerId);
+                }
+
                 $messageIds = $bot->getGlobalData('vpn_message_ids', []);
                 $this->clearChat($messageIds, $bot);
                 $keyboard = InlineKeyboardMarkup::make()->addRow(InlineKeyboardButton::make('✅Принять', callback_data: 'accept_terms'));
@@ -74,12 +94,48 @@ final readonly class TelegramBotHandlers
                     $keyboard->addRow(InlineKeyboardButton::make('Подключить VPN', callback_data: 'connect_vpn'));
                 }
 
+                $keyboard->addRow(InlineKeyboardButton::make('👥 Пригласить друга', callback_data: 'invite'));
                 $keyboard->addRow($this->getMainMenuButton());
                 $messageId = $this->vpnConnectionService->sendMainMenu($bot, $user, $keyboard);
                 $bot->setGlobalData('vpn_message_ids', [$messageId]);
 
                 return;
             }
+        });
+
+        /**
+         * Обработка кнопки "Пригласить друга"
+         */
+        $this->bot->onCallbackQueryData('invite', function (Nutgram $bot) {
+            $bot->answerCallbackQuery();
+            $telegramId = $bot->userId();
+            $user = $this->userService->findUserByTelegramId($telegramId);
+
+            if (!$user || !$user->referral_code) {
+                $bot->sendMessage('❌ Не удалось получить реферальную ссылку');
+                return;
+            }
+
+            $botUsername = config('services.telegram.bot_username');
+            if (!$botUsername) {
+                // Попытка получить имя бота из API
+                try {
+                    $botInfo = $bot->getMe();
+                    $botUsername = $botInfo->username;
+                } catch (\Throwable $e) {
+                    Log::error('Не удалось получить имя бота: ' . $e->getMessage());
+                    $bot->sendMessage('❌ Не удалось сформировать реферальную ссылку');
+                    return;
+                }
+            }
+
+            $referralLink = "https://t.me/{$botUsername}?start={$user->referral_code}";
+            
+            $message = "👭 Ваша реферальная ссылка:\n\n";
+            $message .= "<code>{$referralLink}</code>\n\n";
+            $message .= "За каждого, кто подключит VPN, Вы получите на баланс 2 дня подписки 👉";
+
+            $bot->sendMessage($message, parse_mode: 'HTML');
         });
 
         /**
@@ -92,12 +148,17 @@ final readonly class TelegramBotHandlers
                 $telegramId = $bot->userId();
                 $username = $bot->user()->username;
                 $name = $bot->user()->first_name;
+                $referrerId = $bot->getGlobalData('referrer_id');
 
                 ProcessAcceptTermsJob::dispatch(
                     telegramId: $telegramId,
                     username: $username,
-                    name: $name
+                    name: $name,
+                    referrerId: $referrerId
                 );
+
+                // Очищаем сохраненный referrer_id после использования
+                $bot->unsetGlobalData('referrer_id');
             } catch (\Throwable $e) {
                 Log::error('Ошибка при постановке задачи accept_terms в очередь: ' . $e->getMessage(), [
                     'trace' => $e->getTraceAsString(),
@@ -168,6 +229,7 @@ final readonly class TelegramBotHandlers
             }
 
             $keyboard->addRow(InlineKeyboardButton::make('Инструкции', callback_data: 'guidelines'));
+            $keyboard->addRow(InlineKeyboardButton::make('👥 Пригласить друга', callback_data: 'invite'));
             $messageId = $this->vpnConnectionService->sendMainMenu($bot, $user, $keyboard);
             $bot->setGlobalData('vpn_message_ids', [$messageId]);
             $bot->answerCallbackQuery();

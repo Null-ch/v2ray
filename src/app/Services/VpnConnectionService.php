@@ -51,8 +51,26 @@ final readonly class VpnConnectionService
 
         $name = $bot->user()->first_name ?? $user->name ?? $user->tg_tag ?? 'пользователь';
 
+        // Генерируем реферальную ссылку
+        $referralLink = null;
+        if ($user->referral_code) {
+            $botUsername = config('services.telegram.bot_username');
+            if (!$botUsername) {
+                try {
+                    $botInfo = $bot->getMe();
+                    $botUsername = $botInfo->username;
+                } catch (\Throwable $e) {
+                    // Если не удалось получить имя бота, оставляем ссылку пустой
+                }
+            }
+            if ($botUsername) {
+                $referralLink = "https://t.me/{$botUsername}?start={$user->referral_code}";
+            }
+        }
+
         $message = View::make('telegram.welcome-back', [
             'name' => $name,
+            'referralLink' => $referralLink,
             // 'activeKeysCount' => $activeKeysCount,
             // 'balance' => $balance,
             // 'daysRemaining' => $daysRemaining,
