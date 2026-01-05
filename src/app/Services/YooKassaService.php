@@ -185,8 +185,8 @@ final class YooKassaService
             $tag = $payment->getVpnTag();
             $uuid = $user->uuid;
             $clientDataResponse = $this->xuiService->getClientTrafficByUserUuid($tag, $user->uuid);
-            if (!empty($clientDataResponse)) {
-                $clientDataArray = Arr::get($clientDataResponse, 'data');
+            $clientDataArray = Arr::get($clientDataResponse, 'data');
+            if (!empty($clientDataArray)) {
                 $client = $clientDataArray[0];
                 $client['expiryTime'] += $payment->getDuration();
                 $client['id'] = $uuid;
