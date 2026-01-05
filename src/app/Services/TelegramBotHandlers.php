@@ -198,7 +198,7 @@ final readonly class TelegramBotHandlers
         });
 
         $this->bot->onCallbackQueryData(
-            'vpn:connect:{code}',
+            'vpn:tag:{code}',
             function (Nutgram $bot, string $code) {
                 $user = $this->userService->findUserByTelegramId($bot->userId());
 
@@ -215,7 +215,7 @@ final readonly class TelegramBotHandlers
                 }
 
                 $keyboard = InlineKeyboardMarkup::make()
-                    // ->addRow(InlineKeyboardButton::make('🔃 Продлить VPN', callback_data: Callback::VPN_PRICING->with($code)))
+                    ->addRow(InlineKeyboardButton::make('🔃 Продлить VPN', callback_data: Callback::VPN_PRICING->with($code)))
                     ->addRow(InlineKeyboardButton::make('⬅️ Назад к VPN', callback_data: Callback::VPN_BACK->value));
 
                 $this->vpnConnectionService->sendSubscriptionInfo($bot, $user, $tag->value, $keyboard);
