@@ -41,26 +41,62 @@ final readonly class TelegramBotHandlers
 
     public function registerHandlers(): void
     {
-        $this->bot->onCommand('start', function (Nutgram $bot, ?string $payload = null) {
+        Log::info('Registering Telegram bot handlers');
+        
+        $this->bot->onCommand('start', function (Nutgram $bot) {
             $telegramId = $bot->userId();
+            
+            Log::info('=== START COMMAND HANDLER CALLED ===', [
+                'telegram_id' => $telegramId,
+                'user_id' => $bot->userId(),
+            ]);
 
-            // Если payload не передан как параметр, пытаемся извлечь из текста сообщения
-            if ($payload === null || $payload === '') {
-                $text = $bot->message()?->text ?? '';
-                Log::info('Start command received', [
+            // Получаем текст сообщения
+            $text = $bot->message()?->text ?? '';
+            $payload = null;
+            
+            Log::info('Start command received - initial', [
+                'telegram_id' => $telegramId,
+                'text' => $text,
+                'text_length' => strlen($text),
+            ]);
+
+            // Парсим параметр из команды /start PAYLOAD
+            // Пробуем разные варианты парсинга
+            if (preg_match('/^\/start[@\w]*\s+(.+)$/i', $text, $matches)) {
+                $payload = trim($matches[1]);
+                Log::info('Payload extracted from text (pattern 1)', [
                     'telegram_id' => $telegramId,
-                    'text' => $text,
-                    'payload_param' => $payload,
+                    'payload' => $payload,
                 ]);
-
-                // Парсим параметр из команды /start PAYLOAD
-                if (preg_match('/^\/start\s+(.+)$/i', $text, $matches)) {
-                    $payload = trim($matches[1]);
-                    Log::info('Payload extracted from text', [
+            } elseif (preg_match('/^\/start\s+(.+)$/i', $text, $matches)) {
+                $payload = trim($matches[1]);
+                Log::info('Payload extracted from text (pattern 2)', [
+                    'telegram_id' => $telegramId,
+                    'payload' => $payload,
+                ]);
+            } else {
+                // Пробуем получить из текста напрямую, если текст не начинается с /start
+                $parts = explode(' ', trim($text));
+                if (count($parts) > 1 && $parts[0] === '/start') {
+                    $payload = trim(implode(' ', array_slice($parts, 1)));
+                    Log::info('Payload extracted by splitting', [
                         'telegram_id' => $telegramId,
                         'payload' => $payload,
                     ]);
                 }
+            }
+            
+            if ($payload && $payload !== '') {
+                Log::info('Payload found', [
+                    'telegram_id' => $telegramId,
+                    'payload' => $payload,
+                ]);
+            } else {
+                Log::info('No payload found', [
+                    'telegram_id' => $telegramId,
+                    'text' => $text,
+                ]);
             }
 
             $user = $this->userService->findUserByTelegramId($telegramId);
@@ -129,17 +165,24 @@ final readonly class TelegramBotHandlers
                 Log::error('Error in start command handler', [
                     'telegram_id' => $telegramId,
                     'error' => $e->getMessage(),
+                    'file' => $e->getFile(),
+                    'line' => $e->getLine(),
                     'trace' => $e->getTraceAsString(),
                 ]);
-
+                
                 try {
-                    $bot->sendMessage('❌ Произошла ошибка. Пожалуйста, попробуйте позже.');
+                    $bot->sendMessage('❌ Произошла ошибка. Пожалуйста, попробуйте позже.', chat_id: $telegramId);
                 } catch (\Throwable $sendError) {
                     Log::error('Failed to send error message', [
                         'error' => $sendError->getMessage(),
+                        'telegram_id' => $telegramId,
                     ]);
                 }
             }
+            
+            Log::info('=== START COMMAND HANDLER FINISHED ===', [
+                'telegram_id' => $telegramId,
+            ]);
         });
 
         /**
@@ -619,6 +662,8 @@ final readonly class TelegramBotHandlers
                 }
             }
         );
+        
+        Log::info('All Telegram bot handlers registered successfully');
     }
 
     private function getMainMenuButton(): InlineKeyboardButton
