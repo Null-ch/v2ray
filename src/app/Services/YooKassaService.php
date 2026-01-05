@@ -186,7 +186,7 @@ final class YooKassaService
             $uuid = $user->uuid;
             $clientDataResponse = $this->xuiService->getClientTrafficByUserUuid($tag, $user->uuid);
             $clientDataArray = Arr::get($clientDataResponse, 'data');
-            Log::info('clientDataArray ' . json_encode($clientDataArray));
+
             if (count($clientDataArray) > 0) {
                 $client = $clientDataArray[0];
                 $client['expiryTime'] += $payment->getDuration();
@@ -198,7 +198,7 @@ final class YooKassaService
                     "id" => $uuid,
                     "email" => $user->getVpnEmail(),
                     "subId" => $uuid,
-                    "expiryTime" => $payment->getDuration(),
+                    "expiryTime" => MillisecondsHelper::getNowInMilliseconds() + $payment->getDuration(),
                 ];
 
                 $xuiModel = $this->xuiService->getXuiModelByTag($tag);

@@ -48,4 +48,9 @@ class MillisecondsHelper
     {
         return (int) round((int)$milliseconds / 1000 / 60 / 60 / 24);
     }
+
+    public static function getNowInMilliseconds()
+    {
+        return round(microtime(true) * 1000);
+    }
 }
