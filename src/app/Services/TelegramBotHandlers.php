@@ -140,8 +140,7 @@ final readonly class TelegramBotHandlers
                     referrerId: $referrerId
                 );
 
-                // Очищаем сохраненный referrer_id после использования
-                $bot->unsetGlobalData('referrer_id');
+                $bot->deleteGlobalData('referrer_id');
             } catch (\Throwable $e) {
                 Log::error('Ошибка при постановке задачи accept_terms в очередь: ' . $e->getMessage(), [
                     'trace' => $e->getTraceAsString(),
