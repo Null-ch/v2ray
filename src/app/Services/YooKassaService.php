@@ -7,6 +7,7 @@ namespace App\Services;
 use App\Models\User;
 use App\Models\Payment;
 use App\Clients\YooKassaClient;
+use App\Services\TelegramService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use YooKassa\Model\Payment\PaymentStatus;
@@ -14,6 +15,7 @@ use YooKassa\Model\Payment\PaymentStatus;
 final class YooKassaService
 {
     public function __construct(
+        private readonly TelegramService $telegramService,
         private readonly YooKassaClient $client
     ) {}
 
@@ -163,6 +165,9 @@ final class YooKassaService
             ]);
 
             DB::commit();
+
+            // Отправляем уведомление в Telegram об успешном платеже
+            $this->notifyPaymentSuccess($payment);
         } catch (\Exception $e) {
             DB::rollBack();
             Log::error('Failed to process successful payment', [
@@ -171,6 +176,61 @@ final class YooKassaService
             ]);
 
             throw $e;
+        }
+    }
+
+    /**
+     * Отправляет уведомление об успешном платеже в Telegram
+     *
+     * @param Payment $payment
+     * @return void
+     */
+    private function notifyPaymentSuccess(Payment $payment): void
+    {
+        try {
+            $user = $payment->user;
+            if (!$user->tg_id) {
+                Log::debug('User has no telegram ID for payment notification', [
+                    'user_id' => $user->id,
+                    'payment_id' => $payment->id,
+                ]);
+                return;
+            }
+
+            $bot = $this->telegramService->getBot();
+
+            // Удаляем сообщение с кнопкой оплаты, если оно есть
+            if ($payment->telegram_message_id) {
+                try {
+                    $bot->deleteMessage($user->tg_id, $payment->telegram_message_id);
+                } catch (\Throwable $e) {
+                    Log::debug('Failed to delete payment message', [
+                        'message_id' => $payment->telegram_message_id,
+                        'error' => $e->getMessage(),
+                    ]);
+                }
+            }
+
+            // Отправляем сообщение об успешном платеже
+            $successMessage = sprintf(
+                "✅ Платеж успешно завершен!\n\n💳 Сумма: %s ₽\n📝 Описание: %s\n\nСредства зачислены на ваш баланс.",
+                number_format((float) $payment->amount, 2, '.', ' '),
+                $payment->description
+            );
+
+            $bot->sendMessage($successMessage, chat_id: $user->tg_id);
+
+            Log::info('Payment success notification sent to Telegram', [
+                'payment_id' => $payment->id,
+                'user_id' => $user->id,
+                'telegram_id' => $user->tg_id,
+            ]);
+        } catch (\Throwable $e) {
+            // Не прерываем процесс, если не удалось отправить уведомление
+            Log::error('Failed to send payment success notification to Telegram', [
+                'payment_id' => $payment->id,
+                'error' => $e->getMessage(),
+            ]);
         }
     }
 

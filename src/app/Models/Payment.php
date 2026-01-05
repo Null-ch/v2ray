@@ -24,6 +24,7 @@ class Payment extends Model
         'status',
         'yookassa_status',
         'confirmation_url',
+        'telegram_message_id',
         'metadata',
     ];
 

@@ -311,12 +311,22 @@ final readonly class TelegramBotHandlers
         $this->bot->onCallbackQueryData(
             'payment:pricing:{pricing_id}:{code}',
             function (Nutgram $bot, string $pricingId, string $code) {
-                $bot->answerCallbackQuery();
                 $user = $this->userService
                     ->findUserByTelegramId($bot->userId());
 
                 if (!$user) {
                     $bot->answerCallbackQuery('Пользователь не найден');
+                    return;
+                }
+
+                // Защита от повторных нажатий: проверяем наличие активного pending платежа
+                $activePayment = \App\Models\Payment::where('user_id', $user->id)
+                    ->where('status', \App\Models\Payment::STATUS_PENDING)
+                    ->latest()
+                    ->first();
+
+                if ($activePayment) {
+                    $bot->answerCallbackQuery('У вас уже есть активный платеж. Дождитесь завершения оплаты.');
                     return;
                 }
 
@@ -332,6 +342,20 @@ final readonly class TelegramBotHandlers
                 if (!$pricing) {
                     $bot->answerCallbackQuery('Тарифный план не найден');
                     return;
+                }
+
+                // Удаляем сообщение с тарифами
+                $callbackQuery = $bot->callbackQuery();
+                if ($callbackQuery && $callbackQuery->message) {
+                    try {
+                        $bot->deleteMessage($bot->chatId(), $callbackQuery->message->message_id);
+                    } catch (\Throwable $e) {
+                        // Игнорируем ошибки удаления сообщения
+                        Log::debug('Failed to delete pricing message', [
+                            'message_id' => $callbackQuery->message->message_id,
+                            'error' => $e->getMessage(),
+                        ]);
+                    }
                 }
 
                 try {
@@ -365,7 +389,13 @@ final readonly class TelegramBotHandlers
                             $description
                         );
 
-                        $bot->sendMessage($message, reply_markup: $keyboard);
+                        $sentMessage = $bot->sendMessage($message, reply_markup: $keyboard);
+                        
+                        // Сохраняем ID сообщения с кнопкой оплаты в платеже
+                        if ($sentMessage && $sentMessage->message_id) {
+                            $payment->update(['telegram_message_id' => $sentMessage->message_id]);
+                        }
+                        
                         $bot->answerCallbackQuery('Платеж создан');
                     } else {
                         $bot->answerCallbackQuery('Ошибка при создании платежа');
