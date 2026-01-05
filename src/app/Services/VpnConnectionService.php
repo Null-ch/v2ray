@@ -90,10 +90,13 @@ final readonly class VpnConnectionService
         $subscriptionInfoArray = $this->xuiService->getSubscriptionInfo($tag, $user->uuid);
         $tag = XuiTag::from($tag);
         $name = $bot->user()->first_name ?? $user->name ?? $user->tg_tag ?? 'Пользователь';
-Log::info('subscr data' . json_encode($subscriptionInfoArray));
+        $expiryTime = $this->formatExpiryTime(
+            Arr::get($subscriptionInfoArray, 'expiryTime', [])
+        );
+
         $message = View::make('telegram.subscription-info', [
             'enable' => Arr::get($subscriptionInfoArray, 'enable'),
-            'expiryTime' => Arr::get($subscriptionInfoArray, 'expiryTime'),
+            'expiryTime' => $expiryTime,
             'tag' => $tag->labelWithFlag(),
             'name' => $name
         ])->render();
@@ -164,5 +167,42 @@ Log::info('subscr data' . json_encode($subscriptionInfoArray));
             // 'key' => $keyMsg->message_id,
             'instructions' => $instructionsMsg->message_id,
         ];
+    }
+
+    private function formatExpiryTime(array $expiryTime): string
+    {
+        $parts = [];
+
+        if (!empty($expiryTime['days'])) {
+            $parts[] = $expiryTime['days'] . ' ' . $this->pluralize(
+                (int) $expiryTime['days'],
+                ['день', 'дня', 'дней']
+            );
+        }
+
+        if (!empty($expiryTime['hours'])) {
+            $parts[] = $expiryTime['hours'] . ' ' . $this->pluralize(
+                (int) $expiryTime['hours'],
+                ['час', 'часа', 'часов']
+            );
+        }
+
+        if (!empty($expiryTime['minutes'])) {
+            $parts[] = $expiryTime['minutes'] . ' ' . $this->pluralize(
+                (int) $expiryTime['minutes'],
+                ['минута', 'минуты', 'минут']
+            );
+        }
+
+        return $parts !== [] ? implode(' ', $parts) : 'Менее минуты';
+    }
+
+    private function pluralize(int $number, array $forms): string
+    {
+        $cases = [2, 0, 1, 1, 1, 2];
+
+        return $forms[($number % 100 > 4 && $number % 100 < 20)
+            ? 2
+            : $cases[min($number % 10, 5)]];
     }
 }
