@@ -126,7 +126,8 @@ final class YooKassaService
             'status' => $status,
         ]);
 
-        if ($status === Payment::STATUS_SUCCEEDED && $oldStatus !== Payment::STATUS_SUCCEEDED) {
+        // Обрабатываем успешный платеж только если он еще не был обработан
+        if ($status === Payment::STATUS_SUCCEEDED && $oldStatus !== Payment::STATUS_SUCCEEDED && !$payment->processed_at) {
             $this->processSuccessfulPayment($payment);
         }
 
@@ -148,6 +149,21 @@ final class YooKassaService
      */
     private function processSuccessfulPayment(Payment $payment): void
     {
+        // Дополнительная проверка на случай параллельных запросов
+        // Используем блокировку строки для предотвращения повторной обработки
+        $paymentId = $payment->id;
+        $payment = Payment::where('id', $paymentId)
+            ->whereNull('processed_at')
+            ->lockForUpdate()
+            ->first();
+
+        if (!$payment) {
+            Log::info('Payment already processed, skipping', [
+                'payment_id' => $paymentId,
+            ]);
+            return;
+        }
+
         try {
             DB::beginTransaction();
 
@@ -178,6 +194,10 @@ final class YooKassaService
             $inbloundId = Arr::get($client, 'inboundId');
             Log::info('ClientData to update: ' . json_encode($client));
             $this->xuiService->updateClient($tag, $inbloundId, $uuid, $client);
+
+            // Помечаем платеж как обработанный
+            $payment->update(['processed_at' => now()]);
+
             DB::commit();
 
             $this->notifyPaymentSuccess($payment);
@@ -200,6 +220,16 @@ final class YooKassaService
      */
     private function notifyPaymentSuccess(Payment $payment): void
     {
+        // Проверяем, не было ли уже отправлено уведомление
+        // Используем метаданные для отслеживания отправки уведомления
+        $metadata = $payment->metadata ?? [];
+        if (isset($metadata['notification_sent']) && $metadata['notification_sent'] === true) {
+            Log::info('Payment success notification already sent, skipping', [
+                'payment_id' => $payment->id,
+            ]);
+            return;
+        }
+
         try {
             $user = $payment->user;
             if (!$user->tg_id) {
@@ -233,6 +263,10 @@ final class YooKassaService
 
             $keyboard = InlineKeyboardMarkup::make()->addRow(InlineKeyboardButton::make('🏠 Главное меню', callback_data: 'main_menu'));
             $bot->sendMessage($successMessage, chat_id: $user->tg_id, reply_markup: $keyboard);
+
+            // Помечаем в метаданных, что уведомление отправлено
+            $metadata['notification_sent'] = true;
+            $payment->update(['metadata' => $metadata]);
 
             Log::info('Payment success notification sent to Telegram', [
                 'payment_id' => $payment->id,

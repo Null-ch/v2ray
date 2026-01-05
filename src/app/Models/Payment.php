@@ -26,6 +26,7 @@ class Payment extends Model
         'confirmation_url',
         'telegram_message_id',
         'metadata',
+        'processed_at',
     ];
 
     /**
@@ -38,6 +39,7 @@ class Payment extends Model
         return [
             'amount' => 'decimal:2',
             'metadata' => 'array',
+            'processed_at' => 'datetime',
         ];
     }
 

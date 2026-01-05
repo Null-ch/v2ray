@@ -12,6 +12,7 @@ use SergiX44\Nutgram\Nutgram;
 use App\Services\YooKassaService;
 use App\Services\User\UserService;
 use App\Jobs\ProcessAcceptTermsJob;
+use App\Jobs\ProcessPaymentCreationJob;
 use Illuminate\Support\Facades\Log;
 use SergiX44\Nutgram\Telegram\Types\Keyboard\InlineKeyboardButton;
 use SergiX44\Nutgram\Telegram\Types\Keyboard\InlineKeyboardMarkup;
@@ -306,106 +307,90 @@ final readonly class TelegramBotHandlers
         $this->bot->onCallbackQueryData(
             'payment:pricing:{pricing_id}:{code}',
             function (Nutgram $bot, string $pricingId, string $code) {
-                $user = $this->userService->findUserByTelegramId($bot->userId());
-
-                if (!$user) {
-                    $bot->answerCallbackQuery('Пользователь не найден');
-                    return;
-                }
-
-                // Защита от повторных нажатий: проверяем наличие активного pending платежа
-                $activePayment = \App\Models\Payment::where('user_id', $user->id)
-                    ->where('status', \App\Models\Payment::STATUS_PENDING)
-                    ->latest()
-                    ->first();
-
-                if ($activePayment) {
-                    $bot->answerCallbackQuery('У вас уже есть активный платеж. Дождитесь завершения оплаты.');
-                    return;
-                }
+                // Сразу отвечаем на callback query, чтобы избежать ошибки "query is too old"
+                $bot->answerCallbackQuery($bot->callbackQuery()->id, '⏳ Создаю платеж, пожалуйста, подождите...');
 
                 try {
-                    $tag = XuiTag::from($code);
-                } catch (\ValueError) {
-                    $bot->answerCallbackQuery('Неизвестный VPN');
-                    return;
-                }
+                    $telegramId = $bot->userId();
+                    $user = $this->userService->findUserByTelegramId($telegramId);
 
-                $pricing = Pricing::find($pricingId);
-
-                if (!$pricing) {
-                    $bot->answerCallbackQuery('Тарифный план не найден');
-                    return;
-                }
-
-                // Удаляем сообщение с тарифами
-                $callbackQuery = $bot->callbackQuery();
-                if ($callbackQuery && $callbackQuery->message) {
-                    try {
-                        $bot->deleteMessage($bot->chatId(), $callbackQuery->message->message_id);
-                    } catch (\Throwable $e) {
-                        // Игнорируем ошибки удаления сообщения
-                        Log::debug('Failed to delete pricing message', [
-                            'message_id' => $callbackQuery->message->message_id,
-                            'error' => $e->getMessage(),
-                        ]);
-                    }
-                }
-
-                try {
-                    $description = sprintf(
-                        'Оплата VPN %s: %s',
-                        $tag->labelWithFlag(),
-                        $pricing->title,
-                    );
-
-                    $metadata = [
-                        'pricing_id' => $pricing->id,
-                        'vpn_tag' => $code,
-                        'duration' => $pricing->duration,
-                    ];
-
-                    $payment = $this->yooKassaService->createPayment(
-                        $user,
-                        (float)$pricing->price,
-                        $description,
-                        $metadata
-                    );
-
-                    if ($payment->confirmation_url) {
-                        $keyboard = InlineKeyboardMarkup::make()
-                            ->addRow(InlineKeyboardButton::make('💳 Перейти к оплате', url: $payment->confirmation_url))
-                            ->addRow($this->getMainMenuButton());
-
-                        $message = sprintf(
-                            "💳 Создан платеж на сумму %s ₽\n\n%s\n\nНажмите кнопку ниже для перехода к оплате:",
-                            number_format((float) $pricing->price, 2, '.', ' '),
-                            $description
-                        );
-
-                        $sentMessage = $bot->sendMessage($message, reply_markup: $keyboard);
-
-                        // Сохраняем ID сообщения с кнопкой оплаты в платеже
-                        if ($sentMessage && $sentMessage->message_id) {
-                            $payment->update(['telegram_message_id' => $sentMessage->message_id]);
+                    if (!$user) {
+                        try {
+                            $bot->sendMessage('❌ Пользователь не найден', (string) $telegramId);
+                        } catch (\Throwable $sendError) {
+                            Log::error('Не удалось отправить сообщение об ошибке: ' . $sendError->getMessage());
                         }
-                        
-                        $bot->answerCallbackQuery('Платеж создан');
-                    } else {
-                        $bot->answerCallbackQuery('Ошибка при создании платежа');
-                        Log::error('Payment created but no confirmation URL', [
-                            'payment_id' => $payment->id,
-                            'user_id' => $user->id,
-                        ]);
+                        return;
                     }
-                } catch (\Exception $e) {
-                    Log::error('Failed to create payment from Telegram', [
-                        'user_id' => $user->id,
+
+                    // Защита от повторных нажатий: проверяем наличие активного pending платежа
+                    $activePayment = \App\Models\Payment::where('user_id', $user->id)
+                        ->where('status', \App\Models\Payment::STATUS_PENDING)
+                        ->latest()
+                        ->first();
+
+                    if ($activePayment) {
+                        try {
+                            $bot->sendMessage('⚠️ У вас уже есть активный платеж. Дождитесь завершения оплаты.', (string) $telegramId);
+                        } catch (\Throwable $sendError) {
+                            Log::error('Не удалось отправить сообщение об ошибке: ' . $sendError->getMessage());
+                        }
+                        return;
+                    }
+
+                    try {
+                        $tag = XuiTag::from($code);
+                    } catch (\ValueError) {
+                        try {
+                            $bot->sendMessage('❌ Неизвестный VPN', (string) $telegramId);
+                        } catch (\Throwable $sendError) {
+                            Log::error('Не удалось отправить сообщение об ошибке: ' . $sendError->getMessage());
+                        }
+                        return;
+                    }
+
+                    $pricing = Pricing::find($pricingId);
+
+                    if (!$pricing) {
+                        try {
+                            $bot->sendMessage('❌ Тарифный план не найден', (string) $telegramId);
+                        } catch (\Throwable $sendError) {
+                            Log::error('Не удалось отправить сообщение об ошибке: ' . $sendError->getMessage());
+                        }
+                        return;
+                    }
+
+                    // Удаляем сообщение с тарифами
+                    $callbackQuery = $bot->callbackQuery();
+                    if ($callbackQuery && $callbackQuery->message) {
+                        try {
+                            $bot->deleteMessage($bot->chatId(), $callbackQuery->message->message_id);
+                        } catch (\Throwable $e) {
+                            // Игнорируем ошибки удаления сообщения
+                            Log::debug('Failed to delete pricing message', [
+                                'message_id' => $callbackQuery->message->message_id,
+                                'error' => $e->getMessage(),
+                            ]);
+                        }
+                    }
+
+                    // Выносим создание платежа в джобу
+                    ProcessPaymentCreationJob::dispatch(
+                        telegramId: $telegramId,
+                        pricingId: $pricingId,
+                        code: $code
+                    );
+                } catch (\Throwable $e) {
+                    Log::error('Ошибка при постановке задачи создания платежа в очередь: ' . $e->getMessage(), [
+                        'trace' => $e->getTraceAsString(),
+                        'telegram_id' => $bot->userId(),
                         'pricing_id' => $pricingId,
-                        'error' => $e->getMessage(),
                     ]);
-                    $bot->answerCallbackQuery('Ошибка при создании платежа. Попробуйте позже.');
-                    return;
+                    try {
+                        $bot->sendMessage('❌ Произошла ошибка при обработке запроса. Пожалуйста, попробуйте позже.', (string) $bot->userId());
+                    } catch (\Throwable $sendError) {
+                        Log::error('Не удалось отправить сообщение об ошибке: ' . $sendError->getMessage());
+                    }
                 }
             }
         );
