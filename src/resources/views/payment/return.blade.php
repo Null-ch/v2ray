@@ -209,18 +209,8 @@
             @endif
         </div>
 
-        {{-- <a href="{{ route('payment.show') }}" class="btn">Создать новый платеж</a> --}}
-        <button onclick="window.closeTab()" class="btn"> Закрыть </button>
+        <a href="https://t.me/blackpill_guru_bot" class="btn">Перейти в наш бот</a>
     </div>
 </body>
-
-<script>
-    function closeTab() {
-        window.close();
-        setTimeout(() => {
-            window.location.href = '/';
-        }, 300);
-    }
-</script>
 
 </html>
