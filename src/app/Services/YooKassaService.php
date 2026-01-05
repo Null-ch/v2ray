@@ -186,7 +186,8 @@ final class YooKassaService
             $uuid = $user->uuid;
             $clientDataResponse = $this->xuiService->getClientTrafficByUserUuid($tag, $user->uuid);
             $clientDataArray = Arr::get($clientDataResponse, 'data');
-            if (!empty($clientDataArray)) {
+            Log::info('clientDataArray ' . json_encode($clientDataArray));
+            if (count($clientDataArray) > 0) {
                 $client = $clientDataArray[0];
                 $client['expiryTime'] += $payment->getDuration();
                 $client['id'] = $uuid;
