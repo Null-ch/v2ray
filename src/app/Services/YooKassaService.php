@@ -167,11 +167,12 @@ final class YooKassaService
 
             $tag = $payment->getVpnTag();
             $clientDataResponse = $this->xuiService->getClientTrafficByUserUuid($tag, $user->uuid);
+            $clientDataArray = Arr::get($clientDataResponse, 'data');
             $inbloundId = Arr::get($clientDataResponse, 'inboundId');
             $uuid = $user->uuid;
-            $clientDataResponse['expiryTime'] = $clientDataResponse['expiryTime'] + $payment->getDuration();
+            $clientDataArray['expiryTime'] = $clientDataArray['expiryTime'] + $payment->getDuration();
    
-            $this->xuiService->updateClient($tag, $inbloundId, $uuid, $clientDataResponse);
+            $this->xuiService->updateClient($tag, $inbloundId, $uuid, $clientDataArray);
             DB::commit();
 
             // Отправляем уведомление в Telegram об успешном платеже
