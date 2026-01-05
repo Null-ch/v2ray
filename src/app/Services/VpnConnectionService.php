@@ -10,6 +10,7 @@ use Illuminate\Support\Arr;
 use App\Services\XuiService;
 use SergiX44\Nutgram\Nutgram;
 use App\Services\User\UserService;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\View;
 use SergiX44\Nutgram\Telegram\Types\Keyboard\InlineKeyboardMarkup;
 
@@ -89,7 +90,7 @@ final readonly class VpnConnectionService
         $subscriptionInfoArray = $this->xuiService->getSubscriptionInfo($tag, $user->uuid);
         $tag = XuiTag::from($tag);
         $name = $bot->user()->first_name ?? $user->name ?? $user->tg_tag ?? 'Пользователь';
-
+Log::info('subscr data' . json_encode($subscriptionInfoArray));
         $message = View::make('telegram.subscription-info', [
             'enable' => Arr::get($subscriptionInfoArray, 'enable'),
             'expiryTime' => Arr::get($subscriptionInfoArray, 'expiryTime'),
