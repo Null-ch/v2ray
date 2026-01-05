@@ -383,6 +383,7 @@ final readonly class TelegramBotHandlers
                         'error' => $e->getMessage(),
                     ]);
                     $bot->answerCallbackQuery('Ошибка при создании платежа. Попробуйте позже.');
+                    return;
                 }
             }
         );
