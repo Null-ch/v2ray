@@ -172,6 +172,10 @@ final class YooKassaService
             $client['expiryTime'] += $payment->getDuration();
             $inbloundId = Arr::get($client, 'inboundId');
             $uuid = $user->uuid;
+            Log::info('tag' . $tag);
+            Log::info('inboundId: ' . $inbloundId);
+            Log::info('uuid: ' . $uuid);
+            Log::info('ClientData to update: ' . json_encode($client));
             $this->xuiService->updateClient($tag, $inbloundId, $uuid, $client);
             DB::commit();
 
