@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="ru">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -157,9 +158,10 @@
         }
     </style>
 </head>
+
 <body>
     <div class="payment-status-container">
-        @if($payment->isSucceeded())
+        @if ($payment->isSucceeded())
             <div class="status-icon success">✓</div>
             <h1>Платеж успешно выполнен</h1>
             <span class="status-badge success">Оплачено</span>
@@ -199,16 +201,26 @@
                 <span class="info-label">Дата создания:</span>
                 <span class="info-value">{{ $payment->created_at->format('d.m.Y H:i') }}</span>
             </div>
-            @if($payment->yookassa_payment_id)
-            <div class="info-row">
-                <span class="info-label">YooKassa ID:</span>
-                <span class="info-value">{{ $payment->yookassa_payment_id }}</span>
-            </div>
+            @if ($payment->yookassa_payment_id)
+                <div class="info-row">
+                    <span class="info-label">YooKassa ID:</span>
+                    <span class="info-value">{{ $payment->yookassa_payment_id }}</span>
+                </div>
             @endif
         </div>
 
-        <a href="{{ route('payment.show') }}" class="btn">Создать новый платеж</a>
+        {{-- <a href="{{ route('payment.show') }}" class="btn">Создать новый платеж</a> --}}
+        <button onclick="window.closeTab()" class="btn"> Закрыть </button>
     </div>
 </body>
-</html>
 
+<script>
+    function closeTab() {
+        window.close();
+        setTimeout(() => {
+            window.location.href = '/';
+        }, 300);
+    }
+</script>
+
+</html>

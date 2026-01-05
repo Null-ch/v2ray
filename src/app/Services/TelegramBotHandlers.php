@@ -336,11 +336,9 @@ final readonly class TelegramBotHandlers
 
                 try {
                     $description = sprintf(
-                        'Оплата VPN %s: %s (%s %s)',
+                        'Оплата VPN %s: %s',
                         $tag->labelWithFlag(),
                         $pricing->title,
-                        $pricing->duration,
-                        $pricing->duration == 1 ? 'день' : ($pricing->duration < 5 ? 'дня' : 'дней')
                     );
 
                     $metadata = [
