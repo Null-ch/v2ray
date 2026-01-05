@@ -283,16 +283,18 @@ final readonly class TelegramBotHandlers
                 $keyboard = InlineKeyboardMarkup::make();
 
                 foreach ($pricings as $pricing) {
-                    $days = MillisecondsHelper::millisecondsToDays($pricing->duration);
                     $buttonText = sprintf(
-                        '%s - %s ₽ (%s %s)',
+                        '%s - %s ₽',
                         $pricing->title,
-                        number_format((float) $pricing->price, 0, '.', ' '),
-                        $days,
-                        $days == 1 ? 'день' : ($days < 5 ? 'дня' : 'дней')
+                        number_format((float) $pricing->price, 0, '.', ' ')
                     );
 
-                    $keyboard->addRow(InlineKeyboardButton::make($buttonText,callback_data: Callback::PAYMENT_PRICING->withMultiple((string)$pricing->id, $code)));
+                    $keyboard->addRow(
+                        InlineKeyboardButton::make(
+                            $buttonText,
+                            callback_data: Callback::PAYMENT_PRICING->withMultiple((string)$pricing->id, $code)
+                        )
+                    );
                 }
 
                 $keyboard->addRow($this->getMainMenuButton());
