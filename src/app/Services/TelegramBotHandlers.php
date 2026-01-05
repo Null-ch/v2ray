@@ -37,7 +37,6 @@ final readonly class TelegramBotHandlers
         private VpnConnectionService $vpnConnectionService,
         private UserService $userService,
         private PricingService $pricingService,
-        private YooKassaService $yooKassaService,
     ) {}
 
     public function registerHandlers(): void
@@ -65,7 +64,7 @@ final readonly class TelegramBotHandlers
                     ->pluck('tag')
                     ->toArray();
 
-                $keyboard = InlineKeyboardMarkup::make()->addRow($this->getMainMenuButton());
+                $keyboard = InlineKeyboardMarkup::make();
 
                 if (!empty($userTags)) {
                     $keyboard->addRow(InlineKeyboardButton::make('Мои VPN', callback_data: 'user_vpn'));
@@ -75,8 +74,11 @@ final readonly class TelegramBotHandlers
                     $keyboard->addRow(InlineKeyboardButton::make('Подключить VPN', callback_data: 'connect_vpn'));
                 }
 
+                $keyboard->addRow($this->getMainMenuButton());
                 $messageId = $this->vpnConnectionService->sendMainMenu($bot, $user, $keyboard);
                 $bot->setGlobalData('vpn_message_ids', [$messageId]);
+
+                return;
             }
         });
 
@@ -155,7 +157,7 @@ final readonly class TelegramBotHandlers
                 ->pluck('tag')
                 ->toArray();
 
-            $keyboard = InlineKeyboardMarkup::make()->addRow($this->getMainMenuButton());
+            $keyboard = InlineKeyboardMarkup::make();
 
             if (!empty($userTags)) {
                 $keyboard->addRow(InlineKeyboardButton::make('Мои VPN', callback_data: 'user_vpn'));

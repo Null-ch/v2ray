@@ -106,7 +106,7 @@ class Xui extends Model
 
                 return InlineKeyboardButton::make(
                     text: $tag->labelWithFlag(),
-                    callback_data: Callback::VPN_CONNECT_TAG->with($tag->value)
+                    callback_data: Callback::VPN_PRICING->with($tag->value)
                 );
             })
             ->filter()
