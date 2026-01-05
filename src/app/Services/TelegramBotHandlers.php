@@ -8,12 +8,9 @@ use App\Models\Xui;
 use App\Enums\XuiTag;
 use App\Enums\Callback;
 use App\Models\Pricing;
-use App\Services\XuiService;
 use SergiX44\Nutgram\Nutgram;
-use App\Services\TelegramService;
 use App\Services\YooKassaService;
 use App\Services\User\UserService;
-use App\Helpers\MillisecondsHelper;
 use App\Jobs\ProcessAcceptTermsJob;
 use Illuminate\Support\Facades\Log;
 use SergiX44\Nutgram\Telegram\Types\Keyboard\InlineKeyboardButton;
@@ -39,8 +36,6 @@ final readonly class TelegramBotHandlers
         private VpnConnectionService $vpnConnectionService,
         private UserService $userService,
         private PricingService $pricingService,
-        private TelegramService $telegramService,
-        private XuiService $xuiService,
         private YooKassaService $yooKassaService,
     ) {}
 
@@ -311,8 +306,7 @@ final readonly class TelegramBotHandlers
         $this->bot->onCallbackQueryData(
             'payment:pricing:{pricing_id}:{code}',
             function (Nutgram $bot, string $pricingId, string $code) {
-                $user = $this->userService
-                    ->findUserByTelegramId($bot->userId());
+                $user = $this->userService->findUserByTelegramId($bot->userId());
 
                 if (!$user) {
                     $bot->answerCallbackQuery('Пользователь не найден');

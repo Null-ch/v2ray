@@ -6,6 +6,7 @@ namespace App\Services;
 
 use App\Models\User;
 use App\Models\Payment;
+use Illuminate\Support\Arr;
 use App\Clients\YooKassaClient;
 use App\Services\TelegramService;
 use Illuminate\Support\Facades\DB;
@@ -16,7 +17,8 @@ final class YooKassaService
 {
     public function __construct(
         private readonly TelegramService $telegramService,
-        private readonly YooKassaClient $client
+        private readonly YooKassaClient $client,
+        private readonly XuiService $xuiService
     ) {}
 
     /**
@@ -154,7 +156,6 @@ final class YooKassaService
                 $balance = $user->balance()->create(['balance' => 0]);
             }
 
-            // Пополняем баланс пользователя
             $balance->increment('balance', $payment->amount);
 
             Log::info('User balance updated after successful payment', [
@@ -164,6 +165,13 @@ final class YooKassaService
                 'new_balance' => $balance->fresh()->balance,
             ]);
 
+            $tag = $payment->getVpnTag();
+            $clientDataResponse = $this->xuiService->getClientTrafficByUserUuid($tag, $user->uuid);
+            $inbloundId = Arr::get($clientDataResponse, 'inboundId');
+            $uuid = $user->uuid;
+            $clientDataResponse['expiryTime'] = $clientDataResponse['expiryTime'] + $payment->getDuration();
+   
+            $this->xuiService->updateClient($tag, $inbloundId, $uuid, $clientDataResponse);
             DB::commit();
 
             // Отправляем уведомление в Telegram об успешном платеже
@@ -214,7 +222,7 @@ final class YooKassaService
             // Отправляем сообщение об успешном платеже
             $successMessage = sprintf(
                 "✅ Платеж успешно завершен!\n\n💳 Сумма: %s ₽\n📝 Описание: %s\n\nСредства зачислены на ваш баланс.",
-                number_format((float) $payment->amount, 2, '.', ' '),
+                number_format((float) $payment->amount),
                 $payment->description
             );
 

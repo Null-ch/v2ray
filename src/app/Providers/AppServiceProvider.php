@@ -8,6 +8,7 @@ use App\Services\VpnConnectionService;
 use App\Services\YooKassaService;
 use SergiX44\Nutgram\Nutgram;
 use App\Services\TelegramService;
+use App\Services\XuiService;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -43,7 +44,7 @@ class AppServiceProvider extends ServiceProvider
             });
 
             $this->app->singleton(YooKassaService::class, function ($app) {
-                return new YooKassaService($app->make(YooKassaClient::class));
+                return new YooKassaService($app->make(YooKassaClient::class),$app->make(YooKassaClient::class), $app->make(XuiService::class),);
             });
         } else {
             // Если конфигурация не настроена, не регистрируем сервисы

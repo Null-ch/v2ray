@@ -72,5 +72,23 @@ class Payment extends Model
     {
         return $this->status === self::STATUS_PENDING;
     }
-}
 
+    public function getPricingId(): ?int
+    {
+        return isset($this->metadata['pricing_id'])
+            ? (int) $this->metadata['pricing_id']
+            : null;
+    }
+
+    public function getVpnTag(): ?string
+    {
+        return $this->metadata['vpn_tag'] ?? null;
+    }
+
+    public function getDuration(): ?int
+    {
+        return isset($this->metadata['duration'])
+            ? (int) $this->metadata['duration']
+            : null;
+    }
+}
