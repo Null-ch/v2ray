@@ -47,7 +47,7 @@ final class YooKassaService
             ]);
 
             // Создаем платеж в YooKassa
-            $yooKassaPayment = $this->client->createPayment(
+            $response = $this->client->createPayment(
                 $amount,
                 $description,
                 array_merge($metadata, [
@@ -56,6 +56,9 @@ final class YooKassaService
                 ]),
                 route('payment.return', ['payment' => $payment->id])
             );
+
+            // Получаем PaymentInterface из CreatePaymentResponse
+            $yooKassaPayment = $response->getPayment();
 
             // Обновляем запись с данными из YooKassa
             $payment->update([
@@ -227,4 +230,3 @@ final class YooKassaService
         return $this->updatePaymentStatus($payment);
     }
 }
-
