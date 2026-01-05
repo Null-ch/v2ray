@@ -58,6 +58,34 @@ class Xui extends Model
         return $this->tag?->label() ?? '';
     }
 
+    /**
+     * Получить все активные Xui-записи
+     */
+    public static function active()
+    {
+        return self::query()
+            ->where('is_active', true)
+            ->get();
+    }
+
+    /**
+     * Активные Xui, которых нет у пользователя
+     *
+     * @param array<string|XuiTag> $userTags
+     */
+    public static function activeNotOwnedByUser(array $userTags)
+    {
+        $tags = array_map(
+            fn($tag) => $tag instanceof XuiTag ? $tag->value : (string) $tag,
+            $userTags
+        );
+
+        return self::query()
+            ->where('is_active', true)
+            ->whereNotIn('tag', $tags)
+            ->get();
+    }
+
     public static function activeButtons(array $excludeTags = []): array
     {
         return self::query()

@@ -102,7 +102,7 @@ final readonly class VpnConnectionService
         );
 
         $message = View::make('telegram.subscription-info', [
-            'enable' => Arr::get($subscriptionInfoArray, 'enable'),
+            'enable' => Arr::get($subscriptionInfoArray, 'enable') ? 'Да' : 'Нет',
             'expiryTime' => $expiryTime,
             'tag' => $tag->labelWithFlag(),
             'name' => $name

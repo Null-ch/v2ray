@@ -60,18 +60,19 @@ final readonly class TelegramBotHandlers
             } else {
                 $messageIds = $bot->getGlobalData('vpn_message_ids', []);
                 $this->clearChat($messageIds, $bot);
-                $activeConfigs = $user->tags();
-                if ($activeConfigs) {
-                    $keyboard = InlineKeyboardMarkup::make()
-                        ->addRow(
-                            InlineKeyboardButton::make('Подключить VPN', callback_data: 'connect_vpn'),
-                            InlineKeyboardButton::make('Мои VPN', callback_data: 'user_vpn')
-                        )
-                        ->addRow($this->getMainMenuButton());
-                } else {
-                    $keyboard = InlineKeyboardMarkup::make()
-                        ->addRow(InlineKeyboardButton::make('Подключить VPN', callback_data: 'connect_vpn'))
-                        ->addRow($this->getMainMenuButton());
+
+                $userTags = $user->tags()
+                    ->pluck('tag')
+                    ->toArray();
+
+                $keyboard = InlineKeyboardMarkup::make()->addRow($this->getMainMenuButton());
+
+                if (!empty($userTags)) {
+                    $keyboard->addRow(InlineKeyboardButton::make('Мои VPN', callback_data: 'user_vpn'));
+                }
+
+                if (Xui::activeNotOwnedByUser($userTags)->isNotEmpty()) {
+                    $keyboard->addRow(InlineKeyboardButton::make('Подключить VPN', callback_data: 'connect_vpn'));
                 }
 
                 $messageId = $this->vpnConnectionService->sendMainMenu($bot, $user, $keyboard);
@@ -114,13 +115,13 @@ final readonly class TelegramBotHandlers
             $messageIds = $bot->getGlobalData('vpn_message_ids', []);
             $this->clearChat($messageIds, $bot);
             $user = $this->userService->findUserByTelegramId($bot->userId());
-            
+
             // Получаем активные теги пользователя
             $activeTags = [];
             if ($user) {
                 $activeTags = $user->tags->pluck('tag')->map(fn($tag) => $tag->value)->toArray();
             }
-            
+
             $buttons = Xui::activeButtons($activeTags);
             $keyboard = InlineKeyboardMarkup::make();
 
@@ -150,23 +151,21 @@ final readonly class TelegramBotHandlers
                 return;
             }
 
-            if ($user->tags->isNotEmpty()) {
-                $keyboard = InlineKeyboardMarkup::make()
-                    ->addRow(
-                        InlineKeyboardButton::make('Мои VPN', callback_data: 'user_vpn'),
-                        InlineKeyboardButton::make('Подключить VPN', callback_data: 'connect_vpn')
-                    )
-                    ->addRow(InlineKeyboardButton::make('Инструкции', callback_data: 'guidelines'));
+            $userTags = $user->tags()
+                ->pluck('tag')
+                ->toArray();
 
-                $messageId = $this->vpnConnectionService->sendMainMenu($bot, $user, $keyboard);
-                $bot->setGlobalData('vpn_message_ids', [$messageId]);
-                $bot->answerCallbackQuery();
-                return;
+            $keyboard = InlineKeyboardMarkup::make()->addRow($this->getMainMenuButton());
+
+            if (!empty($userTags)) {
+                $keyboard->addRow(InlineKeyboardButton::make('Мои VPN', callback_data: 'user_vpn'));
             }
 
-            $keyboard = InlineKeyboardMarkup::make()
-                ->addRow(InlineKeyboardButton::make('Подключить VPN', callback_data: 'connect_vpn'))
-                ->addRow(InlineKeyboardButton::make('Инструкции', callback_data: 'guidelines'));
+            if (Xui::activeNotOwnedByUser($userTags)->isNotEmpty()) {
+                $keyboard->addRow(InlineKeyboardButton::make('Подключить VPN', callback_data: 'connect_vpn'));
+            }
+
+            $keyboard->addRow(InlineKeyboardButton::make('Инструкции', callback_data: 'guidelines'));
             $messageId = $this->vpnConnectionService->sendMainMenu($bot, $user, $keyboard);
             $bot->setGlobalData('vpn_message_ids', [$messageId]);
             $bot->answerCallbackQuery();
@@ -234,7 +233,7 @@ final readonly class TelegramBotHandlers
                 }
 
                 $userConfigImportLink = $this->vpnConnectionService->getUserConfigImportLink($user, $tag->value);
-                
+
                 $keyboard = InlineKeyboardMarkup::make()
                     ->addRow(InlineKeyboardButton::make('🔃 Продлить VPN', callback_data: Callback::VPN_PRICING->with($code)))
                     ->addRow(InlineKeyboardButton::make('📲 Перенести в приложение', url: $userConfigImportLink))
