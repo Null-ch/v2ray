@@ -41,62 +41,104 @@ final readonly class TelegramBotHandlers
 
     public function registerHandlers(): void
     {
-        $this->bot->onCommand('start', function (Nutgram $bot) {
+        $this->bot->onCommand('start', function (Nutgram $bot, ?string $payload = null) {
             $telegramId = $bot->userId();
-            $user = $this->userService->findUserByTelegramId($telegramId);
-            $text = $bot->message()?->getText() ?? '';
-            $payload = trim(str_replace('/start', '', $text)) ?: null;
 
-            if ($payload !== null) {
-                $payload = trim($payload);
+            // Если payload не передан как параметр, пытаемся извлечь из текста сообщения
+            if ($payload === null || $payload === '') {
+                $text = $bot->message()?->text ?? '';
+                Log::info('Start command received', [
+                    'telegram_id' => $telegramId,
+                    'text' => $text,
+                    'payload_param' => $payload,
+                ]);
+
+                // Парсим параметр из команды /start PAYLOAD
+                if (preg_match('/^\/start\s+(.+)$/i', $text, $matches)) {
+                    $payload = trim($matches[1]);
+                    Log::info('Payload extracted from text', [
+                        'telegram_id' => $telegramId,
+                        'payload' => $payload,
+                    ]);
+                }
             }
+
+            $user = $this->userService->findUserByTelegramId($telegramId);
 
             $referrerId = null;
 
-            if ($payload && !$user) {
-                // Пытаемся найти пользователя по реферальному коду
-                $referrer = $this->userService->findUserByReferralCode($payload);
-                if ($referrer) {
-                    $referrerId = $referrer->id;
+            if ($payload && $payload !== '') {
+                if (!$user) {
+                    // Пытаемся найти пользователя по реферальному коду
+                    $referrer = $this->userService->findUserByReferralCode($payload);
+                    if ($referrer) {
+                        $referrerId = $referrer->id;
+                        Log::info('Referrer found', [
+                            'telegram_id' => $telegramId,
+                            'referral_code' => $payload,
+                            'referrer_id' => $referrerId,
+                        ]);
+                    } else {
+                        Log::warning('Referrer not found for referral code', [
+                            'telegram_id' => $telegramId,
+                            'referral_code' => $payload,
+                        ]);
+                    }
                 }
             }
 
-            if (!$user) {
-                // Сохраняем referrerId в глобальных данных бота для использования в ProcessAcceptTermsJob
-                if ($referrerId) {
-                    $bot->setGlobalData('referrer_id', $referrerId);
-                    $bot->setGlobalData('referral_code', $payload);
+            try {
+                if (!$user) {
+                    // Сохраняем referrerId в глобальных данных бота для использования в ProcessAcceptTermsJob
+                    if ($referrerId) {
+                        $bot->setGlobalData('referrer_id', $referrerId);
+                        $bot->setGlobalData('referral_code', $payload);
+                    }
+
+                    $messageIds = $bot->getGlobalData('vpn_message_ids', []);
+                    $this->clearChat($messageIds, $bot);
+                    $keyboard = InlineKeyboardMarkup::make()->addRow(InlineKeyboardButton::make('✅Принять', callback_data: 'accept_terms'));
+                    $messageId = $this->vpnConnectionService->sendWelcomeMessageForNewUser($bot, $keyboard);
+                    $bot->setGlobalData('vpn_message_ids', [$messageId]);
+                } else {
+                    $messageIds = $bot->getGlobalData('vpn_message_ids', []);
+                    $this->clearChat($messageIds, $bot);
+
+                    $userTags = $user->tags()
+                        ->pluck('tag')
+                        ->toArray();
+
+                    $keyboard = InlineKeyboardMarkup::make();
+
+                    if (!empty($userTags)) {
+                        $keyboard->addRow(InlineKeyboardButton::make('Мои VPN', callback_data: 'user_vpn'));
+                    }
+
+                    if (Xui::activeNotOwnedByUser($userTags)->isNotEmpty()) {
+                        $keyboard->addRow(InlineKeyboardButton::make('Подключить VPN', callback_data: 'connect_vpn'));
+                    }
+
+                    $keyboard->addRow(InlineKeyboardButton::make('👥 Пригласить друга', callback_data: 'invite'));
+                    $keyboard->addRow($this->getMainMenuButton());
+                    $messageId = $this->vpnConnectionService->sendMainMenu($bot, $user, $keyboard);
+                    $bot->setGlobalData('vpn_message_ids', [$messageId]);
+
+                    return;
                 }
+            } catch (\Throwable $e) {
+                Log::error('Error in start command handler', [
+                    'telegram_id' => $telegramId,
+                    'error' => $e->getMessage(),
+                    'trace' => $e->getTraceAsString(),
+                ]);
 
-                $messageIds = $bot->getGlobalData('vpn_message_ids', []);
-                $this->clearChat($messageIds, $bot);
-                $keyboard = InlineKeyboardMarkup::make()->addRow(InlineKeyboardButton::make('✅Принять', callback_data: 'accept_terms'));
-                $messageId = $this->vpnConnectionService->sendWelcomeMessageForNewUser($bot, $keyboard);
-                $bot->setGlobalData('vpn_message_ids', [$messageId]);
-            } else {
-                $messageIds = $bot->getGlobalData('vpn_message_ids', []);
-                $this->clearChat($messageIds, $bot);
-
-                $userTags = $user->tags()
-                    ->pluck('tag')
-                    ->toArray();
-
-                $keyboard = InlineKeyboardMarkup::make();
-
-                if (!empty($userTags)) {
-                    $keyboard->addRow(InlineKeyboardButton::make('Мои VPN', callback_data: 'user_vpn'));
+                try {
+                    $bot->sendMessage('❌ Произошла ошибка. Пожалуйста, попробуйте позже.');
+                } catch (\Throwable $sendError) {
+                    Log::error('Failed to send error message', [
+                        'error' => $sendError->getMessage(),
+                    ]);
                 }
-
-                if (Xui::activeNotOwnedByUser($userTags)->isNotEmpty()) {
-                    $keyboard->addRow(InlineKeyboardButton::make('Подключить VPN', callback_data: 'connect_vpn'));
-                }
-
-                $keyboard->addRow(InlineKeyboardButton::make('👥 Пригласить друга', callback_data: 'invite'));
-                $keyboard->addRow($this->getMainMenuButton());
-                $messageId = $this->vpnConnectionService->sendMainMenu($bot, $user, $keyboard);
-                $bot->setGlobalData('vpn_message_ids', [$messageId]);
-
-                return;
             }
         });
 
