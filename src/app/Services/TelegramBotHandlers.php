@@ -5,12 +5,14 @@ declare(strict_types=1);
 namespace App\Services;
 
 use App\Models\Xui;
+use App\Models\Pricing;
 use App\Enums\XuiTag;
 use App\Enums\Callback;
 use App\Services\XuiService;
 use SergiX44\Nutgram\Nutgram;
 use App\Services\TelegramService;
 use App\Services\User\UserService;
+use App\Services\YooKassaService;
 use App\Jobs\ProcessAcceptTermsJob;
 use Illuminate\Support\Facades\Log;
 use SergiX44\Nutgram\Telegram\Types\Keyboard\InlineKeyboardButton;
@@ -38,6 +40,7 @@ final readonly class TelegramBotHandlers
         private PricingService $pricingService,
         private TelegramService $telegramService,
         private XuiService $xuiService,
+        private YooKassaService $yooKassaService,
     ) {}
 
     public function registerHandlers(): void
@@ -272,14 +275,124 @@ final readonly class TelegramBotHandlers
                     return;
                 }
 
-                $keyboard = InlineKeyboardMarkup::make()
-                    ->addRow(InlineKeyboardButton::make('🔃 Продлить VPN', callback_data: Callback::VPN_PRICING->with($code)))
-                    ->addRow(InlineKeyboardButton::make('⬅️ Назад к VPN', callback_data: Callback::VPN_BACK->value));
+                $pricings = $this->pricingService->getAll();
+
+                if ($pricings->isEmpty()) {
+                    $bot->answerCallbackQuery('Тарифные планы временно недоступны');
+                    return;
+                }
+
+                $keyboard = InlineKeyboardMarkup::make();
+
+                foreach ($pricings as $pricing) {
+                    $buttonText = sprintf(
+                        '%s - %s ₽ (%s %s)',
+                        $pricing->title,
+                        number_format($pricing->price, 0, '.', ' '),
+                        $pricing->duration,
+                        $pricing->duration == 1 ? 'день' : ($pricing->duration < 5 ? 'дня' : 'дней')
+                    );
+                    $keyboard->addRow(
+                        InlineKeyboardButton::make(
+                            $buttonText,
+                            callback_data: Callback::PAYMENT_PRICING->withMultiple((string)$pricing->id, $code)
+                        )
+                    );
+                }
+
+                $keyboard->addRow(
+                    InlineKeyboardButton::make('🏠 Главное меню', callback_data: 'main_menu')
+                );
 
                 $this->vpnConnectionService
-                    ->sendSubscriptionInfo($bot, $user, $tag->value, $keyboard);
+                    ->sendPricingInfo($bot, $user, $pricings, $tag->value, $keyboard);
 
                 $bot->answerCallbackQuery();
+            }
+        );
+
+        $this->bot->onCallbackQueryData(
+            'payment:pricing:{pricing_id}:{code}',
+            function (Nutgram $bot, string $pricingId, string $code) {
+                $user = $this->userService
+                    ->findUserByTelegramId($bot->userId());
+
+                if (!$user) {
+                    $bot->answerCallbackQuery('Пользователь не найден');
+                    return;
+                }
+
+                try {
+                    $tag = XuiTag::from($code);
+                } catch (\ValueError) {
+                    $bot->answerCallbackQuery('Неизвестный VPN');
+                    return;
+                }
+
+                $pricing = Pricing::find($pricingId);
+
+                if (!$pricing) {
+                    $bot->answerCallbackQuery('Тарифный план не найден');
+                    return;
+                }
+
+                try {
+                    $description = sprintf(
+                        'Оплата VPN %s: %s (%s %s)',
+                        $tag->labelWithFlag(),
+                        $pricing->title,
+                        $pricing->duration,
+                        $pricing->duration == 1 ? 'день' : ($pricing->duration < 5 ? 'дня' : 'дней')
+                    );
+
+                    $metadata = [
+                        'pricing_id' => $pricing->id,
+                        'vpn_tag' => $code,
+                        'duration' => $pricing->duration,
+                    ];
+
+                    $payment = $this->yooKassaService->createPayment(
+                        $user,
+                        (float)$pricing->price,
+                        $description,
+                        $metadata
+                    );
+
+                    if ($payment->confirmation_url) {
+                        $keyboard = InlineKeyboardMarkup::make()
+                            ->addRow(
+                                InlineKeyboardButton::make(
+                                    '💳 Перейти к оплате',
+                                    url: $payment->confirmation_url
+                                )
+                            )
+                            ->addRow(
+                                InlineKeyboardButton::make('🏠 Главное меню', callback_data: 'main_menu')
+                            );
+
+                        $message = sprintf(
+                            "💳 Создан платеж на сумму %s ₽\n\n%s\n\nНажмите кнопку ниже для перехода к оплате:",
+                            number_format($pricing->price, 2, '.', ' '),
+                            $description
+                        );
+
+                        $bot->sendMessage($message, reply_markup: $keyboard);
+                        $bot->answerCallbackQuery('Платеж создан');
+                    } else {
+                        $bot->answerCallbackQuery('Ошибка при создании платежа');
+                        Log::error('Payment created but no confirmation URL', [
+                            'payment_id' => $payment->id,
+                            'user_id' => $user->id,
+                        ]);
+                    }
+                } catch (\Exception $e) {
+                    Log::error('Failed to create payment from Telegram', [
+                        'user_id' => $user->id,
+                        'pricing_id' => $pricingId,
+                        'error' => $e->getMessage(),
+                    ]);
+                    $bot->answerCallbackQuery('Ошибка при создании платежа. Попробуйте позже.');
+                }
             }
         );
     }

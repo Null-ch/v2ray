@@ -5,8 +5,10 @@ declare(strict_types=1);
 namespace App\Services;
 
 use App\Models\User;
+use App\Models\Pricing;
 use App\Enums\XuiTag;
 use Illuminate\Support\Arr;
+use Illuminate\Database\Eloquent\Collection;
 use App\Services\XuiService;
 use SergiX44\Nutgram\Nutgram;
 use App\Services\User\UserService;
@@ -97,6 +99,25 @@ final readonly class VpnConnectionService
         $message = View::make('telegram.subscription-info', [
             'enable' => Arr::get($subscriptionInfoArray, 'enable'),
             'expiryTime' => $expiryTime,
+            'tag' => $tag->labelWithFlag(),
+            'name' => $name
+        ])->render();
+
+        $bot->sendMessage(trim($message), parse_mode: 'HTML', reply_markup: $keyboard);
+    }
+
+    public function sendPricingInfo(
+        Nutgram $bot,
+        User $user,
+        Collection $pricings,
+        string $tag,
+        ?InlineKeyboardMarkup $keyboard = null
+    ): void {
+        $tag = XuiTag::from($tag);
+        $name = $bot->user()->first_name ?? $user->name ?? $user->tg_tag ?? 'Пользователь';
+
+        $message = View::make('telegram.pricing-info', [
+            'pricings' => $pricings,
             'tag' => $tag->labelWithFlag(),
             'name' => $name
         ])->render();
