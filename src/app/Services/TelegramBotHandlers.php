@@ -260,6 +260,7 @@ final readonly class TelegramBotHandlers
         $this->bot->onCallbackQueryData(
             'vpn:pricing:{code}',
             function (Nutgram $bot, string $code) {
+                $bot->answerCallbackQuery();
                 $user = $this->userService
                     ->findUserByTelegramId($bot->userId());
 
@@ -314,6 +315,7 @@ final readonly class TelegramBotHandlers
         $this->bot->onCallbackQueryData(
             'payment:pricing:{pricing_id}:{code}',
             function (Nutgram $bot, string $pricingId, string $code) {
+                $bot->answerCallbackQuery();
                 $user = $this->userService
                     ->findUserByTelegramId($bot->userId());
 
