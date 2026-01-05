@@ -44,7 +44,7 @@ class AppServiceProvider extends ServiceProvider
             });
 
             $this->app->singleton(YooKassaService::class, function ($app) {
-                return new YooKassaService($app->make(YooKassaClient::class),$app->make(YooKassaClient::class), $app->make(XuiService::class),);
+                return new YooKassaService($app->make(YooKassaClient::class),$app->make(TelegramService::class), $app->make(XuiService::class),);
             });
         } else {
             // Если конфигурация не настроена, не регистрируем сервисы

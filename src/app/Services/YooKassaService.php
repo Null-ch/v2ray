@@ -16,8 +16,8 @@ use YooKassa\Model\Payment\PaymentStatus;
 final class YooKassaService
 {
     public function __construct(
-        private readonly TelegramService $telegramService,
         private readonly YooKassaClient $client,
+        private readonly TelegramService $telegramService,
         private readonly XuiService $xuiService
     ) {}
 
