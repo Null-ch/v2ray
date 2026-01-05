@@ -179,32 +179,35 @@ final class YooKassaService
             }
 
             $balance->increment('balance', $payment->amount);
-
-            Log::info('User balance updated after successful payment', [
-                'payment_id' => $payment->id,
-                'user_id' => $user->id,
-                'amount' => $payment->amount,
-                'new_balance' => $balance->fresh()->balance,
-            ]);
+            $balance->fresh()->balance;
 
             $tag = $payment->getVpnTag();
-            $clientDataResponse = $this->xuiService->getClientTrafficByUserUuid($tag, $user->uuid);
-            $clientDataArray = Arr::get($clientDataResponse, 'data');
-            $client = $clientDataArray[0];
             $uuid = $user->uuid;
-            Log::info('ClientData vefore update: ' . json_encode($client));
-            $client['expiryTime'] += $payment->getDuration();
-            $client['id'] = $uuid;
-            $inbloundId = Arr::get($client, 'inboundId');
-            Log::info('ClientData to update: ' . json_encode($client));
-            $this->xuiService->updateClient($tag, $inbloundId, $uuid, $client);
+            $clientDataResponse = $this->xuiService->getClientTrafficByUserUuid($tag, $user->uuid);
+            if (!empty($clientDataResponse)) {
+                $clientDataArray = Arr::get($clientDataResponse, 'data');
+                $client = $clientDataArray[0];
+                $client['expiryTime'] += $payment->getDuration();
+                $client['id'] = $uuid;
+                $inbloundId = Arr::get($client, 'inboundId');
+                $this->xuiService->updateClient($tag, $inbloundId, $uuid, $client);
+            } else {
+                $client = [
+                    "id" => $uuid,
+                    "email" => $user->getVpnEmail(),
+                    "subId" => $uuid,
+                    "expiryTime" => $payment->getDuration(),
+                ];
 
-            // Помечаем платеж как обработанный
+                $xuiModel = $this->xuiService->getXuiModelByTag($tag);
+                $this->xuiService->addClient($tag, $xuiModel->getInboundId(), $client);
+            }
+
             $payment->update(['processed_at' => now()]);
-
             DB::commit();
-
             $this->notifyPaymentSuccess($payment);
+
+            return;
         } catch (\Exception $e) {
             DB::rollBack();
             Log::error('Failed to process successful payment', [
@@ -266,13 +269,13 @@ final class YooKassaService
             $vpnTag = $payment->getVpnTag();
             $totalDays = null;
             $daysWord = null;
-            
+
             if ($vpnTag) {
                 try {
                     $clientDataResponse = $this->xuiService->getClientTrafficByUserUuid($vpnTag, $user->uuid);
                     $clientDataArray = Arr::get($clientDataResponse, 'data');
                     $expiryTimeMs = Arr::get($clientDataArray, '0.expiryTime');
-                    
+
                     if ($expiryTimeMs) {
                         $expiryTime = MillisecondsHelper::millisecondsToDaysHours($expiryTimeMs);
                         $totalDays = Arr::get($expiryTime, 'days', 0);
@@ -298,16 +301,16 @@ final class YooKassaService
             ])->render();
 
             $keyboard = InlineKeyboardMarkup::make();
-            
+
             // Добавляем кнопку "Перенести в приложение" если есть тег VPN
             if ($vpnTag) {
                 $userConfigImportLink = $this->xuiService->getSubLink($vpnTag, $user->uuid, 'import');
                 $keyboard->addRow(InlineKeyboardButton::make('📲 Перенести в приложение', url: $userConfigImportLink));
             }
-            
+
             $keyboard->addRow(InlineKeyboardButton::make('🏠 Главное меню', callback_data: 'main_menu'));
             $sentMessage = $bot->sendMessage(trim($successMessage), chat_id: $user->tg_id, reply_markup: $keyboard);
-            
+
             // Сохраняем ID нового сообщения
             if ($sentMessage && $sentMessage->message_id) {
                 $bot->setGlobalData('vpn_message_ids', [$sentMessage->message_id]);
@@ -322,6 +325,8 @@ final class YooKassaService
                 'user_id' => $user->id,
                 'telegram_id' => $user->tg_id,
             ]);
+
+            return;
         } catch (\Throwable $e) {
             // Не прерываем процесс, если не удалось отправить уведомление
             Log::error('Failed to send payment success notification to Telegram', [

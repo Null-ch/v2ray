@@ -3,9 +3,10 @@
 namespace App\Models;
 
 use App\Models\Balance;
-use App\Models\Referral;
-use App\Models\Configuration;
 use App\Models\UserTag;
+use App\Models\Referral;
+use Illuminate\Support\Str;
+use App\Models\Configuration;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
@@ -107,5 +108,10 @@ class User extends Authenticatable
     public function getId()
     {
         return $this->id;
+    }
+
+    public function getVpnEmail()
+    {
+       return Str::substr($this->uuid, 0, 6) . $this->id;
     }
 }

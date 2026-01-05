@@ -341,7 +341,6 @@ final readonly class TelegramBotHandlers
         $this->bot->onCallbackQueryData(
             'payment:pricing:{pricing_id}:{code}',
             function (Nutgram $bot, string $pricingId, string $code) {
-                // Сразу отвечаем на callback query, чтобы избежать ошибки "query is too old"
                 $bot->answerCallbackQuery($bot->callbackQuery()->id, '⏳ Создаю платеж, пожалуйста, подождите...');
 
                 try {
@@ -373,7 +372,7 @@ final readonly class TelegramBotHandlers
                     }
 
                     try {
-                        $tag = XuiTag::from($code);
+                        XuiTag::from($code);
                     } catch (\ValueError) {
                         try {
                             $bot->sendMessage('❌ Неизвестный VPN', (string) $telegramId);
@@ -408,7 +407,6 @@ final readonly class TelegramBotHandlers
                         }
                     }
 
-                    // Выносим создание платежа в джобу
                     ProcessPaymentCreationJob::dispatch(
                         telegramId: $telegramId,
                         pricingId: $pricingId,
