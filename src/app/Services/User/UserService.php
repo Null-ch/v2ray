@@ -10,15 +10,14 @@ use Illuminate\Support\Str;
 final readonly class UserService
 {
     private const DAILY_COST = 2;
-    private const MONTHLY_COST = 60;
-    private const INITIAL_BALANCE = 14; // 7 дней
+    private const MONTHLY_COST = 80;
+    private const INITIAL_BALANCE = 0;
 
     public function __construct(private UserRepository $userRepository) {}
 
     public function findUserByTelegramId(int $telegramId): ?User
     {
         $user = $this->userRepository->findByTelegramId($telegramId);
-
         $user?->load(['balance', 'configurations']);
 
         return $user;

@@ -12,6 +12,8 @@ use App\Services\TelegramService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use YooKassa\Model\Payment\PaymentStatus;
+use SergiX44\Nutgram\Telegram\Types\Keyboard\InlineKeyboardButton;
+use SergiX44\Nutgram\Telegram\Types\Keyboard\InlineKeyboardMarkup;
 
 final class YooKassaService
 {
@@ -228,7 +230,8 @@ final class YooKassaService
                 $payment->description
             );
 
-            $bot->sendMessage($successMessage, chat_id: $user->tg_id);
+            $keyboard = InlineKeyboardMarkup::make()->addRow(InlineKeyboardButton::make('🏠 Главное меню', callback_data: 'main_menu'));
+            $bot->sendMessage($successMessage, chat_id: $user->tg_id, reply_markup: $keyboard);
 
             Log::info('Payment success notification sent to Telegram', [
                 'payment_id' => $payment->id,
@@ -269,6 +272,7 @@ final class YooKassaService
      */
     public function handleWebhook(array $data): ?Payment
     {
+        Log::info('Payment Data from webhook: ' . json_encode($data));
         $event = $data['event'] ?? null;
         $paymentData = $data['object'] ?? null;
 
