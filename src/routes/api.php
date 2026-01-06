@@ -1,8 +1,9 @@
 <?php
 
-use App\Http\Controllers\TelegramWebhookController;
-use App\Http\Controllers\TestController;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\TestController;
+use App\Http\Controllers\TelegramWebhookController;
 
 //Route::get('/user', function (Request $request) {
 //    return $request->user();
@@ -12,6 +13,7 @@ Route::post('test', [TestController::class, 'create']);
 Route::put('test/{id}', [TestController::class, 'update']);
 
 if (!empty(config('services.telegram.bot_token'))) {
+    Log::info('Webhook hit', $request->all());
     Route::post('telegram/webhook', [TelegramWebhookController::class, 'handle']);
 }
 
