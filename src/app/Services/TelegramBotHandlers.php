@@ -117,7 +117,7 @@ final readonly class TelegramBotHandlers
             $keyboard = $this->createReferralTagKeyboard($userTags, 2);
             $keyboard->addRow($this->getMainMenuButton());
 
-            $messageId = $this->vpnConnectionService->sendChoosingActiveVpnMenu($bot, $keyboard);
+            $messageId = $this->vpnConnectionService->sendChoosingActiveVpnMenu($bot, $keyboard, true);
             $bot->setGlobalData('vpn_message_ids', [$messageId]);
         });
 

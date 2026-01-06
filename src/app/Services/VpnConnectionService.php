@@ -86,8 +86,13 @@ final readonly class VpnConnectionService
 
     public function sendChoosingActiveVpnMenu(
         Nutgram $bot,
-        ?InlineKeyboardMarkup $keyboard = null
+        ?InlineKeyboardMarkup $keyboard = null,
+        ?bool $isReferral = false
     ): int {
+        if ($isReferral) {
+            $sentMessage = $bot->sendMessage('Выберете VPN на который будут начислены дополнительные дни подписки за приглашение', reply_markup: $keyboard);
+            return $sentMessage->message_id;
+        }
         $sentMessage = $bot->sendMessage('Выберете интересующий VPN', reply_markup: $keyboard);
         return $sentMessage->message_id;
     }
