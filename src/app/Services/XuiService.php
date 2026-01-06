@@ -146,11 +146,8 @@ final class XuiService
     {
         $client = $this->getXuiApiClient($tag);
         $result = $client->addClient($inboundId, $clientData);
-
-        if (($result['ok'] ?? false) && $userId !== null) {
-            $xuiModel = $this->getXuiModel($tag);
-            $this->subscriptionService->syncFromClientData($userId, $xuiModel->id, $clientData);
-        }
+        $xuiModel = $this->getXuiModel($tag);
+        $this->subscriptionService->syncFromClientData($userId, $xuiModel->id, $clientData);
 
         return $result;
     }
@@ -169,14 +166,10 @@ final class XuiService
     {
         $client = $this->getXuiApiClient($tag);
         $result = $client->updateClient($inboundId, $uuid, $clientData);
-
-        if (($result['ok'] ?? false) && $userId !== null) {
-            // Обновляем подписку, используя фактические данные клиента
-            $dataForSync = $clientData;
-            $dataForSync['id'] = $uuid;
-            $xuiModel = $this->getXuiModel($tag);
-            $this->subscriptionService->syncFromClientData($userId,  $xuiModel->id, $dataForSync);
-        }
+        $dataForSync = $clientData;
+        $dataForSync['id'] = $uuid;
+        $xuiModel = $this->getXuiModel($tag);
+        $this->subscriptionService->syncFromClientData($userId,  $xuiModel->id, $dataForSync);
 
         return $result;
     }
