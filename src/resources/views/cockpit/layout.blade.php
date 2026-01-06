@@ -74,6 +74,12 @@
                         </a>
                     </li>
                     <li class="nav-item">
+                        <a href="{{ route('cockpit.subscription.index') }}" class="nav-link {{ request()->routeIs('cockpit.subscription.*') ? 'active' : '' }}">
+                            <i class="nav-icon fas fa-users"></i>
+                            <p>Конфигурации</p>
+                        </a>
+                    </li>
+                    <li class="nav-item">
                         <a href="{{ route('cockpit.balance.index') }}" class="nav-link {{ request()->routeIs('cockpit.balance.*') ? 'active' : '' }}">
                             <i class="nav-icon fas fa-wallet"></i>
                             <p>Балансы</p>

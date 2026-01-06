@@ -34,9 +34,9 @@ final class SubscriptionService
         return $this->subscriptionRepository->findByUserId($userId);
     }
 
-    public function findByUserIdAndTag(int $userId, XuiTag $tag): Collection
+    public function findByUserIdAndXui(int $userId, int $xuiId): Collection
     {
-        return $this->subscriptionRepository->findByUserIdAndTag($userId, $tag->value);
+        return $this->subscriptionRepository->findByUserIdAndXui($userId, $xuiId);
     }
 
     public function create(SubscriptionDTO $subscriptionDTO): ?Subscription
@@ -57,7 +57,6 @@ final class SubscriptionService
 
     public function syncFromClientData(
         int $userId,
-        string $tag,
         int $xuiId,
         array $clientData
     ): void {
@@ -75,14 +74,13 @@ final class SubscriptionService
         }
 
         // Удаляем просроченные подписки для данного пользователя и тега
-        $this->subscriptionRepository->deleteExpiredByUserAndTag($userId, $tag);
+        $this->subscriptionRepository->deleteExpiredByUserAndXui($userId, $xuiId);
 
         // Создаем/обновляем актуальную подписку
         $this->subscriptionRepository->upsertSubscription(
             $userId,
             $xuiId,
             $uuid,
-            $tag,
             $expiresAt
         );
     }

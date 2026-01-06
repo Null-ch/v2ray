@@ -149,7 +149,7 @@ final class XuiService
 
         if (($result['ok'] ?? false) && $userId !== null) {
             $xuiModel = $this->getXuiModel($tag);
-            $this->subscriptionService->syncFromClientData($userId, $tag, $xuiModel->id, $clientData);
+            $this->subscriptionService->syncFromClientData($userId, $xuiModel->id, $clientData);
         }
 
         return $result;
@@ -175,7 +175,7 @@ final class XuiService
             $dataForSync = $clientData;
             $dataForSync['id'] = $uuid;
             $xuiModel = $this->getXuiModel($tag);
-            $this->subscriptionService->syncFromClientData($userId, $tag, $xuiModel->id, $dataForSync);
+            $this->subscriptionService->syncFromClientData($userId,  $xuiModel->id, $dataForSync);
         }
 
         return $result;

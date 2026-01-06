@@ -84,21 +84,21 @@ class SubscriptionRepository extends BaseRepository
             ->get();
     }
 
-    public function findByUserIdAndTag(int $userId, string $tag): Collection
+    public function findByUserIdAndXui(int $userId, int $xuiId): Collection
     {
         return $this->model
             ->newQuery()
             ->where('user_id', $userId)
-            ->where('tag', $tag)
+            ->where('xui_id', $xuiId)
             ->get();
     }
 
-    public function deleteExpiredByUserAndTag(int $userId, string $tag): int
+    public function deleteExpiredByUserAndXui(int $userId, int $xuiId): int
     {
         return $this->model
             ->newQuery()
             ->where('user_id', $userId)
-            ->where('tag', $tag)
+            ->where('xui_id', $xuiId)
             ->where('expires_at', '<', now())
             ->delete();
     }
@@ -107,7 +107,6 @@ class SubscriptionRepository extends BaseRepository
         int $userId,
         int $xuiId,
         string $uuid,
-        string $tag,
         ?string $expiresAt
     ): ?Subscription {
         try {
@@ -124,7 +123,6 @@ class SubscriptionRepository extends BaseRepository
                 $subscription->user_id = $userId;
                 $subscription->xui_id = $xuiId;
                 $subscription->uuid = $uuid;
-                $subscription->tag = $tag;
             }
 
             if ($expiresAt !== null) {
