@@ -47,44 +47,140 @@ final class ProcessAcceptTermsJob implements ShouldQueue
                 throw new \RuntimeException('Telegram bot token is not configured');
             }
 
+            Log::info('ProcessAcceptTermsJob started', [
+                'telegram_id' => $this->telegramId,
+                'referrer_id' => $this->referrerId,
+                'username' => $this->username,
+                'name' => $this->name,
+            ]);
+
             $user = $userService->findUserByTelegramId($this->telegramId);
             if (!$user) {
+                Log::info('User not found, creating new user', [
+                    'telegram_id' => $this->telegramId,
+                    'referrer_id' => $this->referrerId,
+                ]);
+                
                 $user = $userService->createUser($this->telegramId, $this->username, $this->name, $this->referrerId);
+
+                Log::info('User created', [
+                    'user_id' => $user?->id,
+                    'telegram_id' => $this->telegramId,
+                    'referrer_id' => $this->referrerId,
+                ]);
 
                 // Создаем запись в таблице referrals, если пользователь был приглашен
                 if ($user && $this->referrerId) {
-                    Referral::create([
-                        'user_id' => $this->referrerId,
+                    Log::info('Creating referral record', [
+                        'referrer_id' => $this->referrerId,
                         'referred_user_id' => $user->id,
                     ]);
+                    
+                    try {
+                        Referral::create([
+                            'user_id' => $this->referrerId,
+                            'referred_user_id' => $user->id,
+                        ]);
+                        
+                        Log::info('Referral record created successfully', [
+                            'referrer_id' => $this->referrerId,
+                            'referred_user_id' => $user->id,
+                        ]);
+                    } catch (\Throwable $e) {
+                        Log::error('Failed to create referral record', [
+                            'error' => $e->getMessage(),
+                            'referrer_id' => $this->referrerId,
+                            'referred_user_id' => $user->id,
+                            'trace' => $e->getTraceAsString(),
+                        ]);
+                    }
 
                     // Добавляем 2 дня к выбранной конфигурации реферера
                     $referrer = $userService->findUserById($this->referrerId);
+                    Log::info('Looking for referrer', [
+                        'referrer_id' => $this->referrerId,
+                        'referrer_found' => $referrer !== null,
+                        'referral_tag' => $referrer?->referral_tag,
+                    ]);
+                    
                     if ($referrer && $referrer->referral_tag) {
                         try {
                             $tag = $referrer->referral_tag;
                             $uuid = $referrer->uuid;
+                            
+                            Log::info('Adding 2 days to referrer subscription', [
+                                'referrer_id' => $this->referrerId,
+                                'tag' => $tag,
+                                'uuid' => $uuid,
+                            ]);
+                            
                             $clientDataResponse = $xuiService->getClientTrafficByUserUuid($tag, $uuid);
                             $clientDataArray = Arr::get($clientDataResponse, 'data');
 
+                            Log::info('Client data retrieved', [
+                                'referrer_id' => $this->referrerId,
+                                'tag' => $tag,
+                                'data_count' => count($clientDataArray ?? []),
+                            ]);
+
                             if (count($clientDataArray) > 0) {
                                 $client = $clientDataArray[0];
-                                // Добавляем 2 дня в миллисекундах (2 * 24 * 60 * 60 * 1000)
+                                $oldExpiryTime = $client['expiryTime'] ?? 0;
+                                
+                                // Добавляем 2 дня в миллисекундах
                                 $twoDaysInMs = MillisecondsHelper::daysToMilliseconds(2);
                                 $client['expiryTime'] += $twoDaysInMs;
                                 $client['id'] = $uuid;
                                 $inboundId = Arr::get($client, 'inboundId');
+                                
+                                Log::info('Updating referrer client', [
+                                    'referrer_id' => $this->referrerId,
+                                    'tag' => $tag,
+                                    'inbound_id' => $inboundId,
+                                    'old_expiry_time' => $oldExpiryTime,
+                                    'new_expiry_time' => $client['expiryTime'],
+                                    'days_added_ms' => $twoDaysInMs,
+                                ]);
+                                
                                 $xuiService->updateClient($tag, $inboundId, $uuid, $client);
+                                
+                                Log::info('Successfully added 2 days to referrer subscription', [
+                                    'referrer_id' => $this->referrerId,
+                                    'tag' => $tag,
+                                ]);
+                            } else {
+                                Log::warning('No client data found for referrer', [
+                                    'referrer_id' => $this->referrerId,
+                                    'tag' => $tag,
+                                    'uuid' => $uuid,
+                                ]);
                             }
                         } catch (\Throwable $e) {
-                            Log::error('Ошибка при добавлении 2 дней рефереру: ' . $e->getMessage(), [
+                            Log::error('Ошибка при добавлении 2 дней рефереру', [
                                 'referrer_id' => $this->referrerId,
                                 'tag' => $referrer->referral_tag ?? null,
+                                'error' => $e->getMessage(),
                                 'trace' => $e->getTraceAsString(),
                             ]);
                         }
+                    } else {
+                        Log::warning('Referrer not found or no referral_tag set', [
+                            'referrer_id' => $this->referrerId,
+                            'referrer_found' => $referrer !== null,
+                            'referral_tag' => $referrer?->referral_tag,
+                        ]);
                     }
+                } else {
+                    Log::info('Skipping referral processing', [
+                        'user_created' => $user !== null,
+                        'referrer_id' => $this->referrerId,
+                    ]);
                 }
+            } else {
+                Log::info('User already exists, skipping creation', [
+                    'user_id' => $user->id,
+                    'telegram_id' => $this->telegramId,
+                ]);
             }
 
             if (!$user) {

@@ -132,6 +132,15 @@ final readonly class TelegramBotHandlers
                 $username = $bot->user()->username;
                 $name = $bot->user()->first_name;
                 $referrerId = $bot->getGlobalData('referrer_id');
+                $referralCode = $bot->getGlobalData('referral_code');
+
+                Log::info('Accept terms callback', [
+                    'telegram_id' => $telegramId,
+                    'referrer_id' => $referrerId,
+                    'referral_code' => $referralCode,
+                    'username' => $username,
+                    'name' => $name,
+                ]);
 
                 ProcessAcceptTermsJob::dispatch(
                     telegramId: $telegramId,
@@ -139,6 +148,11 @@ final readonly class TelegramBotHandlers
                     name: $name,
                     referrerId: $referrerId
                 );
+
+                Log::info('ProcessAcceptTermsJob dispatched', [
+                    'telegram_id' => $telegramId,
+                    'referrer_id' => $referrerId,
+                ]);
 
                 $bot->deleteGlobalData('referrer_id');
                 $bot->deleteGlobalData('referral_code');
