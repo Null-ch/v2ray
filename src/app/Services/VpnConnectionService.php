@@ -63,7 +63,8 @@ final readonly class VpnConnectionService
         $message = View::make('telegram.welcome-back', [
             'name' => $name,
             'referralLink' => $referralLink,
-            'hasVpn' => $hasVpn
+            'hasVpn' => $hasVpn,
+            'refBonusDuration' => $this->settingService->getInt('ref.bonus.duration'),
         ])->render();
 
         $sentMessage = $bot->sendMessage(trim($message), parse_mode: 'HTML', reply_markup: $keyboard);
