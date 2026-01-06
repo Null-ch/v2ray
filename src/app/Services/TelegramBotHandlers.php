@@ -539,8 +539,6 @@ final readonly class TelegramBotHandlers
                 }
             }
         );
-
-        Log::info('All Telegram bot handlers registered successfully');
     }
 
     private function handleStartCommand(Nutgram $bot): void
