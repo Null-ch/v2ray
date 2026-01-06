@@ -12,6 +12,7 @@ use App\Models\Xui;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 use Illuminate\Foundation\Auth\AuthenticatesUsers;
 
@@ -127,9 +128,9 @@ class CockpitController extends Controller
 
         // Разбивка по тарифам (по pricing_id в metadata)
         $pricingStats = Payment::query()
-            ->selectRaw('metadata->>\'pricing_id\' as pricing_id_raw, COUNT(*) as payments_count, SUM(amount) as total_amount')
+            ->selectRaw('JSON_UNQUOTE(JSON_EXTRACT(metadata, "$.pricing_id")) as pricing_id_raw, COUNT(*) as payments_count, SUM(amount) as total_amount')
             ->where('status', Payment::STATUS_SUCCEEDED)
-            ->whereNotNull('metadata->>\'pricing_id\'')
+            ->whereRaw('JSON_EXTRACT(metadata, "$.pricing_id") IS NOT NULL')
             ->groupBy('pricing_id_raw')
             ->get()
             ->map(function ($row) {
