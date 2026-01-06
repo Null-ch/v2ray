@@ -11,6 +11,7 @@ use App\Services\YooKassaService;
 use App\Services\TelegramBotHandlers;
 use App\Services\VpnConnectionService;
 use Illuminate\Support\ServiceProvider;
+use Illuminate\Support\Facades\Log;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -20,7 +21,8 @@ class AppServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->app->singleton(SettingService::class);
-        // Регистрируем TelegramService только если токен настроен
+        
+        // Регистрируем TelegramService и Nutgram только если токен настроен
         $token = config('services.telegram.bot_token');
         
         if (!empty($token)) {
@@ -36,7 +38,6 @@ class AppServiceProvider extends ServiceProvider
         }
 
         // Регистрируем YooKassa клиент и сервис
-        // Важно: регистрируем только если конфигурация настроена
         $shopId = config('services.yookassa.shop_id');
         $secretKey = config('services.yookassa.secret_key');
         
@@ -52,9 +53,6 @@ class AppServiceProvider extends ServiceProvider
                     $app->make(XuiService::class)
                 );
             });
-        } else {
-            // Если конфигурация не настроена, не регистрируем сервисы
-            // TelegramBotHandlers не будет создан, если YooKassaService не зарегистрирован
         }
     }
 
@@ -65,25 +63,46 @@ class AppServiceProvider extends ServiceProvider
     {
         $token = config('services.telegram.bot_token');
 
-        if (empty($token) || !$this->app->bound(TelegramService::class) || !$this->app->bound(VpnConnectionService::class)) {
+        if (empty($token) || !$this->app->bound(TelegramService::class)) {
+            Log::info("Telegram bot token is not configured or service is not bound.");
             return;
         }
 
-        // Проверяем, зарегистрирован ли YooKassaService (нужен для TelegramBotHandlers)
-        if (!$this->app->bound(YooKassaService::class)) {
-            // Если YooKassa не настроен, регистрируем заглушку или пропускаем инициализацию
-            // В зависимости от требований можно либо выбросить исключение, либо пропустить
-            // Для работы бота без платежей можно зарегистрировать заглушку
-            return;
-        }
+        $bot = $this->app->make(Nutgram::class); // Получаем экземпляр бота
 
         try {
-            $handlers = $this->app->make(TelegramBotHandlers::class);
-            $handlers->registerHandlers();
+            // Регистрация команд, если бот доступен
+            $bot->onCommand('start', function(Nutgram $bot) {
+                $bot->sendMessage("Привет! Бот работает!");
+            });
+
+            // Можно добавить другие команды
+            $bot->onCommand('help', function(Nutgram $bot) {
+                $bot->sendMessage("Доступные команды: /start, /help");
+            });
+
+            // Логирование всех входящих сообщений
+            $bot->onMessage(function(Nutgram $bot) {
+                Log::info('Telegram message received', [
+                    'from' => $bot->user(),
+                    'text' => $bot->message()?->text,
+                ]);
+            });
+
+            // Логируем успешную инициализацию бота
+            Log::info("Telegram bot initialized and commands registered.");
+            
         } catch (\Throwable $e) {
-            // Игнорируем ошибки при инициализации бота в тестовом окружении
-            if (app()->environment() !== 'testing') {
-                throw $e;
+            Log::error("Error while registering commands: " . $e->getMessage());
+        }
+
+        // Инициализация других сервисов и обработчиков
+        if ($this->app->bound(YooKassaService::class)) {
+            try {
+                $handlers = $this->app->make(TelegramBotHandlers::class);
+                $handlers->registerHandlers();
+            } catch (\Throwable $e) {
+                Log::error("Error initializing TelegramBotHandlers: " . $e->getMessage());
             }
         }
     }
