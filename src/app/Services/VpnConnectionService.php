@@ -20,7 +20,8 @@ final readonly class VpnConnectionService
 {
     public function __construct(
         private UserService $userService,
-        private XuiService $xuiService
+        private XuiService $xuiService,
+        private SettingService $settingService,
     ) {}
 
     public function sendWelcomeMessageForNewUser(
@@ -28,7 +29,8 @@ final readonly class VpnConnectionService
         ?InlineKeyboardMarkup $keyboard = null
     ): int {
         $message = View::make('telegram.welcome', [
-            'monthlyCost' => $this->userService->getMonthlyCost(),
+            'monthlyCost' => $this->settingService->getInt('default.monthly.cost'),
+            'trialDuration' => $this->settingService->getInt('trial.duration'),
         ])->render();
 
         $sentMessage = $bot->sendMessage(trim($message), parse_mode: 'HTML', reply_markup: $keyboard);
@@ -141,14 +143,6 @@ final readonly class VpnConnectionService
         return $sentMessage->message_id;
     }
 
-    private function getDaysWord(int $days): string
-    {
-        $cases = [2, 0, 1, 1, 1, 2];
-        $titles = ['день', 'дня', 'дней'];
-
-        return $titles[($days % 100 > 4 && $days % 100 < 20) ? 2 : $cases[min($days % 10, 5)]];
-    }
-
     public function sendVpnConnectionMessages(Nutgram $bot, ?InlineKeyboardMarkup $instructionsKeyboard = null, string $vpnKey): array
     {
         $congratsMessage = View::make('telegram.vpn-congratulations')->render();
@@ -182,15 +176,6 @@ final readonly class VpnConnectionService
             chat_id: $chatId
         );
 
-        // $keyMessage = View::make('telegram.vpn-key', [
-        //     'key' => $vpnKey,
-        // ])->render();
-
-        // $keyMsg = $bot->sendMessage(
-        //     text: trim($keyMessage),
-        //     chat_id: $chatId
-        // );
-
         $instructionsMessage = View::make('telegram.vpn-instructions')->render();
 
         $instructionsMsg = $bot->sendMessage(
@@ -201,7 +186,6 @@ final readonly class VpnConnectionService
 
         return [
             'congrats' => $congratsMsg->message_id,
-            // 'key' => $keyMsg->message_id,
             'instructions' => $instructionsMsg->message_id,
         ];
     }

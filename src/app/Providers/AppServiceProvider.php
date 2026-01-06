@@ -5,6 +5,7 @@ namespace App\Providers;
 use App\Services\XuiService;
 use SergiX44\Nutgram\Nutgram;
 use App\Clients\YooKassaClient;
+use App\Services\SettingService;
 use App\Services\TelegramService;
 use App\Services\YooKassaService;
 use App\Services\TelegramBotHandlers;
@@ -18,6 +19,7 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
+        $this->app->singleton(SettingService::class);
         // Регистрируем TelegramService только если токен настроен
         $token = config('services.telegram.bot_token');
         

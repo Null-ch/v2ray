@@ -9,11 +9,12 @@ use App\Enums\XuiTag;
 use App\Enums\Callback;
 use App\Models\Pricing;
 use SergiX44\Nutgram\Nutgram;
+use App\Services\SettingService;
 use App\Services\YooKassaService;
 use App\Services\User\UserService;
 use App\Jobs\ProcessAcceptTermsJob;
-use App\Jobs\ProcessPaymentCreationJob;
 use Illuminate\Support\Facades\Log;
+use App\Jobs\ProcessPaymentCreationJob;
 use SergiX44\Nutgram\Telegram\Types\Keyboard\InlineKeyboardButton;
 use SergiX44\Nutgram\Telegram\Types\Keyboard\InlineKeyboardMarkup;
 
@@ -37,6 +38,7 @@ final readonly class TelegramBotHandlers
         private VpnConnectionService $vpnConnectionService,
         private UserService $userService,
         private PricingService $pricingService,
+        private SettingService $settingService,
     ) {}
 
     public function registerHandlers(): void
@@ -588,7 +590,7 @@ final readonly class TelegramBotHandlers
 
                 $referralLink = "https://t.me/{$botUsername}?start={$user->referral_code}";
                 $shareUrl = "https://t.me/share/url?" . "text=" . urlencode("Дешевый VPN! 7 дней бесплатно, подписка на месяц 70Р!") . '&url=' . urlencode($referralLink);
-                $message = "За каждого, кто подключит VPN, Вы получите на баланс 2 дня подписки, а все приглашенные 7 дней бесплатного VPN";
+                $message = "За каждого, кто подключит VPN, Вы получите на баланс " .  $this->settingService->getInt('ref.bonus.duration') . " дня подписки, а все приглашенные 7 дней бесплатного VPN";
 
                 $keyboard = InlineKeyboardMarkup::make()
                     ->addRow(InlineKeyboardButton::make('Пригласить', url: $shareUrl))

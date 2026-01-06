@@ -10,10 +10,10 @@ use Illuminate\Support\Str;
 use App\Services\XuiService;
 use Illuminate\Bus\Queueable;
 use SergiX44\Nutgram\Nutgram;
+use App\Services\SettingService;
 use App\Services\User\UserService;
 use App\Helpers\MillisecondsHelper;
 use Illuminate\Support\Facades\Log;
-use App\Services\SubscriptionService;
 use App\Services\VpnConnectionService;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Queue\InteractsWithQueue;
@@ -26,6 +26,8 @@ final class ProcessAcceptTermsJob implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
+    private SettingService $settingService;
+
     public function __construct(
         private readonly int $telegramId,
         private readonly ?string $username,
@@ -37,7 +39,6 @@ final class ProcessAcceptTermsJob implements ShouldQueue
         UserService $userService,
         XuiService $xuiService,
         VpnConnectionService $vpnConnectionService,
-        SubscriptionService $subscriptionService
     ): void {
         $bot = $this->createBot();
 
@@ -145,7 +146,7 @@ final class ProcessAcceptTermsJob implements ShouldQueue
             }
 
             $client = $clientDataArray[0];
-            $this->addDaysToClient($client, 2, $tag, $uuid, $xuiService);
+            $this->addDaysToClient($client, $this->settingService->getInt('ref.bonus.duration'), $tag, $uuid, $xuiService);
         } catch (\Throwable $e) {
             Log::error('Failed to extend referrer subscription', [
                 'error' => $e->getMessage(),
@@ -156,7 +157,7 @@ final class ProcessAcceptTermsJob implements ShouldQueue
 
     protected function addDaysToClient(array $client, int $days, string $tag, string $uuid, XuiService $xuiService): void
     {
-        $msToAdd = $days * 24 * 60 * 60 * 1000; // правильно считаем дни в миллисекундах
+        $msToAdd = $days * 24 * 60 * 60 * 1000;
         $oldExpiry = $client['expiryTime'] ?? 0;
         $client['expiryTime'] = ($oldExpiry ?? 0) + $msToAdd;
         $client['id'] = $uuid;
@@ -167,11 +168,12 @@ final class ProcessAcceptTermsJob implements ShouldQueue
 
     protected function createUserSubscription($user, XuiService $xuiService): void
     {
-        $xuiModel = $xuiService->getXuiModelByTag('NL');
+        $trialTag = $this->settingService->getString('trial.tag');
+        $xuiModel = $xuiService->getXuiModelByTag($trialTag);
         $expiryTimeMs = MillisecondsHelper::addDaysInMillisecondsToNow(7);
         $inboundId = $xuiModel->inbound_id;
         $subscriptionName = Str::substr($user->uuid, 0, 6) . $user->id;
-        $createResult = $xuiService->addClient('NL', $inboundId, [
+        $createResult = $xuiService->addClient($trialTag, $inboundId, [
             'id' => $user->uuid,
             'email' => $subscriptionName,
             'expiryTime' => $expiryTimeMs,
@@ -185,8 +187,9 @@ final class ProcessAcceptTermsJob implements ShouldQueue
 
     protected function sendInstructions(Nutgram $bot, VpnConnectionService $vpnConnectionService, XuiService $xuiService, $user): void
     {
-        $userConfig = $xuiService->getSubLink('NL', $user->uuid);
-        $userConfigImportLink = $xuiService->getSubLink('NL', $user->uuid, 'import');
+        $trialTag = $this->settingService->getString('trial.tag');
+        $userConfig = $xuiService->getSubLink($trialTag, $user->uuid);
+        $userConfigImportLink = $xuiService->getSubLink($trialTag, $user->uuid, 'import');
 
         $instructionsKeyboard = InlineKeyboardMarkup::make()
             ->addRow(InlineKeyboardButton::make('🤖 Приложение для Android', url: 'https://play.google.com/store/apps/details?id=com.v2raytun.android&pcampaignid=web_share'))
