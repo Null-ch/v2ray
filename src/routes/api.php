@@ -19,7 +19,7 @@ Route::put('test/{id}', [TestController::class, 'update']);
 //     Route::post('telegram/webhook', [TelegramWebhookController::class, 'handle']);
 // }
 
-Route::post('/api/telegram/webhook', function(Request $request) {
+Route::post('telegram/webhook', function(Request $request) {
     Log::info('Webhook hit', $request->all());
 
     $bot = new Nutgram(config('services.telegram.bot_token'));
