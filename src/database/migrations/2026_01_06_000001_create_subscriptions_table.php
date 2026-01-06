@@ -26,7 +26,6 @@ return new class extends Migration
                 ->on('xuis')
                 ->onDelete('cascade');
 
-            $table->index(['user_id', 'tag']);
             $table->unique(['user_id', 'xui_id', 'uuid']);
         });
     }
