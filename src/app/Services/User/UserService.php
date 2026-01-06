@@ -10,7 +10,7 @@ use Illuminate\Support\Str;
 final readonly class UserService
 {
     private const DAILY_COST = 2;
-    private const MONTHLY_COST = 80;
+    private const MONTHLY_COST = 70;
     private const INITIAL_BALANCE = 0;
 
     public function __construct(private UserRepository $userRepository) {}

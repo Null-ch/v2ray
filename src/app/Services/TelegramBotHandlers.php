@@ -526,7 +526,7 @@ final readonly class TelegramBotHandlers
                 }
 
                 $referralLink = "https://t.me/{$botUsername}?start={$user->referral_code}";
-                $shareUrl = "https://t.me/share/url?" . "text=" . urlencode("Дешевый VPN! 7 дней бесплатно, подписка на месяц 80Р!") . '&url=' . urlencode($referralLink);
+                $shareUrl = "https://t.me/share/url?" . "text=" . urlencode("Дешевый VPN! 7 дней бесплатно, подписка на месяц 70Р!") . '&url=' . urlencode($referralLink);
                 $message = "За каждого, кто подключит VPN, Вы получите на баланс 2 дня подписки, а все приглашенные 7 дней бесплатного VPN";
 
                 $keyboard = InlineKeyboardMarkup::make()

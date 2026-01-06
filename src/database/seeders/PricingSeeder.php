@@ -21,7 +21,7 @@ class PricingSeeder extends Seeder
             [
                 'title' => '30 дней',
                 'duration' => 30 * 24 * 60 * 60 * 1000,
-                'price' => 60.00,
+                'price' => 70.00,
             ],
             [
                 'title' => '3 месяца',
