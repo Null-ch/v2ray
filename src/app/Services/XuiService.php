@@ -339,6 +339,8 @@ final class XuiService
     public function getSubscriptionInfo(string $tag, string $uuid)
     {
         $response = $this->getClientTrafficByUserUuid($tag, $uuid);
+        
+        Log::info('getClientTrafficByUserUuid: ' . json_encode($response));
         $configData = Arr::get($response, 'data');
         $expiryTime = MillisecondsHelper::millisecondsToDaysHours(Arr::get($configData, '0.expiryTime'));
 

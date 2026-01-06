@@ -105,7 +105,6 @@ final readonly class VpnConnectionService
             Arr::get($subscriptionInfoArray, 'expiryTime', [])
         );
 
-        Log::info('$subscriptionInfoArray: ' . json_encode($subscriptionInfoArray));
         $message = View::make('telegram.subscription-info', [
             'enable' => Arr::get($subscriptionInfoArray, 'enable') ? 'Да' : 'Нет',
             'expiryTime' => $expiryTime,
