@@ -651,7 +651,11 @@ final readonly class TelegramBotHandlers
                 $this->clearChat($messageIds, $bot);
 
                 $userTags = $user->subscriptions()
-                    ->pluck('tag')
+                    ->with('xui')
+                    ->get()
+                    ->pluck('xui.tag')
+                    ->filter()
+                    ->map(fn(XuiTag $tag) => $tag->value)
                     ->toArray();
 
                 $keyboard = InlineKeyboardMarkup::make();
