@@ -4,12 +4,9 @@ declare(strict_types=1);
 
 namespace App\Jobs;
 
-use Carbon\Carbon;
-use App\Enums\XuiTag;
 use App\Models\Referral;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Str;
-use App\DTO\SubscriptionDTO;
 use App\Services\XuiService;
 use Illuminate\Bus\Queueable;
 use SergiX44\Nutgram\Nutgram;

@@ -70,7 +70,7 @@ final readonly class TelegramBotHandlers
                 return;
             }
 
-            $userTags = $user->subscriptions->pluck('tag')->all();
+            $userTags = $user->subscriptions->xui->pluck('tag')->all();
 
             if (empty($userTags)) {
                 $bot->sendMessage('❌ У вас нет активных подписок для реферальной программы');
