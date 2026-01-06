@@ -18,17 +18,8 @@ Route::put('test/{id}', [TestController::class, 'update']);
 // if (!empty(config('services.telegram.bot_token'))) {
 //     Route::post('telegram/webhook', [TelegramWebhookController::class, 'handle']);
 // }
+Route::post('telegram/webhook', [TelegramWebhookController::class, 'handle']);
 
-Route::post('telegram/webhook', function(Request $request) {
-    Log::info('Webhook hit', $request->all());
-
-    $bot = new Nutgram(config('services.telegram.bot_token'));
-
-    $bot->onCommand('start', function(Nutgram $bot) {
-        $bot->sendMessage("Привет! Бот работает!");
-    });
-    return response()->json(['ok' => true]);
-});
 
 // Payment API routes
 Route::prefix('payment')->group(function () {
