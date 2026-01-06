@@ -10,12 +10,17 @@ class MillisecondsHelper
      * @param int $days
      * @return int
      */
-    public static function daysToMilliseconds(int $days): int
+    public static function addDaysInMillisecondsToNow(int $days): int
     {
         $nowMs = round(microtime(true) * 1000);
         $msToAdd = $days * 24 * 60 * 60 * 1000;
 
         return $nowMs + $msToAdd;
+    }
+
+    public static function daysToMilliseconds(int $days): int
+    {
+        return $days * 24 * 60 * 60 * 1000;
     }
 
     /**
