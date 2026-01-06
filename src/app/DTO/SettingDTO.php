@@ -8,7 +8,7 @@ final class SettingDTO extends BaseItemDTO
 {
     public function __construct(
         public ?int $id = null,
-        public string $key,
+        public ?string $key = null,
         public mixed $value = null,
         public string $type = 'string',
         public ?string $group = null,

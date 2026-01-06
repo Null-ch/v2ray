@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers;
 
 use App\Models\Payment;
+use App\Models\Pricing;
 use App\Models\Subscription;
 use App\Models\User;
 use App\Models\Xui;
@@ -111,6 +112,54 @@ class CockpitController extends Controller
             ->whereDate('created_at', now()->toDateString())
             ->sum('amount');
 
+        // Ежедневная выручка за последние 7 дней
+        $dailyRevenue = Payment::query()
+            ->selectRaw('DATE(created_at) as date, SUM(amount) as total')
+            ->where('status', Payment::STATUS_SUCCEEDED)
+            ->where('created_at', '>=', now()->subDays(6)->startOfDay())
+            ->groupBy('date')
+            ->orderBy('date')
+            ->get()
+            ->map(fn ($row) => [
+                'date' => $row->date,
+                'total' => (float) $row->total,
+            ]);
+
+        // Разбивка по тарифам (по pricing_id в metadata)
+        $pricingStats = Payment::query()
+            ->selectRaw('metadata->>\'pricing_id\' as pricing_id_raw, COUNT(*) as payments_count, SUM(amount) as total_amount')
+            ->where('status', Payment::STATUS_SUCCEEDED)
+            ->whereNotNull('metadata->>\'pricing_id\'')
+            ->groupBy('pricing_id_raw')
+            ->get()
+            ->map(function ($row) {
+                return [
+                    'pricing_id' => (int) $row->pricing_id_raw,
+                    'payments_count' => (int) $row->payments_count,
+                    'total_amount' => (float) $row->total_amount,
+                ];
+            });
+
+        $pricingLabels = [];
+        $pricingAmounts = [];
+
+        if ($pricingStats->isNotEmpty()) {
+            $pricingIds = $pricingStats->pluck('pricing_id')->all();
+            $pricings = Pricing::query()
+                ->whereIn('id', $pricingIds)
+                ->get()
+                ->keyBy('id');
+
+            foreach ($pricingStats as $stat) {
+                /** @var \App\Models\Pricing|null $pricing */
+                $pricing = $pricings->get($stat['pricing_id']);
+                $label = $pricing?->title ?? ('Тариф #' . $stat['pricing_id']);
+
+                $pricingLabels[] = $label;
+                $pricingAmounts[] = $stat['total_amount'];
+            }
+        }
+
         return view('cockpit.dashboard', compact(
             'totalUsers',
             'activeUsers',
@@ -121,6 +170,9 @@ class CockpitController extends Controller
             'succeededPayments',
             'totalRevenue',
             'todayRevenue',
+            'dailyRevenue',
+            'pricingLabels',
+            'pricingAmounts',
         ));
     }
 }
