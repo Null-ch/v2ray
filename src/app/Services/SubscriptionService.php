@@ -4,13 +4,14 @@ declare(strict_types=1);
 
 namespace App\Services;
 
-use App\DTO\SubscriptionDTO;
-use App\Enums\XuiTag;
-use App\Models\Subscription;
-use App\Repositories\SubscriptionRepository;
 use Carbon\Carbon;
-use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use App\Enums\XuiTag;
+use App\DTO\SubscriptionDTO;
+use App\Models\Subscription;
+use Illuminate\Support\Facades\Log;
+use App\Repositories\SubscriptionRepository;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 
 final class SubscriptionService
 {
@@ -60,6 +61,7 @@ final class SubscriptionService
         int $xuiId,
         array $clientData
     ): void {
+        Log::info('syncFromClientData: ' . json_encode($clientData));
         $uuid = $clientData['id'] ?? $clientData['uuid'] ?? null;
         if (!$uuid) {
             return;
