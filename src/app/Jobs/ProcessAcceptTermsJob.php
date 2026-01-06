@@ -229,6 +229,9 @@ final class ProcessAcceptTermsJob implements ShouldQueue
                 $instructionsKeyboard,
                 $userConfig
             );
+
+            $bot->deleteGlobalData('referrer_id');
+            $bot->deleteGlobalData('referral_code');
         } catch (\Throwable $e) {
             Log::error('Ошибка при обработке accept_terms в Job: ' . $e->getMessage(), [
                 'trace' => $e->getTraceAsString(),
