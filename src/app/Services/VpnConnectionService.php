@@ -40,18 +40,7 @@ final readonly class VpnConnectionService
         User $user,
         ?InlineKeyboardMarkup $keyboard = null
     ): int {
-        //TODO:Переписать приветственное меню, Сделать кнопку "Мои конфигурации" по нажатию будут показаны конфигурации и кнопки, чтобы перейти к ним
-        $balance = $user->balance?->balance ?? 0;
-        $dailyCost = $this->userService->getDailyCost();
-        $activeKeysCount = $user->configurations()->count();
-
-        $daysRemaining = $balance > 0 ? (int)floor($balance / $dailyCost) : 0;
-
-        $daysWord = $this->getDaysWord($daysRemaining);
-
         $name = $bot->user()->first_name ?? $user->name ?? $user->tg_tag ?? 'пользователь';
-
-        // Генерируем реферальную ссылку
         $referralLink = null;
         if ($user->referral_code) {
             $botUsername = config('services.telegram.bot_username');
@@ -60,22 +49,19 @@ final readonly class VpnConnectionService
                     $botInfo = $bot->getMe();
                     $botUsername = $botInfo->username;
                 } catch (\Throwable $e) {
-                    // Если не удалось получить имя бота, оставляем ссылку пустой
                 }
             }
+
             if ($botUsername) {
                 $referralLink = "https://t.me/{$botUsername}?start={$user->referral_code}";
             }
         }
 
+        $hasVpn = empty($userTags = $user->tags->pluck('tag')->all()) ? false : true;
         $message = View::make('telegram.welcome-back', [
             'name' => $name,
             'referralLink' => $referralLink,
-            // 'activeKeysCount' => $activeKeysCount,
-            // 'balance' => $balance,
-            // 'daysRemaining' => $daysRemaining,
-            // 'daysWord' => $daysWord,
-            // 'dailyCost' => $dailyCost,
+            'hasVpn' => $hasVpn
         ])->render();
 
         $sentMessage = $bot->sendMessage(trim($message), parse_mode: 'HTML', reply_markup: $keyboard);
