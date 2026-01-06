@@ -1,17 +1,22 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\XuiController;
 use App\Http\Controllers\CockpitController;
+use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\Cockpit\CockpitXuiController;
 use App\Http\Controllers\Cockpit\CockpitUserController;
 use App\Http\Controllers\Cockpit\CockpitBalanceController;
-use App\Http\Controllers\Cockpit\CockpitReferralController;
 use App\Http\Controllers\Cockpit\CockpitPricingController;
+use App\Http\Controllers\Cockpit\CockpitReferralController;
 use App\Http\Controllers\Cockpit\CockpitSubscriptionController;
-use App\Http\Controllers\PaymentController;
 
 Route::get('/', function () {
     return view('welcome');
+});
+
+Route::prefix('config')->group(function () {
+    Route::get('import', [XuiController::class, 'getConfigImportLink'])->name('export.link');
 });
 
 // Cockpit routes
