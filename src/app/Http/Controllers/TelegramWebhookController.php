@@ -21,7 +21,7 @@ final readonly class TelegramWebhookController
     {
         try {
             $data = $request->all();
-            Log::indo('Пришел реквест: ' . json_encode($data));
+            Log::info('Пришел реквест: ' . json_encode($data));
             $update = Update::fromArray($data);
             $this->telegramService->getBot()->processUpdate($update);
         } catch (\Throwable $e) {
