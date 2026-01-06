@@ -50,7 +50,7 @@ final class ProcessAcceptTermsJob implements ShouldQueue
             }
 
             $this->processReferrerBonus($user, $userService, $xuiService);
-            $this->createUserSubscription($user, $xuiService, $subscriptionService);
+            $this->createUserSubscription($user, $xuiService);
             $this->sendInstructions($bot, $vpnConnectionService, $xuiService, $user);
 
             $bot->deleteGlobalData('referrer_id');
@@ -108,7 +108,7 @@ final class ProcessAcceptTermsJob implements ShouldQueue
             return;
         }
 
-        $this->extendReferrerSubscription($referrer, $xuiService);
+        $this->extendReferrerSubscription($referrer, $xuiService, $user->id);
     }
 
     protected function createReferral(int $referredUserId): void
@@ -128,7 +128,7 @@ final class ProcessAcceptTermsJob implements ShouldQueue
         }
     }
 
-    protected function extendReferrerSubscription($referrer, XuiService $xuiService): void
+    protected function extendReferrerSubscription($referrer, XuiService $xuiService, int $userId): void
     {
         try {
             $tag = $referrer->referral_tag;
@@ -165,7 +165,7 @@ final class ProcessAcceptTermsJob implements ShouldQueue
         $xuiService->updateClient($tag, $inboundId, $uuid, $client);
     }
 
-    protected function createUserSubscription($user, XuiService $xuiService, SubscriptionService $subscriptionService): void
+    protected function createUserSubscription($user, XuiService $xuiService): void
     {
         $xuiModel = $xuiService->getXuiModelByTag('NL');
         $expiryTimeMs = MillisecondsHelper::addDaysInMillisecondsToNow(7);

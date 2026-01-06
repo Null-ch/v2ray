@@ -83,6 +83,15 @@ class UserRepository extends BaseRepository
             ->first();
     }
 
+    public function findUserByUuid(string $uuid): ?Model
+    {
+        return $this->model
+            ->newQuery()
+            ->with(['balance', 'referrer'])
+            ->where('uuid', $uuid)
+            ->first();
+    }
+
     public function findByReferralCode(string $referralCode): ?Model
     {
         return $this->model

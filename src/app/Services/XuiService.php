@@ -8,6 +8,7 @@ use App\Models\Xui;
 use App\Enums\XuiTag;
 use Illuminate\Support\Arr;
 use App\Clients\XuiApiClient;
+use App\Services\User\UserService;
 use App\Helpers\MillisecondsHelper;
 use App\Repositories\XuiRepository;
 use App\Services\SubscriptionService;
@@ -22,7 +23,8 @@ final class XuiService
 
     public function __construct(
         private readonly XuiRepository $xuiRepository,
-        private readonly SubscriptionService $subscriptionService
+        private readonly SubscriptionService $subscriptionService,
+        private readonly UserService $userService,
     ) {}
 
     private function getXuiModel(string $tag): Xui
@@ -162,14 +164,15 @@ final class XuiService
      * 
      * @return array
      */
-    public function updateClient(string $tag, int $inboundId, string $uuid, array $clientData, ?int $userId = null): array
+    public function updateClient(string $tag, int $inboundId, string $uuid, array $clientData): array
     {
         $client = $this->getXuiApiClient($tag);
         $result = $client->updateClient($inboundId, $uuid, $clientData);
         $dataForSync = $clientData;
         $dataForSync['id'] = $uuid;
         $xuiModel = $this->getXuiModel($tag);
-        $this->subscriptionService->syncFromClientData($userId,  $xuiModel->id, $dataForSync);
+        $user = $this->userService->findUserByUuid($uuid);
+        $this->subscriptionService->syncFromClientData($user->id,  $xuiModel->id, $dataForSync);
 
         return $result;
     }
