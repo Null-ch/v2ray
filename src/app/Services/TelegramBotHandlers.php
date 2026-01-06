@@ -640,8 +640,10 @@ final readonly class TelegramBotHandlers
     private function getInstructionsKeyboard(): InlineKeyboardMarkup
     {
         return InlineKeyboardMarkup::make()
-            ->addRow(InlineKeyboardButton::make('🤖 Приложение для Android', url: 'https://play.google.com/store/apps/details?id=com.v2raytun.android&pcampaignid=web_share'))
-            ->addRow(InlineKeyboardButton::make('🖥️ Инструкция для Windows', url: 'https://telegra.ph/Instrukciya-po-ustanovke-V2raytun-na-PK--Windows-1011-01-02'))
+            ->addRow(
+                InlineKeyboardButton::make('🤖 Приложение для Android', url: 'https://play.google.com/store/apps/details?id=com.v2raytun.android&pcampaignid=web_share'),
+                InlineKeyboardButton::make('🍏 Инструкция для MacOS\iPhone', url: 'https://apps.apple.com/ru/app/v2raytun/id6476628951')
+            )
             ->addRow(InlineKeyboardButton::make('🖥️ Инструкция для Windows', url: 'https://telegra.ph/Instrukciya-po-ustanovke-V2raytun-na-PK--Windows-1011-01-02'))
             ->addRow(InlineKeyboardButton::make('🏠 Главное меню', callback_data: 'main_menu'));
     }

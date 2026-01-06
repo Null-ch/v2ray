@@ -268,8 +268,6 @@ final class YooKassaService
 
             // Получаем информацию о подписке, если есть тег VPN
             $vpnTag = $payment->getVpnTag();
-            $totalDays = null;
-            $daysWord = null;
 
             if ($vpnTag) {
                 try {
@@ -279,10 +277,9 @@ final class YooKassaService
 
                     if ($expiryTimeMs) {
                         $expiryTime = MillisecondsHelper::millisecondsToDaysHours($expiryTimeMs);
-                        $totalDays = Arr::get($expiryTime, 'days', 0);
-                        if ($totalDays > 0) {
-                            $daysWord = $this->getDaysWord($totalDays);
-                        }
+                        $expiryInfo = $this->xuiService->formatExpiryTime(
+                            Arr::get($expiryTime, 'expiryTime', [])
+                        );
                     }
                 } catch (\Throwable $e) {
                     Log::debug('Failed to get subscription info for payment notification', [
@@ -297,8 +294,7 @@ final class YooKassaService
             $successMessage = View::make('telegram.payment-success', [
                 'amount' => $payment->amount,
                 'description' => $payment->description,
-                'totalDays' => $totalDays,
-                'daysWord' => $daysWord,
+                'expiryInfo' => $expiryInfo,
             ])->render();
 
             $keyboard = InlineKeyboardMarkup::make();

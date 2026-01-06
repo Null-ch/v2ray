@@ -4,5 +4,5 @@
 📝 Описание: {{ $description }}
 
 @if($totalDays)
-Текущий срок действия подписки: {{ $totalDays }} {{ $daysWord }}
+Текущий срок действия подписки: {{ $expiryInfo }}
 @endif
