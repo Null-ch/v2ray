@@ -27,9 +27,6 @@ Route::post('telegram/webhook', function(Request $request) {
     $bot->onCommand('start', function(Nutgram $bot) {
         $bot->sendMessage("Привет! Бот работает!");
     });
-
-    $bot->run(); // обязательно запускаем обработку обновлений
-
     return response()->json(['ok' => true]);
 });
 
