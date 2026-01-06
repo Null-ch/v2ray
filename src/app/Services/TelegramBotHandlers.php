@@ -131,13 +131,29 @@ final readonly class TelegramBotHandlers
                 $telegramId = $bot->userId();
                 $username = $bot->user()->username;
                 $name = $bot->user()->first_name;
-                $referrerId = $bot->getGlobalData('referrer_id');
-                $referralCode = $bot->getGlobalData('referral_code');
+                
+                // Получаем referrerId из callback_data
+                $referrerId = null;
+                $callbackData = $bot->callbackQuery()->data ?? '';
+                
+                Log::info('Accept terms callback - checking callback_data', [
+                    'telegram_id' => $telegramId,
+                    'callback_data' => $callbackData,
+                ]);
+                
+                // Проверяем формат accept_terms:123
+                if (preg_match('/^accept_terms:(\d+)$/', $callbackData, $matches)) {
+                    $referrerId = (int) $matches[1];
+                    Log::info('Referrer ID extracted from callback_data', [
+                        'telegram_id' => $telegramId,
+                        'referrer_id' => $referrerId,
+                    ]);
+                }
 
                 Log::info('Accept terms callback', [
                     'telegram_id' => $telegramId,
                     'referrer_id' => $referrerId,
-                    'referral_code' => $referralCode,
+                    'callback_data' => $callbackData,
                     'username' => $username,
                     'name' => $name,
                 ]);
@@ -639,15 +655,22 @@ final readonly class TelegramBotHandlers
 
         try {
             if (!$user) {
-                // Сохраняем referrerId в глобальных данных бота для использования в ProcessAcceptTermsJob
-                if ($referrerId) {
-                    $bot->setGlobalData('referrer_id', $referrerId);
-                    $bot->setGlobalData('referral_code', $payload);
-                }
-
                 $messageIds = $bot->getGlobalData('vpn_message_ids', []);
                 $this->clearChat($messageIds, $bot);
-                $keyboard = InlineKeyboardMarkup::make()->addRow(InlineKeyboardButton::make('✅Принять', callback_data: 'accept_terms'));
+                
+                // Передаем referrerId через callback_data кнопки
+                $callbackData = 'accept_terms';
+                if ($referrerId) {
+                    $callbackData = "accept_terms:{$referrerId}";
+                }
+                
+                Log::info('Creating accept button with callback data', [
+                    'telegram_id' => $telegramId,
+                    'callback_data' => $callbackData,
+                    'referrer_id' => $referrerId,
+                ]);
+                
+                $keyboard = InlineKeyboardMarkup::make()->addRow(InlineKeyboardButton::make('✅Принять', callback_data: $callbackData));
                 $messageId = $this->vpnConnectionService->sendWelcomeMessageForNewUser($bot, $keyboard);
                 $bot->setGlobalData('vpn_message_ids', [$messageId]);
             } else {
