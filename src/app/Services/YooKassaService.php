@@ -271,16 +271,10 @@ final class YooKassaService
 
             if ($vpnTag) {
                 try {
-                    $clientDataResponse = $this->xuiService->getClientTrafficByUserUuid($vpnTag, $user->uuid);
-                    $clientDataArray = Arr::get($clientDataResponse, 'data');
-                    $expiryTimeMs = Arr::get($clientDataArray, '0.expiryTime');
-
-                    if ($expiryTimeMs) {
-                        $expiryTime = MillisecondsHelper::millisecondsToDaysHours($expiryTimeMs);
-                        $expiryInfo = $this->xuiService->formatExpiryTime(
-                            Arr::get($expiryTime, 'expiryTime', [])
-                        );
-                    }
+                    $clientDataResponse = $this->xuiService->getSubscriptionInfo($vpnTag, $user->uuid);
+                    $expiryInfo = $this->xuiService->formatExpiryTime(
+                        Arr::get($clientDataResponse, 'expiryTime', [])
+                    );
                 } catch (\Throwable $e) {
                     Log::debug('Failed to get subscription info for payment notification', [
                         'payment_id' => $payment->id,

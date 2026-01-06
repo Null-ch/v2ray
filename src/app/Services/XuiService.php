@@ -339,16 +339,27 @@ final class XuiService
     public function getSubscriptionInfo(string $tag, string $uuid)
     {
         $response = $this->getClientTrafficByUserUuid($tag, $uuid);
-        
-        Log::info('getClientTrafficByUserUuid: ' . json_encode($response));
-        $configData = Arr::get($response, 'data');
-        $expiryTime = MillisecondsHelper::millisecondsToDaysHours(Arr::get($configData, '0.expiryTime'));
 
-        return [
+        Log::info('getClientTrafficByUserUuid: ' . json_encode($response));
+        $configData = Arr::get($response, 'data.0');
+        // $expiryTime = MillisecondsHelper::millisecondsToDaysHours(Arr::get($configData, '0.expiryTime'));
+
+        // return [
+        //     'enable' => Arr::get($configData, 'enable', false),
+        //     'expiryTime' => $expiryTime,
+        //     'tag' => XuiTag::from($tag)->label(),
+        // ];
+        $expiryTime = MillisecondsHelper::millisecondsToDaysHours(
+            Arr::get($configData, 'expiryTime')
+        );
+
+        $outputData = [
             'enable' => Arr::get($configData, 'enable', false),
             'expiryTime' => $expiryTime,
             'tag' => XuiTag::from($tag)->label(),
         ];
+        Log::info('getClientTrafficByUserUuid outputData: ' . json_encode($response));
+        return $outputData;
     }
 
     public function formatExpiryTime(array $expiryTime): string
