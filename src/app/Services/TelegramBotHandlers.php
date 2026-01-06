@@ -141,6 +141,7 @@ final readonly class TelegramBotHandlers
                 );
 
                 $bot->deleteGlobalData('referrer_id');
+                $bot->deleteGlobalData('referral_code');
             } catch (\Throwable $e) {
                 Log::error('Ошибка при постановке задачи accept_terms в очередь: ' . $e->getMessage(), [
                     'trace' => $e->getTraceAsString(),
