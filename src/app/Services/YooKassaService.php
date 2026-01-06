@@ -250,7 +250,6 @@ final class YooKassaService
 
             $bot = $this->telegramService->getBot();
 
-            // Удаляем сообщение с кнопкой оплаты, если оно есть
             if ($payment->telegram_message_id) {
                 try {
                     $bot->deleteMessage($user->tg_id, $payment->telegram_message_id);
@@ -262,11 +261,8 @@ final class YooKassaService
                 }
             }
 
-            // Удаляем предыдущие сообщения с клавиатурами
             $messageIds = $bot->getGlobalData('vpn_message_ids', []);
             $this->clearChat($messageIds, $bot, $user->tg_id);
-
-            // Получаем информацию о подписке, если есть тег VPN
             $vpnTag = $payment->getVpnTag();
 
             if ($vpnTag) {
@@ -284,7 +280,6 @@ final class YooKassaService
                 }
             }
 
-            // Формируем сообщение с помощью blade шаблона
             $successMessage = View::make('telegram.payment-success', [
                 'amount' => $payment->amount,
                 'description' => $payment->description,
@@ -293,7 +288,6 @@ final class YooKassaService
 
             $keyboard = InlineKeyboardMarkup::make();
 
-            // Добавляем кнопку "Перенести в приложение" если есть тег VPN
             if ($vpnTag) {
                 $userConfigImportLink = $this->xuiService->getSubLink($vpnTag, $user->uuid, 'import');
                 $keyboard->addRow(InlineKeyboardButton::make('📲 Перенести в приложение', url: $userConfigImportLink));
@@ -302,12 +296,10 @@ final class YooKassaService
             $keyboard->addRow(InlineKeyboardButton::make('🏠 Главное меню', callback_data: 'main_menu'));
             $sentMessage = $bot->sendMessage(trim($successMessage), chat_id: $user->tg_id, reply_markup: $keyboard);
 
-            // Сохраняем ID нового сообщения
             if ($sentMessage && $sentMessage->message_id) {
                 $bot->setGlobalData('vpn_message_ids', [$sentMessage->message_id]);
             }
 
-            // Помечаем в метаданных, что уведомление отправлено
             $metadata['notification_sent'] = true;
             $payment->update(['metadata' => $metadata]);
 
@@ -350,7 +342,6 @@ final class YooKassaService
      */
     public function handleWebhook(array $data): ?Payment
     {
-        Log::info('Payment Data from webhook: ' . json_encode($data));
         $event = $data['event'] ?? null;
         $paymentData = $data['object'] ?? null;
 
