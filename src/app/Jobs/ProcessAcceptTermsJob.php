@@ -39,7 +39,9 @@ final class ProcessAcceptTermsJob implements ShouldQueue
         UserService $userService,
         XuiService $xuiService,
         VpnConnectionService $vpnConnectionService,
+        SettingService $settingService,
     ): void {
+        $this->settingService = $settingService;
         $bot = $this->createBot();
 
         try {
