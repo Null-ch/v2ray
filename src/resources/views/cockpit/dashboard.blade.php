@@ -116,100 +116,37 @@
     </div>
 
     <div class="row">
-        <div class="col-md-6">
-            <div class="card">
-                <div class="card-header">
-                    <h3 class="card-title">Динамика выручки (7 дней)</h3>
-                </div>
-                <div class="card-body">
-                    <canvas id="revenueChart" height="180"></canvas>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-6">
+        <div class="col-12">
             <div class="card">
                 <div class="card-header">
                     <h3 class="card-title">Доход по тарифам</h3>
                 </div>
-                <div class="card-body">
-                    @if(!empty($pricingLabels))
-                        <canvas id="pricingChart" height="180"></canvas>
-                    @else
-                        <p class="mb-0 text-muted">Пока нет данных по тарифам.</p>
-                    @endif
+                <div class="card-body table-responsive p-0">
+                    <table class="table table-hover text-nowrap">
+                        <thead>
+                            <tr>
+                                <th>Название тарифа</th>
+                                <th>Количество платежей</th>
+                                <th>Доход по тарифу</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @forelse($pricingTableData as $pricing)
+                                <tr>
+                                    <td>{{ $pricing['title'] }}</td>
+                                    <td>{{ $pricing['payments_count'] }}</td>
+                                    <td>{{ number_format($pricing['total_amount'], 2, '.', ' ') }} ₽</td>
+                                </tr>
+                            @empty
+                                <tr>
+                                    <td colspan="3" class="text-center">Пока нет данных по тарифам.</td>
+                                </tr>
+                            @endforelse
+                        </tbody>
+                    </table>
                 </div>
             </div>
         </div>
     </div>
 @endsection
-
-@push('scripts')
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-    <script>
-        (function () {
-            const dailyRevenue = @json($dailyRevenue->pluck('total'));
-            const dailyLabels = @json($dailyRevenue->pluck('date')->map(fn($d) => \Illuminate\Support\Carbon::parse($d)->format('d.m')));
-
-            const pricingLabels = @json($pricingLabels);
-            const pricingAmounts = @json($pricingAmounts);
-
-            const ctxRevenue = document.getElementById('revenueChart');
-            if (ctxRevenue && dailyLabels.length) {
-                new Chart(ctxRevenue, {
-                    type: 'line',
-                    data: {
-                        labels: dailyLabels,
-                        datasets: [{
-                            label: 'Выручка, ₽',
-                            data: dailyRevenue,
-                            borderColor: 'rgba(54, 162, 235, 1)',
-                            backgroundColor: 'rgba(54, 162, 235, 0.2)',
-                            tension: 0.3,
-                            fill: true,
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        plugins: {
-                            legend: {display: true},
-                        },
-                        scales: {
-                            y: {
-                                beginAtZero: true
-                            }
-                        }
-                    }
-                });
-            }
-
-            const ctxPricing = document.getElementById('pricingChart');
-            if (ctxPricing && pricingLabels.length) {
-                new Chart(ctxPricing, {
-                    type: 'doughnut',
-                    data: {
-                        labels: pricingLabels,
-                        datasets: [{
-                            data: pricingAmounts,
-                            backgroundColor: [
-                                'rgba(75, 192, 192, 0.6)',
-                                'rgba(255, 159, 64, 0.6)',
-                                'rgba(153, 102, 255, 0.6)',
-                                'rgba(255, 205, 86, 0.6)',
-                                'rgba(201, 203, 207, 0.6)',
-                            ],
-                            borderColor: 'rgba(255, 255, 255, 1)',
-                            borderWidth: 1,
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        plugins: {
-                            legend: {position: 'bottom'},
-                        },
-                    }
-                });
-            }
-        })();
-    </script>
-@endpush
 
