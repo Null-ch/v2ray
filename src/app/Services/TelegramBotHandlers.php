@@ -70,7 +70,11 @@ final readonly class TelegramBotHandlers
                 return;
             }
 
-            $userTags = $user->subscriptions->xui->pluck('tag')->all();
+            $userTags = $user->subscriptions
+                ->loadMissing('xui')
+                ->pluck('xui.tag')
+                ->filter()
+                ->all();
 
             if (empty($userTags)) {
                 $bot->sendMessage('❌ У вас нет активных подписок для реферальной программы');
@@ -99,7 +103,11 @@ final readonly class TelegramBotHandlers
                 return;
             }
 
-            $userTags = $user->subscriptions->pluck('tag')->all();
+            $userTags = $user->subscriptions
+                ->loadMissing('xui')
+                ->pluck('xui.tag')
+                ->filter()
+                ->all();
 
             if (empty($userTags)) {
                 $bot->sendMessage('❌ У вас нет активных подписок для реферальной программы');
@@ -192,7 +200,13 @@ final readonly class TelegramBotHandlers
             // Получаем активные теги пользователя
             $activeTags = [];
             if ($user) {
-                $activeTags = $user->subscriptions->pluck('tag')->map(fn($tag) => $tag->value)->toArray();
+                $activeTags = $user->subscriptions()
+                    ->with('xui')
+                    ->get()
+                    ->pluck('xui.tag')
+                    ->filter()
+                    ->map(fn(XuiTag $tag) => $tag->value)
+                    ->toArray();
             }
 
             $buttons = Xui::activeButtons($activeTags);
@@ -225,7 +239,11 @@ final readonly class TelegramBotHandlers
             }
 
             $userTags = $user->subscriptions()
-                ->pluck('tag')
+                ->with('xui')
+                ->get()
+                ->pluck('xui.tag')
+                ->filter()
+                ->map(fn(XuiTag $tag) => $tag->value)
                 ->toArray();
 
             $keyboard = InlineKeyboardMarkup::make();
@@ -272,7 +290,12 @@ final readonly class TelegramBotHandlers
             $user = $this->userService->findUserByTelegramId($telegramId);
 
             $keyboard = XuiTag::keyboardFromValues(
-                $user->subscriptions->pluck('tag')->all(),
+                $user->subscriptions()
+                    ->with('xui')
+                    ->get()
+                    ->pluck('xui.tag')
+                    ->filter()
+                    ->all(),
                 2
             );
 
@@ -339,7 +362,12 @@ final readonly class TelegramBotHandlers
                 }
 
                 $keyboard = XuiTag::keyboardFromValues(
-                    $user->subscriptions->pluck('tag')->all(),
+                    $user->subscriptions()
+                        ->with('xui')
+                        ->get()
+                        ->pluck('xui.tag')
+                        ->filter()
+                        ->all(),
                     2
                 );
 
@@ -530,9 +558,12 @@ final readonly class TelegramBotHandlers
                 }
 
                 // Проверяем, что у пользователя есть этот тег
-                $userHasTag = $user->subscriptions->contains(function ($subscription) use ($code) {
-                    return $subscription->tag->value === $code;
-                });
+                $userHasTag = $user->subscriptions()
+                    ->with('xui')
+                    ->get()
+                    ->contains(function ($subscription) use ($code) {
+                        return $subscription->xui && $subscription->xui->tag?->value === $code;
+                    });
 
                 if (!$userHasTag) {
                     $bot->sendMessage('❌ У вас нет активной подписки для этой страны');
