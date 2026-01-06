@@ -124,39 +124,14 @@ final readonly class TelegramBotHandlers
         /**
          * Обработка принятия соглашений
          */
-        $this->bot->onCallbackQueryData('accept_terms', function (Nutgram $bot) {
+        $this->bot->onCallbackQueryData('accept_terms:{code}', function (Nutgram $bot, string $code) {
             $bot->answerCallbackQuery($bot->callbackQuery()->id, '⏳ Создаю VPN конфигурацию, пожалуйста, подождите...');
 
             try {
                 $telegramId = $bot->userId();
                 $username = $bot->user()->username;
                 $name = $bot->user()->first_name;
-                
-                // Получаем referrerId из callback_data
-                $referrerId = null;
-                $callbackData = $bot->callbackQuery()->data ?? '';
-                
-                Log::info('Accept terms callback - checking callback_data', [
-                    'telegram_id' => $telegramId,
-                    'callback_data' => $callbackData,
-                ]);
-                
-                // Проверяем формат accept_terms:123
-                if (preg_match('/^accept_terms:(\d+)$/', $callbackData, $matches)) {
-                    $referrerId = (int) $matches[1];
-                    Log::info('Referrer ID extracted from callback_data', [
-                        'telegram_id' => $telegramId,
-                        'referrer_id' => $referrerId,
-                    ]);
-                }
-
-                Log::info('Accept terms callback', [
-                    'telegram_id' => $telegramId,
-                    'referrer_id' => $referrerId,
-                    'callback_data' => $callbackData,
-                    'username' => $username,
-                    'name' => $name,
-                ]);
+                $referrerId = $code;
 
                 ProcessAcceptTermsJob::dispatch(
                     telegramId: $telegramId,
@@ -669,7 +644,7 @@ final readonly class TelegramBotHandlers
                     'callback_data' => $callbackData,
                     'referrer_id' => $referrerId,
                 ]);
-                
+
                 $keyboard = InlineKeyboardMarkup::make()->addRow(InlineKeyboardButton::make('✅Принять', callback_data: $callbackData));
                 $messageId = $this->vpnConnectionService->sendWelcomeMessageForNewUser($bot, $keyboard);
                 $bot->setGlobalData('vpn_message_ids', [$messageId]);
