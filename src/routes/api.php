@@ -12,10 +12,7 @@ use App\Http\Controllers\TelegramWebhookController;
 Route::post('test', [TestController::class, 'create']);
 Route::put('test/{id}', [TestController::class, 'update']);
 
-if (!empty(config('services.telegram.bot_token'))) {
-    Log::info('Webhook hit', $request->all());
-    Route::post('telegram/webhook', [TelegramWebhookController::class, 'handle']);
-}
+Route::post('telegram/webhook', [TelegramWebhookController::class, 'handle']);
 
 // Payment API routes
 Route::prefix('payment')->group(function () {
