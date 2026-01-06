@@ -10,6 +10,7 @@ use App\Http\Controllers\Cockpit\CockpitBalanceController;
 use App\Http\Controllers\Cockpit\CockpitPricingController;
 use App\Http\Controllers\Cockpit\CockpitReferralController;
 use App\Http\Controllers\Cockpit\CockpitSubscriptionController;
+use App\Http\Controllers\Cockpit\CockpitSettingController;
 
 Route::get('/', function () {
     return view('welcome');
@@ -48,6 +49,9 @@ Route::prefix('cockpit')->group(function () {
 
         // Subscription CRUD routes
         Route::resource('subscription', CockpitSubscriptionController::class);
+
+        // Settings CRUD routes
+        Route::resource('setting', CockpitSettingController::class);
     });
 });
 

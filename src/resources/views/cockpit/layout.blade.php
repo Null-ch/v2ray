@@ -97,6 +97,12 @@
                             <p>Тарифы</p>
                         </a>
                     </li>
+                    <li class="nav-item">
+                        <a href="{{ route('cockpit.setting.index') }}" class="nav-link {{ request()->routeIs('cockpit.setting.*') ? 'active' : '' }}">
+                            <i class="nav-icon fas fa-sliders-h"></i>
+                            <p>Настройки</p>
+                        </a>
+                    </li>
                 </ul>
             </nav>
         </div>

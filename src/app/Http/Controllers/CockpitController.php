@@ -4,6 +4,10 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
+use App\Models\Payment;
+use App\Models\Subscription;
+use App\Models\User;
+use App\Models\Xui;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -83,6 +87,40 @@ class CockpitController extends Controller
      */
     public function dashboard(): View
     {
-        return view('cockpit.dashboard');
+        $totalUsers = User::count();
+        $activeUsers = Subscription::query()
+            ->whereNotNull('expires_at')
+            ->where('expires_at', '>', now())
+            ->distinct('user_id')
+            ->count('user_id');
+
+        $totalSubscriptions = Subscription::count();
+
+        $totalXui = Xui::count();
+        $activeXui = Xui::query()->where('is_active', true)->count();
+
+        $totalPayments = Payment::count();
+        $succeededPayments = Payment::query()
+            ->where('status', Payment::STATUS_SUCCEEDED)
+            ->count();
+        $totalRevenue = Payment::query()
+            ->where('status', Payment::STATUS_SUCCEEDED)
+            ->sum('amount');
+        $todayRevenue = Payment::query()
+            ->where('status', Payment::STATUS_SUCCEEDED)
+            ->whereDate('created_at', now()->toDateString())
+            ->sum('amount');
+
+        return view('cockpit.dashboard', compact(
+            'totalUsers',
+            'activeUsers',
+            'totalSubscriptions',
+            'totalXui',
+            'activeXui',
+            'totalPayments',
+            'succeededPayments',
+            'totalRevenue',
+            'todayRevenue',
+        ));
     }
 }
