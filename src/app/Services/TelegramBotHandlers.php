@@ -53,9 +53,6 @@ final readonly class TelegramBotHandlers
         });
 
         $this->bot->onCommand('start', function (Nutgram $bot) {
-            Log::info('Start command detected via onCommand', [
-                'telegram_id' => $bot->userId(),
-            ]);
             $this->handleStartCommand($bot);
         });
 
@@ -117,7 +114,40 @@ final readonly class TelegramBotHandlers
         });
 
         /**
-         * Обработка принятия соглашений
+         * Обработка принятия соглашений (без реферального кода)
+         */
+        $this->bot->onCallbackQueryData('accept_terms', function (Nutgram $bot) {
+            $bot->answerCallbackQuery($bot->callbackQuery()->id, '⏳ Создаю VPN конфигурацию, пожалуйста, подождите...');
+
+            try {
+                $telegramId = $bot->userId();
+                $username = $bot->user()->username;
+                $name = $bot->user()->first_name;
+
+                ProcessAcceptTermsJob::dispatch(
+                    telegramId: $telegramId,
+                    username: $username,
+                    name: $name,
+                    referrerId: null
+                );
+
+                Log::info('ProcessAcceptTermsJob dispatched (no referrer)', [
+                    'telegram_id' => $telegramId,
+                ]);
+            } catch (\Throwable $e) {
+                Log::error('Ошибка при постановке задачи accept_terms (без кода) в очередь: ' . $e->getMessage(), [
+                    'trace' => $e->getTraceAsString(),
+                ]);
+                try {
+                    $bot->sendMessage('❌ Произошла ошибка при обработке запроса. Пожалуйста, попробуйте позже.');
+                } catch (\Throwable $sendError) {
+                    Log::error('Не удалось отправить сообщение об ошибке: ' . $sendError->getMessage());
+                }
+            }
+        });
+
+        /**
+         * Обработка принятия соглашений (с реферальным кодом)
          */
         $this->bot->onCallbackQueryData('accept_terms:{code}', function (Nutgram $bot, string $code) {
             $bot->answerCallbackQuery($bot->callbackQuery()->id, '⏳ Создаю VPN конфигурацию, пожалуйста, подождите...');
@@ -126,7 +156,7 @@ final readonly class TelegramBotHandlers
                 $telegramId = $bot->userId();
                 $username = $bot->user()->username;
                 $name = $bot->user()->first_name;
-                $referrerId = $code;
+                $referrerId = (int)$code;
 
                 ProcessAcceptTermsJob::dispatch(
                     telegramId: $telegramId,
@@ -626,10 +656,6 @@ final readonly class TelegramBotHandlers
                 ]);
             }
         }
-
-        Log::info('=== START COMMAND HANDLER FINISHED ===', [
-            'telegram_id' => $telegramId,
-        ]);
     }
 
     private function getMainMenuButton(): InlineKeyboardButton
