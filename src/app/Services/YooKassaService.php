@@ -6,7 +6,6 @@ namespace App\Services;
 
 use App\Models\User;
 use App\Models\Payment;
-use App\Enums\XuiTag;
 use App\Helpers\MillisecondsHelper;
 use Illuminate\Support\Arr;
 use App\Clients\YooKassaClient;
@@ -25,7 +24,6 @@ final class YooKassaService
         private readonly YooKassaClient $client,
         private readonly TelegramService $telegramService,
         private readonly XuiService $xuiService,
-        private readonly UserTagService $userTagService,
     ) {}
 
     /**
@@ -202,8 +200,7 @@ final class YooKassaService
                 ];
 
                 $xuiModel = $this->xuiService->getXuiModelByTag($tag);
-                $this->xuiService->addClient($tag, $xuiModel->inbound_id, $client);
-                $this->userTagService->addTagToUser($user->id, XuiTag::from($tag));
+                $this->xuiService->addClient($tag, $xuiModel->inbound_id, $client, $user->id);
             }
 
             $payment->update(['processed_at' => now()]);

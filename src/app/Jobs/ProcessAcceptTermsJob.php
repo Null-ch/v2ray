@@ -4,17 +4,19 @@ declare(strict_types=1);
 
 namespace App\Jobs;
 
+use Carbon\Carbon;
 use App\Enums\XuiTag;
 use App\Models\Referral;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Str;
+use App\DTO\SubscriptionDTO;
 use App\Services\XuiService;
 use Illuminate\Bus\Queueable;
 use SergiX44\Nutgram\Nutgram;
-use App\Services\UserTagService;
 use App\Services\User\UserService;
 use App\Helpers\MillisecondsHelper;
 use Illuminate\Support\Facades\Log;
+use App\Services\SubscriptionService;
 use App\Services\VpnConnectionService;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Queue\InteractsWithQueue;
@@ -38,7 +40,7 @@ final class ProcessAcceptTermsJob implements ShouldQueue
         UserService $userService,
         XuiService $xuiService,
         VpnConnectionService $vpnConnectionService,
-        UserTagService $userTagService
+        SubscriptionService $subscriptionService
     ): void {
         $bot = $this->createBot();
 
@@ -51,7 +53,7 @@ final class ProcessAcceptTermsJob implements ShouldQueue
             }
 
             $this->processReferrerBonus($user, $userService, $xuiService);
-            $this->createUserSubscription($user, $xuiService, $userTagService);
+            $this->createUserSubscription($user, $xuiService, $subscriptionService);
             $this->sendInstructions($bot, $vpnConnectionService, $xuiService, $user);
 
             $bot->deleteGlobalData('referrer_id');
@@ -166,28 +168,18 @@ final class ProcessAcceptTermsJob implements ShouldQueue
         $xuiService->updateClient($tag, $inboundId, $uuid, $client);
     }
 
-    protected function createUserSubscription($user, XuiService $xuiService, UserTagService $userTagService): void
+    protected function createUserSubscription($user, XuiService $xuiService, SubscriptionService $subscriptionService): void
     {
         $xuiModel = $xuiService->getXuiModelByTag('NL');
         $expiryTimeMs = MillisecondsHelper::addDaysInMillisecondsToNow(7);
         $inboundId = $xuiModel->inbound_id;
         $subscriptionName = Str::substr($user->uuid, 0, 6) . $user->id;
-
         $createResult = $xuiService->addClient('NL', $inboundId, [
             'id' => $user->uuid,
             'email' => $subscriptionName,
             'expiryTime' => $expiryTimeMs,
             'subId' => $user->uuid,
-        ]);
-
-        $xuiService->updateClient('NL', $inboundId, $user->uuid, [
-            'id' => $user->uuid,
-            'email' => $subscriptionName,
-            'expiryTime' => $expiryTimeMs,
-            'subId' => $user->uuid,
-        ]);
-
-        $userTagService->addTagToUser($user->id, XuiTag::NL);
+        ], $user->id);
 
         if (!$createResult['ok']) {
             throw new \RuntimeException('Не удалось создать конфигурацию: ' . ($createResult['message'] ?? 'Unknown error'));

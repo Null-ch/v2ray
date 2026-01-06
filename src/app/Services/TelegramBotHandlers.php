@@ -70,7 +70,7 @@ final readonly class TelegramBotHandlers
                 return;
             }
 
-            $userTags = $user->tags->pluck('tag')->all();
+            $userTags = $user->subscriptions->pluck('tag')->all();
 
             if (empty($userTags)) {
                 $bot->sendMessage('❌ У вас нет активных подписок для реферальной программы');
@@ -99,7 +99,7 @@ final readonly class TelegramBotHandlers
                 return;
             }
 
-            $userTags = $user->tags->pluck('tag')->all();
+            $userTags = $user->subscriptions->pluck('tag')->all();
 
             if (empty($userTags)) {
                 $bot->sendMessage('❌ У вас нет активных подписок для реферальной программы');
@@ -192,7 +192,7 @@ final readonly class TelegramBotHandlers
             // Получаем активные теги пользователя
             $activeTags = [];
             if ($user) {
-                $activeTags = $user->tags->pluck('tag')->map(fn($tag) => $tag->value)->toArray();
+                $activeTags = $user->subscriptions->pluck('tag')->map(fn($tag) => $tag->value)->toArray();
             }
 
             $buttons = Xui::activeButtons($activeTags);
@@ -224,7 +224,7 @@ final readonly class TelegramBotHandlers
                 return;
             }
 
-            $userTags = $user->tags()
+            $userTags = $user->subscriptions()
                 ->pluck('tag')
                 ->toArray();
 
@@ -272,7 +272,7 @@ final readonly class TelegramBotHandlers
             $user = $this->userService->findUserByTelegramId($telegramId);
 
             $keyboard = XuiTag::keyboardFromValues(
-                $user->tags->pluck('tag')->all(),
+                $user->subscriptions->pluck('tag')->all(),
                 2
             );
 
@@ -339,7 +339,7 @@ final readonly class TelegramBotHandlers
                 }
 
                 $keyboard = XuiTag::keyboardFromValues(
-                    $user->tags->pluck('tag')->all(),
+                    $user->subscriptions->pluck('tag')->all(),
                     2
                 );
 
@@ -530,8 +530,8 @@ final readonly class TelegramBotHandlers
                 }
 
                 // Проверяем, что у пользователя есть этот тег
-                $userHasTag = $user->tags->contains(function ($userTag) use ($code) {
-                    return $userTag->tag->value === $code;
+                $userHasTag = $user->subscriptions->contains(function ($subscription) use ($code) {
+                    return $subscription->tag->value === $code;
                 });
 
                 if (!$userHasTag) {
@@ -617,7 +617,7 @@ final readonly class TelegramBotHandlers
                 $messageIds = $bot->getGlobalData('vpn_message_ids', []);
                 $this->clearChat($messageIds, $bot);
 
-                $userTags = $user->tags()
+                $userTags = $user->subscriptions()
                     ->pluck('tag')
                     ->toArray();
 
@@ -657,6 +657,7 @@ final readonly class TelegramBotHandlers
             }
         }
     }
+
 
     private function getMainMenuButton(): InlineKeyboardButton
     {

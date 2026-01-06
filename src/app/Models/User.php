@@ -3,8 +3,8 @@
 namespace App\Models;
 
 use App\Models\Balance;
-use App\Models\UserTag;
 use App\Models\Referral;
+use App\Models\Subscription;
 use Illuminate\Support\Str;
 use App\Models\Configuration;
 use Illuminate\Notifications\Notifiable;
@@ -91,11 +91,11 @@ class User extends Authenticatable
     }
 
     /**
-     * User tags
+     * User subscriptions
      */
-    public function tags()
+    public function subscriptions()
     {
-        return $this->hasMany(UserTag::class);
+        return $this->hasMany(Subscription::class);
     }
 
     /**

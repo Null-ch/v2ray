@@ -8,6 +8,7 @@ use App\Http\Controllers\Cockpit\CockpitUserController;
 use App\Http\Controllers\Cockpit\CockpitBalanceController;
 use App\Http\Controllers\Cockpit\CockpitReferralController;
 use App\Http\Controllers\Cockpit\CockpitPricingController;
+use App\Http\Controllers\Cockpit\CockpitSubscriptionController;
 use App\Http\Controllers\PaymentController;
 
 Route::get('/', function () {
@@ -46,6 +47,9 @@ Route::prefix('cockpit')->group(function () {
 
         // Pricing CRUD routes
         Route::resource('pricing', CockpitPricingController::class);
+
+        // Subscription CRUD routes
+        Route::resource('subscription', CockpitSubscriptionController::class);
     });
 });
 

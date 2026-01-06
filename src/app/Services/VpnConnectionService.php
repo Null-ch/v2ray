@@ -57,7 +57,7 @@ final readonly class VpnConnectionService
             }
         }
 
-        $hasVpn = empty($userTags = $user->tags->pluck('tag')->all()) ? false : true;
+        $hasVpn = empty($user->subscriptions->pluck('tag')->all()) ? false : true;
         $message = View::make('telegram.welcome-back', [
             'name' => $name,
             'referralLink' => $referralLink,

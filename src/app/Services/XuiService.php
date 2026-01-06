@@ -10,7 +10,7 @@ use Illuminate\Support\Arr;
 use App\Clients\XuiApiClient;
 use App\Helpers\MillisecondsHelper;
 use App\Repositories\XuiRepository;
-use Illuminate\Support\Facades\Log;
+use App\Services\SubscriptionService;
 
 final class XuiService
 {
@@ -20,7 +20,10 @@ final class XuiService
     /** @var array<string, Xui> */
     private array $modelCache = [];
 
-    public function __construct(private readonly XuiRepository $xuiRepository) {}
+    public function __construct(
+        private readonly XuiRepository $xuiRepository,
+        private readonly SubscriptionService $subscriptionService
+    ) {}
 
     private function getXuiModel(string $tag): Xui
     {
@@ -139,10 +142,17 @@ final class XuiService
      * 
      * @return array
      */
-    public function addClient(string $tag, int $inboundId, array $clientData): array
+    public function addClient(string $tag, int $inboundId, array $clientData, ?int $userId = null): array
     {
         $client = $this->getXuiApiClient($tag);
-        return $client->addClient($inboundId, $clientData);
+        $result = $client->addClient($inboundId, $clientData);
+
+        if (($result['ok'] ?? false) && $userId !== null) {
+            $xuiModel = $this->getXuiModel($tag);
+            $this->subscriptionService->syncFromClientData($userId, $tag, $xuiModel->id, $clientData);
+        }
+
+        return $result;
     }
 
     /**
@@ -155,10 +165,20 @@ final class XuiService
      * 
      * @return array
      */
-    public function updateClient(string $tag, int $inboundId, string $uuid, array $clientData): array
+    public function updateClient(string $tag, int $inboundId, string $uuid, array $clientData, ?int $userId = null): array
     {
         $client = $this->getXuiApiClient($tag);
-        return $client->updateClient($inboundId, $uuid, $clientData);
+        $result = $client->updateClient($inboundId, $uuid, $clientData);
+
+        if (($result['ok'] ?? false) && $userId !== null) {
+            // Обновляем подписку, используя фактические данные клиента
+            $dataForSync = $clientData;
+            $dataForSync['id'] = $uuid;
+            $xuiModel = $this->getXuiModel($tag);
+            $this->subscriptionService->syncFromClientData($userId, $tag, $xuiModel->id, $dataForSync);
+        }
+
+        return $result;
     }
 
     /**
