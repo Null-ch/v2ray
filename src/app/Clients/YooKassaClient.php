@@ -29,35 +29,21 @@ final class YooKassaClient
     ): PaymentInterface {
         try {
             $builder = CreatePaymentRequest::builder();
-
-            // Сумма и валюта
             $builder->setAmount([
                 'value' => number_format($amount, 2, '.', ''),
                 'currency' => 'RUB',
             ]);
 
-            // Метаданные (в том числе описание)
             $metadata = array_merge($metadata, ['description' => $description]);
             $builder->setMetadata($metadata);
-
-            // Подтверждение через редирект
             $builder->setConfirmation([
                 'type' => 'redirect',
                 'return_url' => $returnUrl ?? route('payment.return'),
             ]);
 
-            $builder->setCapture(true); // автозахват
-
+            $builder->setCapture(true);
             $request = $builder->build();
-
-            // В SDK 3.x createPayment уже возвращает PaymentInterface
             $payment = $this->client->createPayment($request);
-
-            Log::info('YooKassa payment created', [
-                'payment_id' => $payment->getId(),
-                'amount' => $amount,
-                'status' => $payment->getStatus(),
-            ]);
 
             return $payment;
         } catch (\Exception $e) {
@@ -142,7 +128,6 @@ final class YooKassaClient
     public function cancelPayment(string $paymentId, ?float $amount = null): ?PaymentInterface
     {
         try {
-            // SDK 3.x позволяет просто вызвать cancelPayment на клиенте
             $payment = $this->client->cancelPayment($paymentId, $amount);
 
             Log::info('YooKassa payment cancelled', [

@@ -77,18 +77,11 @@ final class XuiApiClient
             ]);
 
             $body = $this->parseResponse($response);
-
             $success = $response->getStatusCode() === 200 && ($body['success'] ?? false);
 
             if ($success) {
                 $this->isAuthenticated = true;
             }
-
-            Log::info('XUI Login result:', [
-                'status_code' => $response->getStatusCode(),
-                'success' => $success,
-                'response' => $body,
-            ]);
 
             return [
                 'ok' => $success,
