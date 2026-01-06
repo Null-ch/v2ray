@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Models;
 
-use App\Enums\XuiTag;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -18,7 +17,6 @@ class Subscription extends Model
         'xui_id',
         'uuid',
         'expires_at',
-        'tag',
     ];
 
     /**
@@ -32,7 +30,6 @@ class Subscription extends Model
             'user_id' => 'integer',
             'xui_id' => 'integer',
             'expires_at' => 'datetime',
-            'tag' => XuiTag::class,
         ];
     }
 

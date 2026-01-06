@@ -14,7 +14,6 @@ return new class extends Migration
             $table->unsignedBigInteger('xui_id');
             $table->string('uuid');
             $table->dateTime('expires_at')->nullable();
-            $table->string('tag');
             $table->timestamps();
 
             $table->foreign('user_id')
