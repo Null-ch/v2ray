@@ -128,7 +128,7 @@ final class ProcessPaymentCreationJob implements ShouldQueue
                 $amountMinor = (int)round(((float)$pricing->price) * 100);
                 $message = $bot->sendInvoice(
                     chat_id: (string)$this->telegramId,
-                    title: "Оплата VPN {$tag->labelWithFlag()}",
+                    title: "Оплата подписки CapyVPN {$tag->labelWithFlag()}",
                     description: $description,
                     payload: "payment:{$payment->id}",
                     provider_token: (string)config('services.telegram.provider_token'),
