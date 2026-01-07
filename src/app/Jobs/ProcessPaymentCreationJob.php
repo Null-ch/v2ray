@@ -19,7 +19,7 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use SergiX44\Nutgram\Telegram\Types\Keyboard\InlineKeyboardButton;
 use SergiX44\Nutgram\Telegram\Types\Keyboard\InlineKeyboardMarkup;
-use SergiX44\Nutgram\Telegram\Types\Payments\LabeledPrice;
+use SergiX44\Nutgram\Telegram\Types\Payment\LabeledPrice;
 use App\Models\Payment;
 
 final class ProcessPaymentCreationJob implements ShouldQueue
@@ -37,6 +37,8 @@ final class ProcessPaymentCreationJob implements ShouldQueue
         SettingService $settingService,
         YooKassaService $yooKassaService,
     ): void {
+        /** @var Payment|null $createdTelegramInvoicePayment */
+        $createdTelegramInvoicePayment = null;
         try {
             $token = config('services.telegram.bot_token');
             $bot = new Nutgram($token);
@@ -57,6 +59,22 @@ final class ProcessPaymentCreationJob implements ShouldQueue
                 ->where('status', \App\Models\Payment::STATUS_PENDING)
                 ->latest()
                 ->first();
+
+            if ($activePayment) {
+                // Если это "зависший" локальный платеж (invoice не успели отправить), авто-отменяем и продолжаем
+                $isStaleLocal = !$activePayment->yookassa_payment_id
+                    && !$activePayment->telegram_message_id
+                    && $activePayment->created_at !== null
+                    && $activePayment->created_at->lt(now()->subMinutes(5));
+
+                if ($isStaleLocal) {
+                    $activePayment->update([
+                        'status' => \App\Models\Payment::STATUS_CANCELED,
+                        'yookassa_status' => 'canceled',
+                    ]);
+                    $activePayment = null;
+                }
+            }
 
             if ($activePayment) {
                 $bot->sendMessage('⚠️ У вас уже есть активный платеж. Дождитесь завершения оплаты.', (string) $this->telegramId);
@@ -101,6 +119,7 @@ final class ProcessPaymentCreationJob implements ShouldQueue
                     'status' => Payment::STATUS_PENDING,
                     'metadata' => $metadata,
                 ]);
+                $createdTelegramInvoicePayment = $payment;
 
                 // Удаляем предыдущие сообщения
                 $messageIds = $bot->getGlobalData('vpn_message_ids', []);
@@ -164,6 +183,21 @@ final class ProcessPaymentCreationJob implements ShouldQueue
                 }
             }
         } catch (\Throwable $e) {
+            // Если упали после создания локального платежа для invoice — не оставляем pending
+            try {
+                if ($createdTelegramInvoicePayment instanceof Payment && $createdTelegramInvoicePayment->isPending()) {
+                    $metadata = $createdTelegramInvoicePayment->metadata ?? [];
+                    $metadata['invoice_error'] = $e->getMessage();
+                    $createdTelegramInvoicePayment->update([
+                        'status' => Payment::STATUS_CANCELED,
+                        'yookassa_status' => 'canceled',
+                        'metadata' => $metadata,
+                    ]);
+                }
+            } catch (\Throwable) {
+                // игнорируем вторичные ошибки
+            }
+
             Log::error('Ошибка при создании платежа в Job: ' . $e->getMessage(), [
                 'trace' => $e->getTraceAsString(),
                 'telegram_id' => $this->telegramId,
