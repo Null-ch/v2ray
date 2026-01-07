@@ -25,6 +25,8 @@ class Payment extends Model
         'yookassa_status',
         'confirmation_url',
         'telegram_message_id',
+        'provider_payment_charge_id',
+        'telegram_payment_charge_id',
         'metadata',
         'processed_at',
     ];

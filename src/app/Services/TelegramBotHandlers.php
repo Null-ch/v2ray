@@ -58,6 +58,84 @@ final readonly class TelegramBotHandlers
             $this->handleStartCommand($bot);
         });
 
+        // Ответ на Shipping Query (для цифровых товаров доставка не требуется)
+        $this->bot->onShippingQuery(function (Nutgram $bot) {
+            try {
+                $bot->answerShippingQuery(ok: true, shipping_options: []);
+            } catch (\Throwable $e) {
+                Log::error('Failed to answerShippingQuery', ['error' => $e->getMessage()]);
+            }
+        });
+
+        // Ответ на PreCheckout Query (обязателен в течение 10 секунд)
+        $this->bot->onPreCheckoutQuery(function (Nutgram $bot) {
+            try {
+                $bot->answerPreCheckoutQuery(ok: true);
+            } catch (\Throwable $e) {
+                Log::error('Failed to answerPreCheckoutQuery', ['error' => $e->getMessage()]);
+            }
+        });
+
+        // Обработка успешной оплаты через Telegram Payments
+        $this->bot->onMessage(function (Nutgram $bot) {
+            $successfulPayment = $bot->message()?->successful_payment;
+            if ($successfulPayment === null) {
+                return;
+            }
+
+            try {
+                $payload = (string)($successfulPayment->invoice_payload ?? '');
+                $paymentId = null;
+                if (str_starts_with($payload, 'payment:')) {
+                    $paymentId = (int)substr($payload, strlen('payment:'));
+                }
+
+                if (!$paymentId) {
+                    Log::warning('SuccessfulPayment received without valid payload', ['payload' => $payload]);
+                    return;
+                }
+
+                /** @var \App\Models\Payment|null $payment */
+                $payment = \App\Models\Payment::find($paymentId);
+                if (!$payment) {
+                    Log::warning('Payment not found for SuccessfulPayment', ['payment_id' => $paymentId]);
+                    return;
+                }
+
+                // Валидация владельца (tg_id)
+                $tgId = (string)$bot->userId();
+                if ((string)($payment->user?->tg_id ?? '') !== $tgId) {
+                    Log::warning('Telegram user does not match payment owner', [
+                        'payment_id' => $payment->id,
+                        'payload_tg_id' => $tgId,
+                        'owner_tg_id' => $payment->user?->tg_id,
+                    ]);
+                }
+
+                // Обновляем статус и сохраняем идентификаторы транзакций провайдера
+                $payment->update([
+                    'status' => \App\Models\Payment::STATUS_SUCCEEDED,
+                    'yookassa_status' => 'succeeded',
+                    'provider_payment_charge_id' => (string)($successfulPayment->provider_payment_charge_id ?? ''),
+                    'telegram_payment_charge_id' => (string)($successfulPayment->telegram_payment_charge_id ?? ''),
+                ]);
+
+                // Финализация: продление/подключение услуги и уведомление
+                try {
+                    /** @var \App\Services\YooKassaService $yk */
+                    $yk = app(\App\Services\YooKassaService::class);
+                    $yk->handleSuccessfulPayment($payment->fresh());
+                } catch (\Throwable $e) {
+                    Log::error('Failed to finalize successful Telegram payment', [
+                        'payment_id' => $payment->id,
+                        'error' => $e->getMessage(),
+                    ]);
+                }
+            } catch (\Throwable $e) {
+                Log::error('Error handling SuccessfulPayment', ['error' => $e->getMessage()]);
+            }
+        });
+
         /**
          * Обработка команды /invite
          */

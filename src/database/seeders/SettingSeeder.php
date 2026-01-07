@@ -45,6 +45,14 @@ class SettingSeeder extends Seeder
                 'description' => null,
                 'is_system' => true,
             ],
+            [
+                'key' => 'payments.use_telegram_invoice',
+                'value' => true,
+                'type' => 'bool',
+                'group' => null,
+                'description' => null,
+                'is_system' => true,
+            ],
         ];
 
         foreach ($settings as $setting) {
