@@ -31,14 +31,14 @@ use SergiX44\Nutgram\Telegram\Types\Keyboard\InlineKeyboardMarkup;
  *
  * Или используйте этот класс для организации обработчиков
  */
-final readonly class TelegramBotHandlers
+final class TelegramBotHandlers
 {
     public function __construct(
-        private Nutgram $bot,
-        private VpnConnectionService $vpnConnectionService,
-        private UserService $userService,
-        private PricingService $pricingService,
-        private SettingService $settingService,
+        private readonly Nutgram $bot,
+        private readonly VpnConnectionService $vpnConnectionService,
+        private readonly UserService $userService,
+        private readonly PricingService $pricingService,
+        private readonly SettingService $settingService,
     ) {}
 
     public function registerHandlers(): void
@@ -100,11 +100,6 @@ final readonly class TelegramBotHandlers
                 return;
             }
 
-            if (!$payment->isPending()) {
-                $bot->sendMessage('⚠️ Этот платеж уже не активен');
-                return;
-            }
-
             // Удаляем invoice-сообщение (берем message_id из callback либо из payment)
             $msgId = $bot->callbackQuery()?->message?->message_id ?? $payment->telegram_message_id;
             if ($msgId) {
@@ -119,11 +114,17 @@ final readonly class TelegramBotHandlers
                 }
             }
 
-            // Отмечаем платеж отмененным
-            $payment->update([
-                'status' => \App\Models\Payment::STATUS_CANCELED,
-                'yookassa_status' => 'canceled',
-            ]);
+            // Отмечаем платеж отмененным (только если он еще pending) — защищаемся от гонок
+            $updated = \App\Models\Payment::where('id', (int)$paymentId)
+                ->where('user_id', (int)$user->id)
+                ->where('status', \App\Models\Payment::STATUS_PENDING)
+                ->update([
+                    'status' => \App\Models\Payment::STATUS_CANCELED,
+                    'yookassa_status' => 'canceled',
+                ]);
+
+            // Обновляем экземпляр для правильного ответа пользователю
+            $payment->refresh();
 
             // Чистим сохраненные message ids и отправляем подтверждение + главное меню
             $messageIds = $bot->getGlobalData('vpn_message_ids', []);
@@ -132,7 +133,13 @@ final readonly class TelegramBotHandlers
             $keyboard = InlineKeyboardMarkup::make()
                 ->addRow($this->getMainMenuButton());
 
-            $sent = $bot->sendMessage('✅ Платеж отменен', reply_markup: $keyboard);
+            $text = match ($payment->status) {
+                \App\Models\Payment::STATUS_CANCELED => $updated > 0 ? '✅ Платеж отменен' : '⚠️ Платеж уже отменен',
+                \App\Models\Payment::STATUS_SUCCEEDED => '✅ Платеж уже оплачен',
+                default => '⚠️ Этот платеж уже не активен',
+            };
+
+            $sent = $bot->sendMessage($text, reply_markup: $keyboard);
             if ($sent && $sent->message_id) {
                 $bot->setGlobalData('vpn_message_ids', [$sent->message_id]);
             }
