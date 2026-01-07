@@ -14,24 +14,19 @@ class PricingSeeder extends Seeder
     {
         $pricings = [
             [
-                'title' => '7 дней',
-                'duration' => 7 * 24 * 60 * 60 * 1000,
-                'price' => 30.00,
-            ],
-            [
                 'title' => '30 дней',
                 'duration' => 30 * 24 * 60 * 60 * 1000,
-                'price' => 70.00,
+                'price' => 100.00,
             ],
             [
                 'title' => '3 месяца',
                 'duration' => 90 * 24 * 60 * 60 * 1000,
-                'price' => 170.00,
+                'price' => 280.00,
             ],
             [
                 'title' => '6 месяцев',
                 'duration' => 180 * 24 * 60 * 60 * 1000,
-                'price' => 340.00,
+                'price' => 500.00,
             ],
         ];
 

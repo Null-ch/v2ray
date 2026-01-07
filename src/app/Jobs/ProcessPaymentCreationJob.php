@@ -110,6 +110,18 @@ final class ProcessPaymentCreationJob implements ShouldQueue
             $useTelegramInvoice = (bool)$settingService->getBool('payments.use_telegram_invoice', true)
                 && !empty(config('services.telegram.provider_token'));
 
+            // Проверяем минимальную сумму для Telegram (80 рублей = 8000 копеек)
+            // Если сумма меньше, автоматически переключаемся на YooKassa
+            $priceFloat = (float)$pricing->price;
+            $telegramMinAmountRubles = 80.0; // Минимальная сумма для Telegram инвойсов
+            if ($useTelegramInvoice && $priceFloat < $telegramMinAmountRubles) {
+                Log::info('Amount below Telegram minimum, switching to YooKassa', [
+                    'price' => $priceFloat,
+                    'telegram_minimum' => $telegramMinAmountRubles,
+                ]);
+                $useTelegramInvoice = false;
+            }
+
             if ($useTelegramInvoice) {
                 // Создаем локальную запись платежа со статусом pending
                 $payment = Payment::create([
@@ -139,6 +151,9 @@ final class ProcessPaymentCreationJob implements ShouldQueue
                 
                 $amountMinor = $rubles * 100 + $kopecks;
                 
+                // Убеждаемся, что amountMinor строго integer
+                $amountMinor = (int)$amountMinor;
+                
                 // Telegram требует минимум 1 единицу минимальной валюты (1 копейка = 0.01 RUB)
                 // Также проверяем, что сумма не превышает максимальное значение для int32
                 if ($amountMinor < 1) {
@@ -149,20 +164,44 @@ final class ProcessPaymentCreationJob implements ShouldQueue
                     throw new \InvalidArgumentException("Сумма платежа слишком велика");
                 }
                 
+                // Telegram имеет минимальный порог для инвойсов (примерно 80 рублей = 8000 копеек)
+                // Если сумма меньше, Telegram API вернет ошибку CURRENCY_TOTAL_AMOUNT_INVALID
+                $telegramMinAmount = 8000; // 80 рублей в копейках
+                if ($amountMinor < $telegramMinAmount) {
+                    Log::warning('Telegram invoice amount below recommended minimum', [
+                        'amount_minor' => $amountMinor,
+                        'amount_rubles' => $amountMinor / 100,
+                        'minimum_required' => $telegramMinAmount,
+                        'minimum_rubles' => $telegramMinAmount / 100,
+                        'price' => $pricing->price,
+                    ]);
+                    // Продолжаем попытку, но Telegram может вернуть ошибку
+                }
+                
                 Log::info('Telegram invoice amount', [
                     'price' => $pricing->price,
                     'price_string' => $priceStr,
                     'rubles' => $rubles,
                     'kopecks' => $kopecks,
                     'amount_minor' => $amountMinor,
+                    'amount_minor_type' => gettype($amountMinor),
                 ]);
                 $invoiceKeyboard = InlineKeyboardMarkup::make()
                     // Pay-кнопка должна быть первой в первой строке
                     ->addRow(
-                        InlineKeyboardButton::make('💳 Заплатить', pay: true),
+                        InlineKeyboardButton::make('💳 Оплатить', pay: true),
                         InlineKeyboardButton::make('❌ Отменить платеж', callback_data: "payment:cancel:{$payment->id}")
                     )
                     ->addRow(InlineKeyboardButton::make('🏠 Главное меню', callback_data: 'main_menu'));
+
+                // Создаем LabeledPrice с явным указанием типа integer
+                $labeledPrice = LabeledPrice::make('К оплате', $amountMinor);
+                
+                Log::info('Sending Telegram invoice', [
+                    'chat_id' => $this->telegramId,
+                    'amount_minor' => $amountMinor,
+                    'currency' => 'RUB',
+                ]);
 
                 $message = $bot->sendInvoice(
                     chat_id: (string)$this->telegramId,
@@ -171,7 +210,7 @@ final class ProcessPaymentCreationJob implements ShouldQueue
                     payload: "payment:{$payment->id}",
                     provider_token: (string)config('services.telegram.provider_token'),
                     currency: 'RUB',
-                    prices: [LabeledPrice::make('К оплате', $amountMinor)],
+                    prices: [$labeledPrice],
                     start_parameter: 'vpn_payment',
                     is_flexible: false,
                     reply_markup: $invoiceKeyboard,
