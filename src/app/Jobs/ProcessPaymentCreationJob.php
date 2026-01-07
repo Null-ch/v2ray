@@ -125,9 +125,35 @@ final class ProcessPaymentCreationJob implements ShouldQueue
                 $messageIds = $bot->getGlobalData('vpn_message_ids', []);
                 $this->clearChat($messageIds, $bot, (string)$this->telegramId);
 
-                $amountMinor = (int)round(((float)$pricing->price) * 100);
+                // Конвертируем цену в копейки (минимальные единицы валюты RUB)
+                // Используем точную арифметику для избежания проблем с плавающей точкой
+                $priceStr = (string)$pricing->price;
+                $priceParts = explode('.', $priceStr);
+                $rubles = (int)($priceParts[0] ?? 0);
+                $kopecks = 0;
+                
+                if (isset($priceParts[1])) {
+                    $decimalPart = substr($priceParts[1] . '00', 0, 2);
+                    $kopecks = (int)$decimalPart;
+                }
+                
+                $amountMinor = $rubles * 100 + $kopecks;
+                
+                // Telegram требует минимум 1 единицу минимальной валюты (1 копейка = 0.01 RUB)
+                // Также проверяем, что сумма не превышает максимальное значение для int32
+                if ($amountMinor < 1) {
+                    throw new \InvalidArgumentException("Сумма платежа слишком мала. Минимальная сумма: 0.01 RUB");
+                }
+                
+                if ($amountMinor > 2147483647) {
+                    throw new \InvalidArgumentException("Сумма платежа слишком велика");
+                }
+                
                 Log::info('Telegram invoice amount', [
                     'price' => $pricing->price,
+                    'price_string' => $priceStr,
+                    'rubles' => $rubles,
+                    'kopecks' => $kopecks,
                     'amount_minor' => $amountMinor,
                 ]);
                 $invoiceKeyboard = InlineKeyboardMarkup::make()
