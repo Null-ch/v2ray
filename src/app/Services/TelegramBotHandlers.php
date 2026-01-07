@@ -140,9 +140,9 @@ final readonly class TelegramBotHandlers
          * Обработка команды /invite
          */
         $this->bot->onCommand('invite', function (Nutgram $bot) {
-            $messageIds = $bot->getGlobalData('vpn_message_ids', []);
-            $this->clearChat($messageIds, $bot);
             $telegramId = $bot->userId();
+            $messageIds = $bot->getGlobalData('vpn_message_ids', []);
+            $this->clearChat($messageIds, $bot, $telegramId);
             $user = $this->userService->findUserByTelegramId($telegramId);
 
             if (!$user) {
@@ -173,9 +173,9 @@ final readonly class TelegramBotHandlers
          */
         $this->bot->onCallbackQueryData('invite', function (Nutgram $bot) {
             $bot->answerCallbackQuery();
-            $messageIds = $bot->getGlobalData('vpn_message_ids', []);
-            $this->clearChat($messageIds, $bot);
             $telegramId = $bot->userId();
+            $messageIds = $bot->getGlobalData('vpn_message_ids', []);
+            $this->clearChat($messageIds, $bot, $telegramId);
             $user = $this->userService->findUserByTelegramId($telegramId);
 
             if (!$user) {
@@ -274,7 +274,7 @@ final readonly class TelegramBotHandlers
          */
         $this->bot->onCallbackQueryData('connect_vpn', function (Nutgram $bot) {
             $messageIds = $bot->getGlobalData('vpn_message_ids', []);
-            $this->clearChat($messageIds, $bot);
+            $this->clearChat($messageIds, $bot, $bot->userId());
             $user = $this->userService->findUserByTelegramId($bot->userId());
 
             // Получаем активные теги пользователя
@@ -309,8 +309,8 @@ final readonly class TelegramBotHandlers
          */
         $this->bot->onCallbackQueryData('main_menu', function (Nutgram $bot) {
             $messageIds = $bot->getGlobalData('vpn_message_ids', []);
-            $this->clearChat($messageIds, $bot);
             $telegramId = $bot->userId();
+            $this->clearChat($messageIds, $bot, $telegramId);
             $user = $this->userService->findUserByTelegramId($telegramId);
 
             if (!$user) {
@@ -352,7 +352,7 @@ final readonly class TelegramBotHandlers
             $bot->answerCallbackQuery();
             $messageIds = $bot->getGlobalData('vpn_message_ids', []);
             $keyboard = $this->getInstructionsKeyboard();
-            $this->clearChat($messageIds, $bot);
+            $this->clearChat($messageIds, $bot, $bot->userId());
             $messageId = $this->vpnConnectionService->sendGuideMenu($bot, $keyboard);
             $bot->setGlobalData('vpn_message_ids', [$messageId]);
 
@@ -364,9 +364,10 @@ final readonly class TelegramBotHandlers
          */
         $this->bot->onCallbackQueryData('user_vpn', function (Nutgram $bot) {
             $bot->answerCallbackQuery();
-            $messageIds = $bot->getGlobalData('vpn_message_ids', []);
-            $this->clearChat($messageIds, $bot);
             $telegramId = $bot->userId();
+            $messageIds = $bot->getGlobalData('vpn_message_ids', []);
+            $this->clearChat($messageIds, $bot, $telegramId);
+            
             $user = $this->userService->findUserByTelegramId($telegramId);
 
             $keyboard = XuiTag::keyboardFromValues(
@@ -394,7 +395,7 @@ final readonly class TelegramBotHandlers
             'vpn:tag:{code}',
             function (Nutgram $bot, string $code) {
                 $messageIds = $bot->getGlobalData('vpn_message_ids', []);
-                $this->clearChat($messageIds, $bot);
+                $this->clearChat($messageIds, $bot, $bot->userId());
                 $user = $this->userService->findUserByTelegramId($bot->userId());
 
                 if (!$user) {
@@ -433,7 +434,7 @@ final readonly class TelegramBotHandlers
             function (Nutgram $bot) {
                 $bot->answerCallbackQuery();
                 $messageIds = $bot->getGlobalData('vpn_message_ids', []);
-                $this->clearChat($messageIds, $bot);
+                $this->clearChat($messageIds, $bot, $bot->userId());
                 $user = $this->userService->findUserByTelegramId($bot->userId());
 
                 if (!$user) {
@@ -468,7 +469,7 @@ final readonly class TelegramBotHandlers
             function (Nutgram $bot, string $code) {
                 $bot->answerCallbackQuery();
                 $messageIds = $bot->getGlobalData('vpn_message_ids', []);
-                $this->clearChat($messageIds, $bot);
+                $this->clearChat($messageIds, $bot, $bot->userId());
                 $user = $this->userService->findUserByTelegramId($bot->userId());
 
                 if (!$user) {
@@ -615,9 +616,9 @@ final readonly class TelegramBotHandlers
             'referral:tag:{code}',
             function (Nutgram $bot, string $code) {
                 $bot->answerCallbackQuery();
-                $messageIds = $bot->getGlobalData('vpn_message_ids', []);
-                $this->clearChat($messageIds, $bot);
                 $telegramId = $bot->userId();
+                $messageIds = $bot->getGlobalData('vpn_message_ids', []);
+                $this->clearChat($messageIds, $bot, $telegramId);
                 $user = $this->userService->findUserByTelegramId($telegramId);
 
                 if (!$user) {
@@ -714,7 +715,7 @@ final readonly class TelegramBotHandlers
         try {
             if (!$user) {
                 $messageIds = $bot->getGlobalData('vpn_message_ids', []);
-                $this->clearChat($messageIds, $bot);
+                $this->clearChat($messageIds, $bot, $telegramId);
 
                 $callbackData = 'accept_terms';
                 if ($referrerId) {
@@ -726,7 +727,7 @@ final readonly class TelegramBotHandlers
                 $bot->setGlobalData('vpn_message_ids', [$messageId]);
             } else {
                 $messageIds = $bot->getGlobalData('vpn_message_ids', []);
-                $this->clearChat($messageIds, $bot);
+                $this->clearChat($messageIds, $bot, $telegramId);
 
                 $userTags = $user->subscriptions()
                     ->with('xui')
@@ -825,12 +826,13 @@ final readonly class TelegramBotHandlers
         return $keyboard;
     }
 
-    private function clearChat(array $messageIds, Nutgram $bot): void
+    private function clearChat(array $messageIds, Nutgram $bot, int|string $chatId): void
     {
         foreach ($messageIds as $messageId) {
             try {
-                $bot->deleteMessage($bot->chatId(), $messageId);
+                $bot->deleteMessage($chatId, $messageId);
             } catch (\Throwable $e) {
+                // Игнорируем ошибки удаления
             }
         }
     }
