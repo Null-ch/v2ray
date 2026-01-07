@@ -178,14 +178,7 @@ final class ProcessPaymentCreationJob implements ShouldQueue
                     // Продолжаем попытку, но Telegram может вернуть ошибку
                 }
                 
-                Log::info('Telegram invoice amount', [
-                    'price' => $pricing->price,
-                    'price_string' => $priceStr,
-                    'rubles' => $rubles,
-                    'kopecks' => $kopecks,
-                    'amount_minor' => $amountMinor,
-                    'amount_minor_type' => gettype($amountMinor),
-                ]);
+
                 $invoiceKeyboard = InlineKeyboardMarkup::make()
                     // Pay-кнопка должна быть первой в первой строке
                     ->addRow(
@@ -196,12 +189,6 @@ final class ProcessPaymentCreationJob implements ShouldQueue
 
                 // Создаем LabeledPrice с явным указанием типа integer
                 $labeledPrice = LabeledPrice::make('К оплате', $amountMinor);
-                
-                Log::info('Sending Telegram invoice', [
-                    'chat_id' => $this->telegramId,
-                    'amount_minor' => $amountMinor,
-                    'currency' => 'RUB',
-                ]);
 
                 $message = $bot->sendInvoice(
                     chat_id: (string)$this->telegramId,
