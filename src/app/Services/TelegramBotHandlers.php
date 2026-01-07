@@ -128,7 +128,7 @@ final class TelegramBotHandlers
 
             // Чистим сохраненные message ids и отправляем подтверждение + главное меню
             $messageIds = $bot->getGlobalData('vpn_message_ids', []);
-            $this->clearChat($messageIds, $bot);
+            $this->clearChat($messageIds, $bot, $telegramId);
 
             $keyboard = InlineKeyboardMarkup::make()
                 ->addRow($this->getMainMenuButton());
