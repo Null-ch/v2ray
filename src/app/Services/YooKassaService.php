@@ -218,6 +218,15 @@ final class YooKassaService
     }
 
     /**
+     * Публичный метод для обработки успешного платежа,
+     * когда успешность подтверждена внешним провайдером (например, Telegram Payments).
+     */
+    public function handleSuccessfulPayment(Payment $payment): void
+    {
+        $this->processSuccessfulPayment($payment);
+    }
+
+    /**
      * Отправляет уведомление об успешном платеже в Telegram
      *
      * @param Payment $payment

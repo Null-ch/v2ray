@@ -37,6 +37,7 @@ return [
 
     'telegram' => [
         'bot_token' => env('TELEGRAM_BOT_TOKEN'),
+        'provider_token' => env('Y_KASSA_PROVIDER_TOKEN'),
     ],
 
     'yookassa' => [
