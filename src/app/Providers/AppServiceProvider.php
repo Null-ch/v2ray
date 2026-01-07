@@ -74,7 +74,6 @@ class AppServiceProvider extends ServiceProvider
         try {
             $handlers = $this->app->make(TelegramBotHandlers::class);
             $handlers->registerHandlers();
-            Log::info("Telegram bot commands registered.");
         } catch (\Throwable $e) {
             // Логируем ошибку для отладки
             Log::error("Failed to register Telegram bot handlers", [

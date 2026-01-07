@@ -126,6 +126,10 @@ final class ProcessPaymentCreationJob implements ShouldQueue
                 $this->clearChat($messageIds, $bot, (string)$this->telegramId);
 
                 $amountMinor = (int)round(((float)$pricing->price) * 100);
+                Log::info('Telegram invoice amount', [
+                    'price' => $pricing->price,
+                    'amount_minor' => $amountMinor,
+                ]);
                 $invoiceKeyboard = InlineKeyboardMarkup::make()
                     // Pay-кнопка должна быть первой в первой строке
                     ->addRow(
