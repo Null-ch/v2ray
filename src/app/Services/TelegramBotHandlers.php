@@ -76,6 +76,68 @@ final readonly class TelegramBotHandlers
             }
         });
 
+        // Отмена платежа (кнопка на invoice)
+        $this->bot->onCallbackQueryData('payment:cancel:{payment_id}', function (Nutgram $bot, string $paymentId) {
+            $bot->answerCallbackQuery();
+
+            $telegramId = (string)$bot->userId();
+            /** @var \App\Models\User|null $user */
+            $user = $this->userService->findUserByTelegramId((int)$telegramId);
+            if (!$user) {
+                $bot->sendMessage('❌ Пользователь не найден');
+                return;
+            }
+
+            /** @var \App\Models\Payment|null $payment */
+            $payment = \App\Models\Payment::find((int)$paymentId);
+            if (!$payment) {
+                $bot->sendMessage('❌ Платеж не найден');
+                return;
+            }
+
+            if ((int)$payment->user_id !== (int)$user->id) {
+                $bot->sendMessage('❌ Нет доступа к этому платежу');
+                return;
+            }
+
+            if (!$payment->isPending()) {
+                $bot->sendMessage('⚠️ Этот платеж уже не активен');
+                return;
+            }
+
+            // Удаляем invoice-сообщение (берем message_id из callback либо из payment)
+            $msgId = $bot->callbackQuery()?->message?->message_id ?? $payment->telegram_message_id;
+            if ($msgId) {
+                try {
+                    $bot->deleteMessage($bot->chatId(), $msgId);
+                } catch (\Throwable $e) {
+                    Log::debug('Failed to delete invoice message', [
+                        'payment_id' => $payment->id,
+                        'message_id' => $msgId,
+                        'error' => $e->getMessage(),
+                    ]);
+                }
+            }
+
+            // Отмечаем платеж отмененным
+            $payment->update([
+                'status' => \App\Models\Payment::STATUS_CANCELED,
+                'yookassa_status' => 'canceled',
+            ]);
+
+            // Чистим сохраненные message ids и отправляем подтверждение + главное меню
+            $messageIds = $bot->getGlobalData('vpn_message_ids', []);
+            $this->clearChat($messageIds, $bot);
+
+            $keyboard = InlineKeyboardMarkup::make()
+                ->addRow($this->getMainMenuButton());
+
+            $sent = $bot->sendMessage('✅ Платеж отменен', reply_markup: $keyboard);
+            if ($sent && $sent->message_id) {
+                $bot->setGlobalData('vpn_message_ids', [$sent->message_id]);
+            }
+        });
+
         // Обработка успешной оплаты через Telegram Payments
         $this->bot->onMessage(function (Nutgram $bot) {
             $successfulPayment = $bot->message()?->successful_payment;

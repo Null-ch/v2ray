@@ -126,6 +126,14 @@ final class ProcessPaymentCreationJob implements ShouldQueue
                 $this->clearChat($messageIds, $bot, (string)$this->telegramId);
 
                 $amountMinor = (int)round(((float)$pricing->price) * 100);
+                $invoiceKeyboard = InlineKeyboardMarkup::make()
+                    // Pay-кнопка должна быть первой в первой строке
+                    ->addRow(
+                        InlineKeyboardButton::make('💳 Заплатить', pay: true),
+                        InlineKeyboardButton::make('❌ Отменить платеж', callback_data: "payment:cancel:{$payment->id}")
+                    )
+                    ->addRow(InlineKeyboardButton::make('🏠 Главное меню', callback_data: 'main_menu'));
+
                 $message = $bot->sendInvoice(
                     chat_id: (string)$this->telegramId,
                     title: "Оплата подписки CapyVPN {$tag->labelWithFlag()}",
@@ -136,6 +144,7 @@ final class ProcessPaymentCreationJob implements ShouldQueue
                     prices: [LabeledPrice::make('К оплате', $amountMinor)],
                     start_parameter: 'vpn_payment',
                     is_flexible: false,
+                    reply_markup: $invoiceKeyboard,
                 );
 
                 if ($message && $message->message_id) {
