@@ -11,6 +11,7 @@ use App\Services\YooKassaService;
 use App\Services\TelegramBotHandlers;
 use App\Services\VpnConnectionService;
 use Illuminate\Support\ServiceProvider;
+use Illuminate\Support\Facades\Log;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -35,6 +36,8 @@ class AppServiceProvider extends ServiceProvider
             $this->app->singleton(VpnConnectionService::class);
         }
 
+        $this->app->singleton(TelegramBotHandlers::class);
+
         // Регистрируем YooKassa клиент и сервис
         // Важно: регистрируем только если конфигурация настроена
         $shopId = config('services.yookassa.shop_id');
@@ -52,9 +55,6 @@ class AppServiceProvider extends ServiceProvider
                     $app->make(XuiService::class)
                 );
             });
-        } else {
-            // Если конфигурация не настроена, не регистрируем сервисы
-            // TelegramBotHandlers не будет создан, если YooKassaService не зарегистрирован
         }
     }
 
@@ -69,18 +69,18 @@ class AppServiceProvider extends ServiceProvider
             return;
         }
 
-        // Проверяем, зарегистрирован ли YooKassaService (нужен для TelegramBotHandlers)
-        if (!$this->app->bound(YooKassaService::class)) {
-            // Если YooKassa не настроен, регистрируем заглушку или пропускаем инициализацию
-            // В зависимости от требований можно либо выбросить исключение, либо пропустить
-            // Для работы бота без платежей можно зарегистрировать заглушку
-            return;
-        }
-
+        // Регистрируем обработчики команд бота
+        // YooKassaService не является обязательной зависимостью для TelegramBotHandlers
         try {
             $handlers = $this->app->make(TelegramBotHandlers::class);
             $handlers->registerHandlers();
+            Log::info("Telegram bot commands registered.");
         } catch (\Throwable $e) {
+            // Логируем ошибку для отладки
+            Log::error("Failed to register Telegram bot handlers", [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
             // Игнорируем ошибки при инициализации бота в тестовом окружении
             if (app()->environment() !== 'testing') {
                 throw $e;

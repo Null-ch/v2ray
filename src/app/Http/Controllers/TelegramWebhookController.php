@@ -22,7 +22,8 @@ final readonly class TelegramWebhookController
         try {
             $data = $request->all();
             $update = Update::fromArray($data);
-            $this->telegramService->getBot()->processUpdate($update);
+            $bot = $this->telegramService->getBot();
+            $bot->processUpdate($update);
         } catch (\Throwable $e) {
             Log::error('Telegram webhook error', [
                 'error' => $e->getMessage(),

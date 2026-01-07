@@ -1,8 +1,12 @@
 <?php
 
-use App\Http\Controllers\TelegramWebhookController;
-use App\Http\Controllers\TestController;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\TestController;
+use App\Http\Controllers\TelegramWebhookController;
+use SergiX44\Nutgram\Nutgram;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
+
 
 //Route::get('/user', function (Request $request) {
 //    return $request->user();
@@ -10,10 +14,7 @@ use Illuminate\Support\Facades\Route;
 
 Route::post('test', [TestController::class, 'create']);
 Route::put('test/{id}', [TestController::class, 'update']);
-
-if (!empty(config('services.telegram.bot_token'))) {
-    Route::post('telegram/webhook', [TelegramWebhookController::class, 'handle']);
-}
+Route::post('telegram/webhook', [TelegramWebhookController::class, 'handle']);
 
 // Payment API routes
 Route::prefix('payment')->group(function () {
