@@ -26,7 +26,7 @@ class CancelExpiredPayments extends Command
     {
         $bot = $this->telegramService->getBot();
         $payments = Payment::expiredPending()->with('user')->get();
-
+        Log::info('Expired payments count', ['count' => $payments->count()]);
         foreach ($payments as $payment) {
             try {
                 if ($payment->yookassa_payment_id) {
