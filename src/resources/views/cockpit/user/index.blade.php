@@ -47,7 +47,6 @@
           <tr>
             <th>ID</th>
             <th>Имя</th>
-            <th>TG Tag</th>
             <th>TG ID</th>
             <th>Активные ключи</th>
             <th>Баланс</th>
@@ -58,8 +57,7 @@
           @forelse($users as $user)
           <tr>
             <td class="user-id">{{ $user->id }}</td>
-            <td>{{ $user->name }}</td>
-            <td class="user-name">@{{ $user->tg_tag ?? 'N/A' }}</td>
+            <td class="user-name">{{ $user->name }}</td>
             <td>{{ $user->tg_id }}</td>
             <td>
               {{ $user->subscriptions->count() }} шт.
@@ -73,7 +71,7 @@
                 <button type="button"
                         class="btn btn-success btn-sm btn-glass btn-user-balance-sign"
                         data-uid="{{ $user->id }}"
-                        data-username="{{ $user->tg_tag ?? 'N/A' }}"
+                        data-username="{{ $user->name}}"
                         data-balance="{{ number_format($user->balance->balance ?? 0, 2) }}"
                         data-sign="+"
                         title="Начислить баланс">
@@ -82,7 +80,7 @@
                 <button type="button"
                         class="btn btn-danger btn-sm btn-glass btn-user-balance-sign"
                         data-uid="{{ $user->id }}"
-                        data-username="{{ $user->tg_tag ?? 'N/A' }}"
+                        data-username="{{ $user->name}}"
                         data-balance="{{ number_format($user->balance->balance ?? 0, 2) }}"
                         data-sign="-"
                         title="Списать баланс">
