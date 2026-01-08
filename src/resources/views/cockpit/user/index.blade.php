@@ -19,20 +19,23 @@
 </div>
 
 <!-- Modal: Баланс пользователя -->
-<div class="modal modal-blur fade" id="balanceModal" tabindex="-1" aria-hidden="true">
+<div class="modal modal-blur fade" id="balanceModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
   <div class="modal-dialog modal-dialog-centered">
     <div class="modal-content">
       <div class="modal-header">
         <h5 class="modal-title">Баланс пользователя</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" id="bm-close-btn"></button>
       </div>
       <div class="modal-body">
         <div class="mb-2 text-secondary" id="bm-user"></div>
         <div class="mb-2">Текущий баланс: <strong id="bm-balance">0.00</strong> RUB</div>
         <form id="bm-form" class="d-flex gap-2" method="post">
           @csrf
-          <input class="form-control" type="text" inputmode="decimal" name="delta" placeholder="± сумма" required />
-          <button class="btn btn-primary" type="submit">Изменить</button>
+          <input class="form-control" type="text" inputmode="decimal" name="delta" placeholder="± сумма" required id="bm-delta-input" />
+          <button class="btn btn-primary" type="submit" id="bm-submit-btn">
+            <span class="btn-text">Изменить</span>
+            <span class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
+          </button>
         </form>
       </div>
     </div>
@@ -168,9 +171,26 @@
   const modalEl = document.getElementById('balanceModal');
   if (modalEl) {
     const form = modalEl.querySelector('#bm-form');
+    const submitBtn = modalEl.querySelector('#bm-submit-btn');
+    const submitBtnText = submitBtn?.querySelector('.btn-text');
+    const submitBtnSpinner = submitBtn?.querySelector('.spinner-border');
+    const closeBtn = modalEl.querySelector('#bm-close-btn');
+    const deltaInput = modalEl.querySelector('#bm-delta-input');
+    
     if (form) {
       form.addEventListener('submit', async function(ev){
         ev.preventDefault();
+        ev.stopPropagation();
+        
+        // Disable form during submission
+        if (submitBtn) {
+          submitBtn.disabled = true;
+          if (submitBtnText) submitBtnText.classList.add('d-none');
+          if (submitBtnSpinner) submitBtnSpinner.classList.remove('d-none');
+        }
+        if (closeBtn) closeBtn.disabled = true;
+        if (deltaInput) deltaInput.disabled = true;
+        
         try{
           const fd = new FormData(form);
           const meta = document.querySelector('meta[name="csrf-token"]');
@@ -180,23 +200,61 @@
           const resp = await fetch(form.action, {
             method: 'POST',
             body: fd,
-            headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+            headers: { 
+              'Accept': 'application/json', 
+              'X-Requested-With': 'XMLHttpRequest',
+              'X-CSRF-TOKEN': token
+            },
             credentials: 'same-origin'
           });
-          const data = await resp.json().catch(()=>null);
+          
+          let data = null;
+          try {
+            const text = await resp.text();
+            data = text ? JSON.parse(text) : null;
+          } catch(e) {
+            console.error('Failed to parse response:', e);
+          }
+          
           if (resp.ok && data && data.ok){
             try { window.showToast('success', data.message || 'Баланс изменён.'); } catch(_){ }
-            try { bootstrap.Modal.getInstance(modalEl)?.hide(); } catch(_){ }
+            try { 
+              const modalInstance = bootstrap.Modal.getInstance(modalEl);
+              if (modalInstance) modalInstance.hide();
+            } catch(_){ }
             try { await window.refreshContainerById('users-tbody'); } catch(_){ }
           } else {
             const msg = (data && data.message) || (data && data.error) || 'Не удалось изменить баланс';
             try { window.showToast('danger', msg); } catch(_){ }
           }
-        } catch(_){
-          try { window.showToast('danger', 'Ошибка сети'); } catch(__){}
+        } catch(err){
+          console.error('Request error:', err);
+          try { window.showToast('danger', 'Ошибка сети: ' + (err.message || 'Неизвестная ошибка')); } catch(__){}
+        } finally {
+          // Re-enable form
+          if (submitBtn) {
+            submitBtn.disabled = false;
+            if (submitBtnText) submitBtnText.classList.remove('d-none');
+            if (submitBtnSpinner) submitBtnSpinner.classList.add('d-none');
+          }
+          if (closeBtn) closeBtn.disabled = false;
+          if (deltaInput) deltaInput.disabled = false;
         }
       });
     }
+    
+    // Reset form when modal is hidden
+    modalEl.addEventListener('hidden.bs.modal', function() {
+      if (form) form.reset();
+      if (deltaInput) deltaInput.value = '';
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        if (submitBtnText) submitBtnText.classList.remove('d-none');
+        if (submitBtnSpinner) submitBtnSpinner.classList.add('d-none');
+      }
+      if (closeBtn) closeBtn.disabled = false;
+      if (deltaInput) deltaInput.disabled = false;
+    });
   }
 })();
 </script>

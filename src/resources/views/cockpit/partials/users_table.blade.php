@@ -1,10 +1,8 @@
 @foreach($users as $user)
   <tr>
     <td class="user-id">{{ $user->id }}</td>
-    <td class="user-name">@{{ $user->tg_tag ?? 'N/A' }}</td>
-    <td>
-      <span class="badge bg-green">Активен</span>
-    </td>
+    <td class="user-name">{{ $user->name ?? $user->tg_tag ?? 'N/A' }}</td>
+    <td>{{ $user->tg_id ?? 'N/A' }}</td>
     <td>
       {{ $user->subscriptions->count() }} шт.
     </td>
@@ -17,23 +15,26 @@
         <button type="button"
                 class="btn btn-success btn-sm btn-glass btn-user-balance-sign"
                 data-uid="{{ $user->id }}"
-                data-username="{{ $user->tg_tag ?? 'N/A' }}"
+                data-username="{{ $user->name ?? $user->tg_tag ?? 'N/A' }}"
                 data-balance="{{ number_format($user->balance->balance ?? 0, 2) }}"
                 data-sign="+"
                 title="Начислить баланс">
-          Начислить баланс
+          <i class="ti ti-plus"></i>
         </button>
         <button type="button"
                 class="btn btn-danger btn-sm btn-glass btn-user-balance-sign"
                 data-uid="{{ $user->id }}"
-                data-username="{{ $user->tg_tag ?? 'N/A' }}"
+                data-username="{{ $user->name ?? $user->tg_tag ?? 'N/A' }}"
                 data-balance="{{ number_format($user->balance->balance ?? 0, 2) }}"
                 data-sign="-"
                 title="Списать баланс">
-          Списать баланс
+          <i class="ti ti-minus"></i>
         </button>
         <a href="{{ route('cockpit.user.show', $user->id) }}" class="btn btn-info btn-sm btn-glass" title="Просмотр">
           <i class="ti ti-eye"></i>
+        </a>
+        <a href="{{ route('cockpit.user.edit', $user->id) }}" class="btn btn-warning btn-sm btn-glass" title="Редактировать">
+          <i class="ti ti-edit"></i>
         </a>
       </div>
     </td>
