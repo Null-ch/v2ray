@@ -115,4 +115,9 @@ class User extends Authenticatable
     {
        return Str::substr($this->uuid, 0, 6) . $this->id;
     }
+
+    public function getTgId()
+    {
+        return $this->tg_id;
+    }
 }

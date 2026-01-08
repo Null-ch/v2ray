@@ -118,17 +118,11 @@ final class YooKassaClient
         }
     }
 
-    /**
-     * Отменяет платеж
-     *
-     * @param string $paymentId
-     * @param float|null $amount
-     * @return PaymentInterface|null
-     */
-    public function cancelPayment(string $paymentId, ?float $amount = null): ?PaymentInterface
+
+    public function cancelPayment(string $paymentId)
     {
         try {
-            $payment = $this->client->cancelPayment($paymentId, $amount);
+            $payment = $this->client->cancelPayment($paymentId);
 
             Log::info('YooKassa payment cancelled', [
                 'payment_id' => $paymentId,

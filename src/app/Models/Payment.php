@@ -7,6 +7,8 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Builder;
+use Carbon\CarbonImmutable;
 
 class Payment extends Model
 {
@@ -15,6 +17,7 @@ class Payment extends Model
     public const STATUS_PENDING = 'pending';
     public const STATUS_SUCCEEDED = 'succeeded';
     public const STATUS_CANCELED = 'canceled';
+    public const STATUS_CANCELING = 'canceling';
 
     protected $fillable = [
         'user_id',
@@ -66,7 +69,7 @@ class Payment extends Model
      */
     public function isCanceled(): bool
     {
-        return $this->status === self::STATUS_CANCELED;
+        return $this->status === self::STATUS_CANCELED || $this->status === self::STATUS_CANCELING;
     }
 
     /**
@@ -94,5 +97,43 @@ class Payment extends Model
         return isset($this->metadata['duration'])
             ? (int) $this->metadata['duration']
             : null;
+    }
+
+    public function getId()
+    {
+        return $this->id;
+    }
+
+    public function getProviderPaimentChargeId()
+    {
+        return $this->provider_payment_charge_id;
+    }
+
+    public function getTelegramPaimentChargeId()
+    {
+        return $this->telegram_payment_charge_id;
+    }
+
+    public function getDescription()
+    {
+        return $this->description;
+    }
+
+    public function getAmount()
+    {
+        return $this->amount;
+    }
+
+    public function getTelegramMessageId()
+    {
+        return $this->telegram_message_id;
+    }
+
+    public function scopeExpiredPending(Builder $query): Builder
+    {
+        $utcNow = CarbonImmutable::now('UTC');
+        return $query
+            ->where('status', self::STATUS_PENDING)
+            ->where('created_at', '<=', $utcNow->subMinutes(10));
     }
 }

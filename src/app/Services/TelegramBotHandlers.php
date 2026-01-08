@@ -134,6 +134,7 @@ final class TelegramBotHandlers
                 ->addRow($this->getMainMenuButton());
 
             $text = match ($payment->status) {
+                \App\Models\Payment::STATUS_CANCELING => $updated > 0 ? '✅ Платеж отменен' : '⚠️ Платеж уже отменен',
                 \App\Models\Payment::STATUS_CANCELED => $updated > 0 ? '✅ Платеж отменен' : '⚠️ Платеж уже отменен',
                 \App\Models\Payment::STATUS_SUCCEEDED => '✅ Платеж уже оплачен',
                 default => '⚠️ Этот платеж уже не активен',

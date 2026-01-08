@@ -217,6 +217,10 @@ final class YooKassaService
         }
     }
 
+    public function cancelPayment(string $paymentId): void
+    {
+        $this->client->cancelPayment($paymentId);
+    }
     /**
      * Публичный метод для обработки успешного платежа,
      * когда успешность подтверждена внешним провайдером (например, Telegram Payments).
