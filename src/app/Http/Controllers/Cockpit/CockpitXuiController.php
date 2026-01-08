@@ -11,13 +11,17 @@ use App\Http\Requests\Cockpit\XuiStoreRequest;
 use App\Http\Requests\Cockpit\XuiUpdateRequest;
 use App\Models\Xui;
 use App\Services\CockpitXuiService;
+use App\Services\XuiService;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\View\View;
 
 final class CockpitXuiController extends Controller
 {
-    public function __construct(private CockpitXuiService $cockpitXuiService)
-    {
+    public function __construct(
+        private CockpitXuiService $cockpitXuiService,
+        private XuiService $xuiService
+    ) {
     }
 
     /**
@@ -147,5 +151,54 @@ final class CockpitXuiController extends Controller
             ->route('cockpit.xui.index')
             ->with('success', 'XUI сервер успешно удален.');
     }
+
+    /**
+     * Check XUI server status.
+     */
+    public function checkStatus(int $id): JsonResponse
+    {
+        $xui = $this->cockpitXuiService->findById($id);
+        
+        if (!$xui) {
+            return response()->json(['ok' => false, 'status' => 'not_found'], 404);
+        }
+
+        try {
+            // Простая проверка доступности через HTTP/HTTPS
+            $url = ($xui->ssl ? 'https://' : 'http://') . $xui->host . ':' . $xui->port . $xui->path;
+            
+            $ch = curl_init($url);
+            curl_setopt_array($ch, [
+                CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_TIMEOUT => 5,
+                CURLOPT_CONNECTTIMEOUT => 5,
+                CURLOPT_SSL_VERIFYPEER => false,
+                CURLOPT_SSL_VERIFYHOST => false,
+                CURLOPT_FOLLOWLOCATION => true,
+                CURLOPT_MAXREDIRS => 3,
+            ]);
+            
+            $response = curl_exec($ch);
+            $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            $error = curl_error($ch);
+            curl_close($ch);
+            
+            $isOnline = $response !== false && $httpCode > 0 && $httpCode < 500;
+            
+            return response()->json([
+                'ok' => true,
+                'status' => $isOnline ? 'online' : 'offline',
+                'http_code' => $httpCode,
+                'error' => $error ?: null,
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'ok' => false,
+                'status' => 'error',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
+    }
+
 }
 

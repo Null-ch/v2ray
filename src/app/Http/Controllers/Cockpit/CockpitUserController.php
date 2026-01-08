@@ -10,7 +10,9 @@ use App\Http\Requests\Cockpit\UserStoreRequest;
 use App\Http\Requests\Cockpit\UserUpdateRequest;
 use App\Models\User;
 use App\Services\CockpitUserService;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\View\View;
 
 final class CockpitUserController extends Controller
@@ -110,6 +112,65 @@ final class CockpitUserController extends Controller
         return redirect()
             ->route('cockpit.user.index')
             ->with('success', 'Пользователь успешно удален.');
+    }
+
+    /**
+     * Adjust user balance.
+     */
+    public function adjustBalance(Request $request, int $id): JsonResponse|RedirectResponse
+    {
+        $validated = $request->validate([
+            'delta' => 'required|numeric',
+        ]);
+
+        $user = $this->cockpitUserService->findById($id);
+        if (!$user) {
+            if ($request->wantsJson()) {
+                return response()->json(['ok' => false, 'error' => 'user_not_found'], 404);
+            }
+            return redirect()->route('cockpit.user.index')->withErrors(['error' => 'Пользователь не найден.']);
+        }
+
+        $delta = (float) $validated['delta'];
+        $balance = $user->balance;
+        
+        if (!$balance) {
+            $balance = \App\Models\Balance::create([
+                'user_id' => $user->id,
+                'balance' => 0,
+            ]);
+        }
+
+        $balance->balance += $delta;
+        if ($balance->balance < 0) {
+            if ($request->wantsJson()) {
+                return response()->json(['ok' => false, 'error' => 'insufficient_balance'], 400);
+            }
+            return redirect()->route('cockpit.user.index')->withErrors(['error' => 'Недостаточно средств на балансе.']);
+        }
+
+        $balance->save();
+
+        if ($request->wantsJson()) {
+            return response()->json([
+                'ok' => true,
+                'message' => 'Баланс изменён.',
+                'new_balance' => $balance->balance,
+            ]);
+        }
+
+        return redirect()
+            ->route('cockpit.user.index')
+            ->with('success', 'Баланс успешно изменён.');
+    }
+
+    /**
+     * Partial: users table.
+     */
+    public function usersTablePartial(): View
+    {
+        $users = User::with(['balance', 'subscriptions'])->get();
+        return view('cockpit.partials.users_table', compact('users'));
     }
 }
 

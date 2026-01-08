@@ -309,6 +309,38 @@ final class XuiApiClient
     }
 
     /**
+     * Удаляет клиента из инбаунда
+     *
+     * @param int $inboundId
+     * @param string $uuid
+     * @return array
+     * @throws \RuntimeException
+     */
+    public function removeClient(int $inboundId, string $uuid): array
+    {
+        $this->ensureAuthenticated();
+
+        try {
+            $response = $this->client->post("panel/api/inbounds/delClient/{$uuid}", [
+                'json' => [
+                    'id' => $inboundId,
+                ],
+            ]);
+
+            $body = $this->parseResponse($response);
+
+            return [
+                'ok' => $response->getStatusCode() === 200 && ($body['success'] ?? false),
+                'status_code' => $response->getStatusCode(),
+                'data' => $body['obj'] ?? null,
+                'message' => $body['msg'] ?? null,
+            ];
+        } catch (GuzzleException $e) {
+            throw new \RuntimeException("Failed to remove client {$uuid} from inbound {$inboundId}: " . $e->getMessage(), 0, $e);
+        }
+    }
+
+    /**
      * Обновляет инбаунд
      *
      * @param int $inboundId

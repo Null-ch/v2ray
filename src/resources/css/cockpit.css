@@ -1,0 +1,1074 @@
+/* Cockpit Admin Panel Styles - перенесено из Python проекта */
+
+:root {
+	/* Брендовые переменные проекта */
+	--primary-color: #ae3ec9; /* grape */
+	--success-color: #51cf66;
+	--danger-color: #ff6b6b;
+	--warning-color: #ff922b;
+
+	/* Базовые цвета (по умолчанию тёмная тема) */
+	--bg-page: #0f1115;
+	--bg-surface: #1b1f24;
+	--bg-card: #23272c;
+	--text-primary: #e9ecef;
+	--text-muted: #adb5bd;
+	--border-color: rgba(255, 255, 255, 0.08);
+
+	/* Переопределение переменных Tabler/Bootstrap под бренд */
+	--tblr-primary: var(--primary-color);
+	--bs-primary: var(--primary-color);
+
+	/* Масштаб интерфейса */
+	--ui-font-scale: 0.97;
+	--ui-radius: 12px;
+}
+
+/* Светлая тема */
+[data-bs-theme='light'] {
+	--bg-page: #f6f8fb;
+	--bg-surface: #ffffff;
+	--bg-card: #ffffff;
+	--text-primary: #212529;
+	--text-muted: #5f6b7a;
+	--border-color: rgba(0, 0, 0, 0.08);
+	--tblr-primary: var(--primary-color);
+	--bs-primary: var(--primary-color);
+    --accent-1: color-mix(in oklab, var(--primary-color) 16%, transparent);
+    --accent-2: color-mix(in oklab, #3e8cc9 12%, transparent);
+    --accent-3: color-mix(in oklab, #3ec996 10%, transparent);
+}
+
+/* Тёмная тема */
+[data-bs-theme='dark'] {
+	--bg-page: #0f1115;
+	--bg-surface: #1b1f24;
+	--bg-card: #23272c;
+	--text-primary: #e9ecef;
+	--text-muted: #adb5bd;
+	--border-color: rgba(255, 255, 255, 0.08);
+	--tblr-primary: var(--primary-color);
+	--bs-primary: var(--primary-color);
+    --accent-1: color-mix(in oklab, var(--primary-color) 18%, transparent);
+    --accent-2: color-mix(in oklab, #3e8cc9 14%, transparent);
+    --accent-3: color-mix(in oklab, #3ec996 12%, transparent);
+}
+
+html, body {
+	height: 100%;
+	font-size: calc(16px * var(--ui-font-scale));
+	background: var(--bg-page);
+	color: var(--text-primary);
+}
+
+body {
+	font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+	line-height: 1.6;
+}
+
+/* Виньетка-обрамление по краям экрана */
+body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,0.04), inset 0 0 140px rgba(0,0,0,0.35);
+    z-index: 0;
+}
+
+html[data-bs-theme='light'] body::before {
+	box-shadow: inset 0 0 0 1px rgba(0,0,0,0.06), inset 0 0 120px rgba(0,0,0,0.12);
+}
+
+/* Градиентная подложка поверх фона */
+body::after {
+    content: "";
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    background:
+        conic-gradient(from var(--aurora-rot, 0deg) at 50% 50%,
+          color-mix(in oklab, var(--primary-color) 12%, transparent) 0deg,
+          color-mix(in oklab, #3e8cc9 12%, transparent) 120deg,
+          color-mix(in oklab, #3ec996 10%, transparent) 240deg,
+          color-mix(in oklab, var(--primary-color) 12%, transparent) 360deg
+        ),
+        radial-gradient(900px 700px at var(--aurora-x1, 20%) var(--aurora-y1, 20%), color-mix(in oklab, var(--accent-1) 90%, transparent) 0%, transparent 60%),
+        radial-gradient(1100px 800px at var(--aurora-x2, 80%) var(--aurora-y2, 30%), color-mix(in oklab, var(--accent-2) 90%, transparent) 0%, transparent 64%),
+        radial-gradient(1000px 700px at var(--aurora-x3, 60%) var(--aurora-y3, 75%), color-mix(in oklab, var(--accent-3) 90%, transparent) 0%, transparent 64%);
+    z-index: 0;
+    opacity: .32;
+    animation: auroraMove 42s ease-in-out infinite;
+    will-change: background, filter;
+    filter: saturate(118%) brightness(106%);
+}
+
+@keyframes auroraMove {
+  0%   { --aurora-x1: 15%; --aurora-y1: 20%; --aurora-x2: 82%; --aurora-y2: 25%; --aurora-x3: 62%; --aurora-y3: 78%; --aurora-rot: 0deg; }
+  25%  { --aurora-x1: 28%; --aurora-y1: 30%; --aurora-x2: 74%; --aurora-y2: 35%; --aurora-x3: 58%; --aurora-y3: 68%; --aurora-rot: 90deg; }
+  50%  { --aurora-x1: 42%; --aurora-y1: 22%; --aurora-x2: 68%; --aurora-y2: 20%; --aurora-x3: 52%; --aurora-y3: 60%; --aurora-rot: 180deg; }
+  75%  { --aurora-x1: 32%; --aurora-y1: 12%; --aurora-x2: 60%; --aurora-y2: 28%; --aurora-x3: 56%; --aurora-y3: 72%; --aurora-rot: 270deg; }
+  100% { --aurora-x1: 15%; --aurora-y1: 20%; --aurora-x2: 82%; --aurora-y2: 25%; --aurora-x3: 62%; --aurora-y3: 78%; --aurora-rot: 360deg; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body::after { animation: none; opacity: .16; }
+}
+
+/* Стеклянные кнопки */
+.btn-glass {
+  background: rgba(255,255,255,0.04) !important;
+  border: 1px solid rgba(255,255,255,0.08) !important;
+  backdrop-filter: saturate(120%) blur(8px);
+  -webkit-backdrop-filter: saturate(120%) blur(8px);
+  color: #e6e9ef !important;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.25), inset 0 0 0 1px rgba(255,255,255,0.02);
+  transition: background .2s ease, border-color .2s ease, box-shadow .2s ease, transform .02s ease;
+}
+
+.btn-glass:hover,
+.btn-glass:focus {
+  background: rgba(255,255,255,0.07) !important;
+  border-color: rgba(255,255,255,0.14) !important;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.35), inset 0 0 0 1px rgba(255,255,255,0.03);
+}
+
+.btn-glass:active {
+  transform: translateY(1px);
+  box-shadow: 0 1px 2px rgba(0,0,0,0.35) inset;
+}
+
+/* Стеклянные карточки */
+.card.glass {
+	background: color-mix(in oklab, var(--bg-card) 70%, transparent);
+	border: 1px solid var(--border-color);
+	border-radius: calc(var(--ui-radius) + 2px);
+	box-shadow: 0 8px 22px rgba(0,0,0,.22);
+	backdrop-filter: blur(12px) saturate(140%);
+	-webkit-backdrop-filter: blur(12px) saturate(140%);
+}
+
+.card {
+	background: color-mix(in oklab, var(--bg-surface) 78%, transparent);
+	border: 1px solid color-mix(in oklab, #ffffff 10%, var(--border-color) 90%);
+	border-radius: var(--ui-radius);
+	backdrop-filter: blur(8px);
+}
+
+/* Smooth swap для частичных обновлений */
+.is-swapping {
+  transition: min-height .24s ease;
+}
+
+.flash {
+  animation: flashFade .6s ease;
+}
+
+@keyframes flashFade {
+  0% { box-shadow: 0 0 0 0 rgba(255,255,255,0.18) inset; }
+  100% { box-shadow: 0 0 0 0 rgba(255,255,255,0) inset; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .is-swapping { transition: none; }
+  .flash { animation: none; }
+}
+
+/* Статус индикаторы */
+.status-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--success-color);
+  margin-right: 6px;
+  vertical-align: middle;
+}
+
+.status-dot-animated {
+  animation: pulse 1.6s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0% { transform: scale(1); opacity: 0.9; }
+  50% { transform: scale(1.25); opacity: 0.4; }
+  100% { transform: scale(1); opacity: 0.9; }
+}
+
+/* Pill элементы */
+.pill { border-radius: 9999px !important; }
+.pill-md { border-radius: 14px !important; }
+
+/* Мини-кнопки */
+.btn.btn-xs {
+	padding: 4px 10px;
+	font-size: .78rem;
+	line-height: 1.2;
+	border-radius: 10px;
+}
+
+/* Модалки */
+.modal.modal-blur .modal-content {
+  background: color-mix(in oklab, var(--bg-card) 70%, transparent) !important;
+  border: 1px solid color-mix(in oklab, #ffffff 22%, var(--border-color) 78%) !important;
+  backdrop-filter: blur(12px) saturate(140%);
+  -webkit-backdrop-filter: blur(12px) saturate(140%);
+  box-shadow: 0 24px 60px rgba(0,0,0,0.40) !important;
+  border-radius: 14px !important;
+}
+
+/* Toast уведомления */
+.toast {
+  background: color-mix(in oklab, var(--bg-card) 70%, transparent) !important;
+  border: 1px solid color-mix(in oklab, #ffffff 22%, var(--border-color) 78%) !important;
+  backdrop-filter: blur(10px) saturate(140%);
+  -webkit-backdrop-filter: blur(10px) saturate(140%);
+  box-shadow: 0 16px 40px rgba(0,0,0,0.35) !important;
+  border-radius: 14px !important;
+}
+
+/* Формы */
+.form-control, .form-select {
+	background-color: var(--bg-surface);
+	border-color: var(--border-color);
+	color: var(--text-primary);
+	border-radius: var(--ui-radius);
+}
+
+.form-control:focus, .form-select:focus {
+	border-color: var(--primary-color);
+	box-shadow: 0 0 0 3px rgba(174, 62, 201, 0.25);
+	background-color: var(--bg-surface);
+	color: var(--text-primary);
+}
+
+/* Таблицы */
+.table {
+	color: var(--text-primary);
+}
+
+.table thead {
+	background-color: var(--bg-surface);
+}
+
+.table thead th {
+	border-bottom-color: var(--border-color);
+	color: var(--text-primary);
+}
+
+.table tbody td {
+	border-color: var(--border-color);
+}
+
+/* Контейнер и layout */
+.container {
+    max-width: 1680px;
+    min-height: calc(100vh - 48px);
+    margin: 28px auto;
+    background: transparent;
+    padding: 0 28px;
+    position: relative;
+    z-index: 1;
+}
+
+/* Шапка */
+.main-header {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    overflow: visible;
+    border: 1px solid var(--border-color);
+    border-radius: calc(var(--ui-radius) + 2px);
+    padding: 10px 16px;
+    margin-bottom: 16px;
+    position: sticky;
+    top: 8px;
+    backdrop-filter: blur(12px) saturate(130%);
+    -webkit-backdrop-filter: blur(12px) saturate(130%);
+    background: color-mix(in oklab, var(--bg-surface) 80%, transparent);
+    box-shadow: 0 10px 24px rgba(0,0,0,0.18);
+    z-index: 10;
+}
+
+.brand {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.brand .brand-link {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    text-decoration: none;
+    color: var(--text-primary);
+}
+
+.brand #brand-title {
+    display: flex;
+    align-items: center;
+    line-height: 1;
+    margin: 0;
+    padding: 0;
+    font-weight: 800;
+    font-size: 1.06rem;
+    letter-spacing: .25px;
+}
+
+.navigation {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex: 1 1 auto;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+/* Tablet and smaller screens - allow wrapping */
+@media (max-width: 991.98px) {
+    .navigation {
+        gap: 8px;
+    }
+    
+    .navigation .nav-link {
+        font-size: 0.9rem;
+        padding: 7px 12px;
+    }
+}
+
+@media (max-width: 767.98px) {
+    /* Navigation overlay - separate element */
+    .nav-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.5);
+        backdrop-filter: blur(4px);
+        -webkit-backdrop-filter: blur(4px);
+        z-index: 999;
+        opacity: 0;
+        transition: opacity 0.3s ease;
+        pointer-events: none;
+    }
+    
+    .nav-overlay.nav-open {
+        opacity: 1;
+        pointer-events: auto;
+    }
+    
+    /* Hide navigation in header on mobile, show as sidebar */
+    .main-header > .navigation {
+        display: none;
+    }
+    
+    .navigation {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        max-width: 320px;
+        height: 100vh;
+        background: color-mix(in oklab, var(--bg-surface) 95%, transparent);
+        backdrop-filter: blur(20px) saturate(130%);
+        -webkit-backdrop-filter: blur(20px) saturate(130%);
+        z-index: 1000;
+        flex-direction: column;
+        justify-content: flex-start;
+        align-items: stretch;
+        padding: 70px 20px 20px;
+        gap: 12px;
+        overflow-y: auto;
+        transform: translateX(-100%);
+        transition: transform 0.3s ease;
+        box-shadow: 2px 0 10px rgba(0, 0, 0, 0.3);
+    }
+    
+    .navigation.nav-open {
+        transform: translateX(0);
+        display: flex;
+    }
+    
+    .navigation .nav-link {
+        width: 100%;
+        justify-content: flex-start;
+        padding: 12px 16px;
+        border-radius: var(--ui-radius);
+        height: auto;
+        min-height: 44px;
+    }
+}
+
+.navigation .nav-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.98rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-decoration: none;
+    padding: 8px 14px;
+    height: 38px;
+    line-height: 1;
+    border-radius: 999px;
+    background: color-mix(in oklab, var(--primary-color) 12%, transparent);
+    border: 1px solid color-mix(in oklab, var(--primary-color) 26%, var(--border-color));
+    position: relative;
+    transition: all 0.2s ease;
+}
+
+.navigation .nav-link:hover {
+    background: color-mix(in oklab, var(--primary-color) 26%, transparent);
+    color: #fff;
+    box-shadow: 0 0 0 1px color-mix(in oklab, var(--primary-color) 38%, transparent), 0 10px 22px rgba(174,62,201,0.26);
+}
+
+.navigation .nav-link.active {
+    color: #fff;
+    background: color-mix(in oklab, var(--primary-color) 42%, transparent);
+    border-color: color-mix(in oklab, var(--primary-color) 40%, var(--border-color));
+    box-shadow: 0 0 0 1px color-mix(in oklab, var(--primary-color) 42%, transparent), 0 12px 28px rgba(174,62,201,0.34);
+}
+
+/* Burger menu button */
+.nav-toggle {
+    display: none;
+    flex-direction: column;
+    justify-content: space-around;
+    width: 32px;
+    height: 32px;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+    z-index: 1001;
+    position: relative;
+}
+
+.nav-toggle span {
+    width: 100%;
+    height: 3px;
+    background: var(--text-primary);
+    border-radius: 2px;
+    transition: all 0.3s ease;
+    transform-origin: center;
+}
+
+.nav-toggle.nav-open span:nth-child(1) {
+    transform: rotate(45deg) translate(8px, 8px);
+}
+
+.nav-toggle.nav-open span:nth-child(2) {
+    opacity: 0;
+}
+
+.nav-toggle.nav-open span:nth-child(3) {
+    transform: rotate(-45deg) translate(8px, -8px);
+}
+
+@media (max-width: 767.98px) {
+    .nav-toggle {
+        display: flex;
+        order: 2;
+        margin-left: auto;
+        margin-right: 8px;
+    }
+    
+    .main-header {
+        position: relative;
+        padding: 8px 12px;
+        gap: 12px;
+        flex-wrap: wrap;
+    }
+    
+    .brand {
+        order: 1;
+        flex: 0 0 auto;
+    }
+    
+    .brand #brand-title {
+        font-size: 0.95rem;
+    }
+    
+    .navigation {
+        order: 4;
+        width: 100%;
+        flex: 1 1 100%;
+    }
+    
+    .header-controls {
+        order: 3;
+        flex: 0 0 auto;
+    }
+    
+    .container {
+        padding: 0 16px;
+        margin: 16px auto;
+    }
+    
+    /* Prevent body scroll when menu is open */
+    body.nav-menu-open {
+        overflow: hidden;
+    }
+}
+
+.header-controls {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin: 0;
+}
+
+@media (max-width: 767.98px) {
+    .header-controls {
+        gap: 8px;
+    }
+    
+    .header-controls .user-session-controls {
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+    
+    .header-controls .user-session-controls span {
+        display: none;
+    }
+    
+    .header-controls .btn {
+        padding: 6px 12px;
+        font-size: 0.875rem;
+    }
+}
+
+.user-session-controls {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.user-session-controls span {
+    color: var(--text-muted);
+    font-size: 0.9rem;
+}
+
+/* Кнопки */
+.btn {
+    border-radius: var(--ui-radius) !important;
+}
+
+.btn-outline-secondary {
+    border-color: var(--border-color);
+    color: var(--text-primary);
+    background: transparent;
+}
+
+.btn-outline-secondary:hover {
+    background: rgba(255,255,255,0.06);
+    border-color: var(--border-color);
+}
+
+.btn-outline-primary {
+    color: var(--primary-color);
+    background: transparent;
+    border: 1px solid var(--primary-color);
+}
+
+.btn-outline-primary:hover {
+    background: color-mix(in oklab, var(--primary-color) 15%, transparent);
+    color: #fff;
+}
+
+/* Карточки */
+.card {
+    background: color-mix(in oklab, var(--bg-surface) 78%, transparent);
+    border: 1px solid color-mix(in oklab, #ffffff 10%, var(--border-color) 90%);
+    border-radius: var(--ui-radius);
+    backdrop-filter: blur(8px);
+    margin-bottom: 1.5rem;
+}
+
+.card-header {
+    border-bottom: 1px solid var(--border-color);
+    padding: 1rem 1.5rem;
+    background: transparent;
+}
+
+.card-title {
+    margin: 0;
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.card-body {
+    padding: 1.5rem;
+    color: var(--text-primary);
+}
+
+/* Page header */
+.page-header {
+    margin: 8px 0 16px;
+}
+
+.page-title {
+    margin: 0 0 4px;
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.text-secondary {
+    color: var(--text-muted) !important;
+    font-size: 0.9rem;
+}
+
+/* Subheader в карточках */
+.subheader {
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-muted);
+    margin-bottom: 0.5rem;
+}
+
+.h1 {
+    font-size: 2rem;
+    font-weight: 700;
+    line-height: 1.2;
+    color: var(--text-primary);
+    margin: 0;
+}
+
+.mb-0 {
+    margin-bottom: 0 !important;
+}
+
+.mb-1 {
+    margin-bottom: 0.25rem !important;
+}
+
+/* Row cards */
+.row-cards {
+    margin-left: -0.75rem;
+    margin-right: -0.75rem;
+}
+
+.row-cards > .col,
+.row-cards > [class*="col-"] {
+    padding-left: 0.75rem;
+    padding-right: 0.75rem;
+}
+
+.row-deck {
+    display: flex;
+    flex-wrap: wrap;
+    margin-left: -0.75rem;
+    margin-right: -0.75rem;
+}
+
+.row-deck > .col,
+.row-deck > [class*="col-"] {
+    padding-left: 0.75rem;
+    padding-right: 0.75rem;
+    display: flex;
+}
+
+.row-deck .card {
+    flex: 1 1 auto;
+}
+
+/* Footer */
+.main-footer {
+    margin-top: 40px;
+    padding: 20px 0;
+    border-top: 1px solid var(--border-color);
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 0.9rem;
+    width: 100%;
+}
+
+@media (max-width: 767.98px) {
+    .main-footer {
+        margin-top: 24px;
+        padding: 16px 0;
+        font-size: 0.85rem;
+    }
+}
+
+/* Main content */
+main {
+    position: relative;
+    z-index: 1;
+}
+
+/* Badge */
+.badge {
+	border-radius: 12px;
+	padding: 4px 10px;
+	font-size: 0.85em;
+	font-weight: 600;
+}
+
+.bg-green-lt {
+	background-color: color-mix(in oklab, var(--success-color) 20%, transparent);
+	color: var(--success-color);
+}
+
+/* Дополнительные стили для правильного отображения */
+.row {
+    display: flex;
+    flex-wrap: wrap;
+    margin-left: -0.75rem;
+    margin-right: -0.75rem;
+}
+
+.row > * {
+    padding-left: 0.75rem;
+    padding-right: 0.75rem;
+}
+
+.col-sm-6 {
+    flex: 0 0 auto;
+    width: 50%;
+}
+
+.col-lg-3 {
+    flex: 0 0 auto;
+    width: 25%;
+}
+
+.col-lg-5 {
+    flex: 0 0 auto;
+    width: 41.66666667%;
+}
+
+.col-lg-7 {
+    flex: 0 0 auto;
+    width: 58.33333333%;
+}
+
+.col-12 {
+    flex: 0 0 auto;
+    width: 100%;
+}
+
+@media (max-width: 992px) {
+    .col-lg-3, .col-lg-5, .col-lg-7 {
+        width: 100%;
+    }
+}
+
+@media (max-width: 576px) {
+    .col-sm-6 {
+        width: 100%;
+    }
+}
+
+/* Таблицы Tabler */
+.table-vcenter td {
+    vertical-align: middle;
+}
+
+.table-responsive {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+/* Chart container */
+.chart {
+    position: relative;
+    height: 280px;
+}
+
+/* Form select */
+.form-select {
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23adb5bd' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M2 5l6 6 6-6'/%3e%3c/svg%3e");
+    background-repeat: no-repeat;
+    background-position: right 0.75rem center;
+    background-size: 16px 12px;
+    padding-right: 2.5rem;
+}
+
+/* Утилиты */
+.mt-2 {
+    margin-top: 0.5rem !important;
+}
+
+.mt-3 {
+    margin-top: 1rem !important;
+}
+
+.ms-2 {
+    margin-left: 0.5rem !important;
+}
+
+.d-print-none {
+    display: block !important;
+}
+
+@media print {
+    .d-print-none {
+        display: none !important;
+    }
+}
+
+/* Badge colors */
+.bg-red {
+    background-color: var(--danger-color) !important;
+    color: #fff !important;
+}
+
+.bg-green {
+    background-color: var(--success-color) !important;
+    color: #fff !important;
+}
+
+/* Code */
+code {
+    background: color-mix(in oklab, var(--bg-surface) 90%, transparent);
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    padding: 2px 6px;
+    font-size: 0.9em;
+    color: var(--primary-color);
+}
+
+/* Links */
+a {
+    color: var(--primary-color);
+    text-decoration: none;
+}
+
+a:hover {
+    color: color-mix(in oklab, var(--primary-color) 80%, white);
+    text-decoration: underline;
+}
+
+/* Text muted */
+.text-muted {
+    color: var(--text-muted) !important;
+}
+
+/* Clearfix */
+.clearfix::after {
+    content: "";
+    display: table;
+    clear: both;
+}
+
+/* Pagination */
+.pagination {
+    display: flex;
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    gap: 0.5rem;
+}
+
+.pagination li {
+    display: inline-block;
+}
+
+.pagination a,
+.pagination span {
+    display: inline-block;
+    padding: 0.5rem 0.75rem;
+    border: 1px solid var(--border-color);
+    border-radius: var(--ui-radius);
+    color: var(--text-primary);
+    background: var(--bg-surface);
+    text-decoration: none;
+}
+
+.pagination a:hover {
+    background: color-mix(in oklab, var(--primary-color) 15%, transparent);
+    border-color: var(--primary-color);
+}
+
+.pagination .active span {
+    background: var(--primary-color);
+    border-color: var(--primary-color);
+    color: #fff;
+}
+
+.pagination .disabled span {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* Page header с кнопкой */
+.page-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1.5rem;
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+
+.page-header .row {
+    width: 100%;
+    margin: 0;
+}
+
+.page-header .col-auto {
+    flex: 0 0 auto;
+}
+
+.page-header .col {
+    flex: 1 1 auto;
+}
+
+/* Кнопки действий в таблице */
+.btn-list {
+    display: inline-flex;
+    gap: 0.25rem;
+    flex-wrap: nowrap;
+    align-items: center;
+}
+
+.btn-list .btn {
+    padding: 0.375rem 0.5rem;
+    min-width: auto;
+    line-height: 1;
+    border-radius: var(--ui-radius);
+}
+
+.btn-list .btn i,
+.btn-list .btn .ti {
+    font-size: 0.875rem;
+    width: 1em;
+    height: 1em;
+    display: inline-block;
+}
+
+/* Убираем отступы у форм внутри btn-list */
+.btn-list form {
+    margin: 0;
+    display: inline-block;
+}
+
+/* Убираем отступы у кнопок внутри форм */
+.btn-list form .btn {
+    margin: 0;
+}
+
+/* Status indicator */
+.status-indicator {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.status-indicator .status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    display: inline-block;
+}
+
+.status-indicator .status-text {
+    font-size: 0.875rem;
+    color: var(--text-muted);
+}
+
+/* Speedtest info */
+.speedtest-info {
+    font-size: 0.875rem;
+}
+
+.speedtest-info small {
+    color: var(--text-muted);
+}
+
+/* Badge colors для Tabler */
+.bg-blue {
+    background-color: #206bc4 !important;
+    color: #fff !important;
+}
+
+.bg-secondary {
+    background-color: var(--text-muted) !important;
+    color: #fff !important;
+}
+
+/* Card tools */
+.card-tools {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+/* Align items center */
+.align-items-center {
+    align-items: center !important;
+}
+
+.ms-auto {
+    margin-left: auto !important;
+}
+
+.d-print-none {
+    display: block !important;
+}
+
+@media print {
+    .d-print-none {
+        display: none !important;
+    }
+}
+
+
+/* Server monitor specific styles */
+#server-monitor-data .card {
+    min-height: 120px;
+}
+
+#server-monitor-data .h1 {
+    font-size: 2rem;
+    font-weight: 700;
+    line-height: 1.2;
+    color: var(--text-primary);
+    margin: 0;
+}
+
+#server-monitor-data .subheader {
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-muted);
+    margin-bottom: 0.5rem;
+}
+
+/* Alert styles */
+.alert {
+    padding: 1rem 1.5rem;
+    border: 1px solid var(--border-color);
+    border-radius: var(--ui-radius);
+    margin-bottom: 1rem;
+}
+
+.alert-danger {
+    background-color: color-mix(in oklab, var(--danger-color) 15%, transparent);
+    border-color: var(--danger-color);
+    color: var(--danger-color);
+}
+
+.alert-title {
+    font-weight: 600;
+    font-size: 1rem;
+    margin-bottom: 0.5rem;
+    color: var(--text-primary);
+}
+
+.alert ul {
+    margin-top: 0.5rem;
+    margin-bottom: 0;
+    padding-left: 1.5rem;
+}

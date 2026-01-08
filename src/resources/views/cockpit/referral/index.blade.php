@@ -4,26 +4,36 @@
 @section('page-title', 'Рефералы')
 
 @section('content')
-    <div class="row">
-        <div class="col-12">
-            <div class="card">
-                <div class="card-header">
-                    <h3 class="card-title">Список реферальных связей</h3>
-                    <div class="card-tools">
-                        <a href="{{ route('cockpit.referral.create') }}" class="btn btn-primary btn-sm">
-                            <i class="fas fa-plus"></i> Добавить связь
-                        </a>
-                    </div>
-                </div>
-                <div class="card-body table-responsive p-0">
-                    <table class="table table-hover text-nowrap">
+<div class="page-header d-print-none">
+  <div class="row align-items-center">
+    <div class="col">
+      <h2 class="page-title">Рефералы</h2>
+      <div class="text-secondary">Управление реферальными связями</div>
+    </div>
+    <div class="col-auto ms-auto d-print-none">
+      <a href="{{ route('cockpit.referral.create') }}" class="btn btn-primary">
+        <i class="ti ti-plus"></i> Добавить связь
+      </a>
+    </div>
+  </div>
+</div>
+
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">Список реферальных связей</h3>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-vcenter">
                         <thead>
                             <tr>
                                 <th>ID</th>
                                 <th>Кто пригласил</th>
                                 <th>Кого пригласили</th>
                                 <th>Создано</th>
-                                <th>Действия</th>
+                                <th class="w-1">Действия</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -50,18 +60,18 @@
                                     </td>
                                     <td>{{ $referral->created_at->format('d.m.Y H:i') }}</td>
                                     <td>
-                                        <div class="btn-group">
-                                            <a href="{{ route('cockpit.referral.show', $referral) }}" class="btn btn-info btn-sm">
-                                                <i class="fas fa-eye"></i>
+                                        <div class="btn-list">
+                                            <a href="{{ route('cockpit.referral.show', $referral) }}" class="btn btn-info btn-sm btn-glass" title="Просмотр">
+                                                <i class="ti ti-eye"></i>
                                             </a>
-                                            <a href="{{ route('cockpit.referral.edit', $referral) }}" class="btn btn-warning btn-sm">
-                                                <i class="fas fa-edit"></i>
+                                            <a href="{{ route('cockpit.referral.edit', $referral) }}" class="btn btn-warning btn-sm btn-glass" title="Редактировать">
+                                                <i class="ti ti-edit"></i>
                                             </a>
-                                            <form action="{{ route('cockpit.referral.destroy', $referral) }}" method="POST" class="d-inline" onsubmit="return confirm('Вы уверены?');">
+                                            <form action="{{ route('cockpit.referral.destroy', $referral) }}" method="POST" class="d-inline" data-confirm="Вы уверены?" data-ajax="delete">
                                                 @csrf
                                                 @method('DELETE')
-                                                <button type="submit" class="btn btn-danger btn-sm">
-                                                    <i class="fas fa-trash"></i>
+                                                <button type="submit" class="btn btn-danger btn-sm btn-glass" title="Удалить">
+                                                    <i class="ti ti-trash"></i>
                                                 </button>
                                             </form>
                                         </div>
@@ -75,11 +85,11 @@
                         </tbody>
                     </table>
                 </div>
-                <div class="card-footer clearfix">
-                    {{ $referrals->links() }}
-                </div>
+            </div>
+            <div class="card-footer">
+                {{ $referrals->links() }}
             </div>
         </div>
     </div>
+</div>
 @endsection
-

@@ -11,6 +11,8 @@ use App\Http\Controllers\Cockpit\CockpitPricingController;
 use App\Http\Controllers\Cockpit\CockpitReferralController;
 use App\Http\Controllers\Cockpit\CockpitSubscriptionController;
 use App\Http\Controllers\Cockpit\CockpitSettingController;
+use App\Http\Controllers\Cockpit\CockpitKeyController;
+use App\Http\Controllers\Cockpit\CockpitServerMonitorController;
 
 Route::get('/', function () {
     return view('welcome');
@@ -34,6 +36,18 @@ Route::prefix('cockpit')->group(function () {
 
         // XUI CRUD routes
         Route::resource('xui', CockpitXuiController::class);
+        
+        // XUI monitoring routes
+        Route::prefix('xui')->name('xui.')->group(function () {
+            Route::get('/{id}/status', [CockpitXuiController::class, 'checkStatus'])->name('status');
+        });
+
+        // Server monitoring routes
+        Route::prefix('server')->name('server.')->group(function () {
+            Route::get('/monitor', [CockpitServerMonitorController::class, 'index'])->name('monitor.index');
+            Route::get('/monitor/{id}', [CockpitServerMonitorController::class, 'show'])->name('monitor');
+            Route::get('/monitor/{id}/status.json', [CockpitServerMonitorController::class, 'status'])->name('monitor.status');
+        });
 
         // User CRUD routes
         Route::resource('user', CockpitUserController::class);
@@ -52,6 +66,29 @@ Route::prefix('cockpit')->group(function () {
 
         // Settings CRUD routes
         Route::resource('setting', CockpitSettingController::class);
+
+        // Keys management routes
+        Route::prefix('key')->name('key.')->group(function () {
+            Route::get('/', [CockpitKeyController::class, 'index'])->name('index');
+            Route::post('/', [CockpitKeyController::class, 'store'])->name('store');
+            Route::delete('/{id}', [CockpitKeyController::class, 'destroy'])->name('destroy');
+            Route::post('/{id}/adjust-expiry', [CockpitKeyController::class, 'adjustExpiry'])->name('adjust-expiry');
+            Route::post('/sweep-expired', [CockpitKeyController::class, 'sweepExpired'])->name('sweep-expired');
+            Route::get('/generate-email', [CockpitKeyController::class, 'generateEmail'])->name('generate-email');
+        });
+
+        // Dashboard partials
+        Route::prefix('dashboard')->name('dashboard.')->group(function () {
+            Route::get('/stats.partial', [CockpitController::class, 'dashboardStatsPartial'])->name('stats.partial');
+            Route::get('/transactions.partial', [CockpitController::class, 'dashboardTransactionsPartial'])->name('transactions.partial');
+            Route::get('/charts.json', [CockpitController::class, 'dashboardChartsJson'])->name('charts.json');
+        });
+
+        // User balance adjustment
+        Route::post('/user/{id}/balance/adjust', [CockpitUserController::class, 'adjustBalance'])->name('user.balance.adjust');
+        
+        // Users partial
+        Route::get('/users/table.partial', [CockpitUserController::class, 'usersTablePartial'])->name('users.table.partial');
     });
 });
 

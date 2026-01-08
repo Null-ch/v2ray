@@ -1,152 +1,220 @@
 @extends('cockpit.layout')
 
-@section('title', 'Dashboard')
-@section('page-title', 'Dashboard')
+@section('title', 'Главная страница')
+@section('page-title', 'Главная')
 
 @section('content')
-    <div class="row">
-        <div class="col-lg-3 col-6">
-            <!-- small box -->
-            <div class="small-box bg-info">
-                <div class="inner">
-                    <h3>{{ $totalUsers }}</h3>
-                    <p>Пользователи</p>
-                </div>
-                <div class="icon">
-                    <i class="fas fa-users"></i>
-                </div>
-                <a href="{{ route('cockpit.user.index') }}" class="small-box-footer">
-                    Подробнее <i class="fas fa-arrow-circle-right"></i>
-                </a>
-            </div>
+<div class="page-header d-print-none">
+  <div class="row align-items-center">
+    <div class="col">
+      <h2 class="page-title">Главная</h2>
+      <div class="text-secondary">Сводка и ключевые метрики</div>
+    </div>
+  </div>
+  <div id="dash-stats" class="row row-deck row-cards mt-2"
+       data-fetch-url="{{ route('cockpit.dashboard.stats.partial') }}"
+       data-fetch-interval="8000">
+    @include('cockpit.partials.dashboard_stats')
+  </div>
+</div>
+
+<div class="row row-cards">
+  <div class="col-lg-7">
+    <div class="card">
+      <div class="card-header">
+        <h3 class="card-title">Новые пользователи (30 дней)</h3>
+      </div>
+      <div class="card-body">
+        <div class="chart" style="height: 280px">
+          <canvas id="newUsersChart"></canvas>
         </div>
-        <!-- ./col -->
-        <div class="col-lg-3 col-6">
-            <!-- small box -->
-            <div class="small-box bg-success">
-                <div class="inner">
-                    @php
-                        $activePercent = $totalUsers > 0 ? round($activeUsers / $totalUsers * 100) : 0;
-                    @endphp
-                    <h3>{{ $activeUsers }}<sup style="font-size: 16px"> ({{ $activePercent }}%)</sup></h3>
-                    <p>Активные пользователи (с непрошедшей подпиской)</p>
-                </div>
-                <div class="icon">
-                    <i class="fas fa-check-circle"></i>
-                </div>
-                <a href="{{ route('cockpit.subscription.index') }}" class="small-box-footer">
-                    Подробнее <i class="fas fa-arrow-circle-right"></i>
-                </a>
-            </div>
-        </div>
-        <!-- ./col -->
-        <div class="col-lg-3 col-6">
-            <!-- small box -->
-            <div class="small-box bg-warning">
-                <div class="inner">
-                    <h3>{{ $totalSubscriptions }}</h3>
-                    <p>Всего подписок</p>
-                </div>
-                <div class="icon">
-                    <i class="fas fa-cog"></i>
-                </div>
-                <a href="{{ route('cockpit.subscription.index') }}" class="small-box-footer">
-                    Подробнее <i class="fas fa-arrow-circle-right"></i>
-                </a>
-            </div>
-        </div>
-        <!-- ./col -->
-        <div class="col-lg-3 col-6">
-            <!-- small box -->
-            <div class="small-box bg-danger">
-                <div class="inner">
-                    <h3>{{ $activeXui }}/{{ $totalXui }}</h3>
-                    <p>Активные XUI сервера</p>
-                </div>
-                <div class="icon">
-                    <i class="fas fa-server"></i>
-                </div>
-                <a href="{{ route('cockpit.xui.index') }}" class="small-box-footer">
-                    Подробнее <i class="fas fa-arrow-circle-right"></i>
-                </a>
-            </div>
-        </div>
-        <!-- ./col -->
+      </div>
     </div>
 
-    <div class="row">
-        <div class="col-md-8">
-            <div class="card">
-                <div class="card-header">
-                    <h3 class="card-title">Добро пожаловать в Cockpit</h3>
-                </div>
-                <div class="card-body">
-                    <p>Панель управления успешно настроена и готова к использованию.</p>
-                    <p>Вы можете настраивать ключевые параметры проекта через раздел <strong>Настройки</strong>, а также отслеживать пользователей, VPN-конфигурации и платежи.</p>
-                </div>
-            </div>
+    <div class="card mt-3">
+      <div class="card-header">
+        <h3 class="card-title">Новые ключи (30 дней)</h3>
+      </div>
+      <div class="card-body">
+        <div class="chart" style="height: 280px">
+          <canvas id="newKeysChart"></canvas>
         </div>
-        <div class="col-md-4">
-            <div class="card">
-                <div class="card-header">
-                    <h3 class="card-title">Аналитика по платежам</h3>
-                </div>
-                <div class="card-body">
-                    <ul class="list-unstyled mb-0">
-                        <li>
-                            <strong>Всего платежей:</strong>
-                            {{ $totalPayments }}
-                        </li>
-                        <li>
-                            <strong>Успешных платежей:</strong>
-                            {{ $succeededPayments }}
-                        </li>
-                        <li>
-                            <strong>Общий доход (успешные):</strong>
-                            {{ number_format($totalRevenue, 2, '.', ' ') }} ₽
-                        </li>
-                        <li>
-                            <strong>Доход за сегодня:</strong>
-                            {{ number_format($todayRevenue, 2, '.', ' ') }} ₽
-                        </li>
-                    </ul>
-                </div>
-            </div>
-        </div>
+      </div>
     </div>
+  </div>
 
-    <div class="row">
-        <div class="col-12">
-            <div class="card">
-                <div class="card-header">
-                    <h3 class="card-title">Доход по тарифам</h3>
-                </div>
-                <div class="card-body table-responsive p-0">
-                    <table class="table table-hover text-nowrap">
-                        <thead>
-                            <tr>
-                                <th>Название тарифа</th>
-                                <th>Количество платежей</th>
-                                <th>Доход по тарифу</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @forelse($pricingTableData as $pricing)
-                                <tr>
-                                    <td>{{ $pricing['title'] }}</td>
-                                    <td>{{ $pricing['payments_count'] }}</td>
-                                    <td>{{ number_format($pricing['total_amount'], 2, '.', ' ') }} ₽</td>
-                                </tr>
-                            @empty
-                                <tr>
-                                    <td colspan="3" class="text-center">Пока нет данных по тарифам.</td>
-                                </tr>
-                            @endforelse
-                        </tbody>
-                    </table>
-                </div>
-            </div>
+  <div class="col-lg-5">
+    <div class="card">
+      <div class="card-header">
+        <h3 class="card-title">Недавние транзакции</h3>
+      </div>
+      <div class="card-body">
+        @if($recentTransactions->count() > 0)
+        <div class="table-responsive">
+          <table class="table table-vcenter">
+            <thead>
+              <tr>
+                <th>Пользователь</th>
+                <th>Хост</th>
+                <th>План</th>
+                <th>Цена</th>
+                <th>Дата</th>
+              </tr>
+            </thead>
+            <tbody id="dash-transactions"
+                   data-fetch-url="{{ route('cockpit.dashboard.transactions.partial', ['page' => 1]) }}"
+                   data-fetch-interval="10000">
+              @include('cockpit.partials.dashboard_transactions', ['transactions' => $recentTransactions])
+            </tbody>
+          </table>
         </div>
+        @else
+        <p class="text-secondary">Пока нет транзакций для отображения.</p>
+        @endif
+      </div>
     </div>
+  </div>
+</div>
+
+<script id="chart-data" type="application/json">
+  @json($chartData)
+</script>
+
+@push('scripts')
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const CHART_DATA = JSON.parse(document.getElementById('chart-data').textContent);
+  
+  function prepareChartData(data, label, color) {
+    const labels = [];
+    const values = [];
+    const today = new Date();
+
+    for (let i = 29; i >= 0; i--) {
+      const date = new Date(today);
+      date.setDate(today.getDate() - i);
+      const dateString = date.toISOString().split('T')[0];
+      const formattedDate = `${date.getDate().toString().padStart(2,'0')}.${(date.getMonth()+1).toString().padStart(2,'0')}`;
+      labels.push(formattedDate);
+      values.push(data[dateString] || 0);
+    }
+
+    return {
+      labels: labels,
+      datasets: [{
+        label: label,
+        data: values,
+        borderColor: color,
+        backgroundColor: color + '33',
+        borderWidth: 2,
+        fill: true,
+        tension: 0.3,
+      }],
+    };
+  }
+
+  // Users chart
+  const usersChartCanvas = document.getElementById('newUsersChart');
+  if (usersChartCanvas && typeof Chart !== 'undefined') {
+    const usersCtx = usersChartCanvas.getContext('2d');
+    const usersChartData = prepareChartData(CHART_DATA.users, 'Новые пользователи', '#007bff');
+    const usersChart = new Chart(usersCtx, {
+      type: 'line',
+      data: usersChartData,
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+          y: {
+            beginAtZero: true,
+            ticks: {
+              precision: 0,
+            }
+          },
+          x: {
+            ticks: {
+              maxTicksLimit: 15,
+            }
+          }
+        },
+        plugins: {
+          legend: {
+            display: true,
+          }
+        }
+      }
+    });
+
+    // Auto refresh charts
+    setInterval(async function() {
+      try {
+        const resp = await fetch('{{ route('cockpit.dashboard.charts.json') }}', {
+          headers: { 'Accept': 'application/json' },
+          credentials: 'same-origin',
+          cache: 'no-store'
+        });
+        if (!resp.ok) return;
+        const fresh = await resp.json();
+        if (!fresh) return;
+        const newUsers = prepareChartData(fresh.users, 'Новые пользователи', '#007bff');
+        usersChart.data.labels = newUsers.labels;
+        usersChart.data.datasets[0].data = newUsers.datasets[0].data;
+        usersChart.update('none');
+      } catch(_) {}
+    }, 10000);
+  }
+
+  // Keys chart
+  const keysChartCanvas = document.getElementById('newKeysChart');
+  if (keysChartCanvas && typeof Chart !== 'undefined') {
+    const keysCtx = keysChartCanvas.getContext('2d');
+    const keysChartData = prepareChartData(CHART_DATA.keys, 'Новые ключи', '#28a745');
+    const keysChart = new Chart(keysCtx, {
+      type: 'line',
+      data: keysChartData,
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+          y: {
+            beginAtZero: true,
+            ticks: {
+              precision: 0,
+            }
+          },
+          x: {
+            ticks: {
+              maxTicksLimit: 15,
+            }
+          }
+        },
+        plugins: {
+          legend: {
+            display: true,
+          }
+        }
+      }
+    });
+
+    // Auto refresh charts
+    setInterval(async function() {
+      try {
+        const resp = await fetch('{{ route('cockpit.dashboard.charts.json') }}', {
+          headers: { 'Accept': 'application/json' },
+          credentials: 'same-origin',
+          cache: 'no-store'
+        });
+        if (!resp.ok) return;
+        const fresh = await resp.json();
+        if (!fresh) return;
+        const newKeys = prepareChartData(fresh.keys, 'Новые ключи', '#28a745');
+        keysChart.data.labels = newKeys.labels;
+        keysChart.data.datasets[0].data = newKeys.datasets[0].data;
+        keysChart.update('none');
+      } catch(_) {}
+    }, 10000);
+  }
+});
+</script>
+@endpush
 @endsection
-
