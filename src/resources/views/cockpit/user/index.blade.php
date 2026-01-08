@@ -47,7 +47,6 @@
           <tr>
             <th>ID</th>
             <th>Имя</th>
-            <th>TG Tag</th>
             <th>TG ID</th>
             <th>Активные ключи</th>
             <th>Баланс</th>
@@ -59,7 +58,6 @@
           <tr>
             <td class="user-id">{{ $user->id }}</td>
             <td class="user-name">{{ $user->name }}</td>
-            <td>{{ $user->tg_tag ?? 'N/A' }}</td>
             <td>{{ $user->tg_id }}</td>
             <td>
               {{ $user->subscriptions->count() }} шт.
