@@ -25,20 +25,7 @@ class CancelExpiredPayments extends Command
     public function handle(): int
     {
         $bot = $this->telegramService->getBot();
-        $payments = DB::transaction(function () {
-            $payments = Payment::expiredPending()
-                ->with('user')
-                ->lockForUpdate()
-                ->get();
-
-            foreach ($payments as $payment) {
-                $payment->update([
-                    'status' => Payment::STATUS_CANCELING,
-                ]);
-            }
-
-            return $payments;
-        });
+        $payments = Payment::expiredPending()->with('user')->get();
 
         foreach ($payments as $payment) {
             try {
