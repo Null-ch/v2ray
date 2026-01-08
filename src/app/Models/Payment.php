@@ -7,6 +7,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Builder;
 
 class Payment extends Model
 {
@@ -127,9 +128,10 @@ class Payment extends Model
         return $this->telegram_message_id;
     }
 
-    public function scopeExpiredPending(): Payment   
+    public function scopeExpiredPending(Builder $query): Builder
     {
-        return $this->where('status', self::STATUS_PENDING)
+        return $query
+            ->where('status', self::STATUS_PENDING)
             ->where('created_at', '<=', now()->subMinutes(10));
     }
 }

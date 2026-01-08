@@ -27,6 +27,7 @@ class CancelExpiredPayments extends Command
         $bot = $this->telegramService->getBot();
         $payments = DB::transaction(function () {
             $payments = Payment::expiredPending()
+                ->with('user')
                 ->lockForUpdate()
                 ->get();
 
@@ -61,7 +62,7 @@ class CancelExpiredPayments extends Command
                 $msgId = $payment->getTelegramMessageId();
 
                 if (!empty($msgId)) {
-                    $bot->deleteMessage($bot->chatId(), $msgId);
+                    $bot->deleteMessage($chatId, $msgId);
                 }
 
                 $bot->sendMessage(text: $message, chat_id: $chatId);
