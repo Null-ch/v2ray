@@ -58,8 +58,8 @@
           @forelse($users as $user)
           <tr>
             <td class="user-id">{{ $user->id }}</td>
-            <td>{{ $user->name }}</td>
-            <td class="user-name">@{{ $user->tg_tag ?? 'N/A' }}</td>
+            <td class="user-name">{{ $user->name }}</td>
+            <td>@{{ $user->tg_tag ?? 'N/A' }}</td>
             <td>{{ $user->tg_id }}</td>
             <td>
               {{ $user->subscriptions->count() }} шт.

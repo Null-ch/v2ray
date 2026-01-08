@@ -81,7 +81,7 @@
                             <tr>
                                 <th>ID</th>
                                 <th>Пользователь</th>
-                                <th>XUI Сервер</th>
+                                <th>Локация</th>
                                 <th>Email</th>
                                 <th>UUID</th>
                                 <th>Истекает</th>
@@ -104,12 +104,12 @@
                                     </td>
                                     <td>
                                         @if($key->xui)
-                                            {{ $key->xui->name }}
+                                            {{ $key->xui->tag->labelWithFlag() }}
                                         @else
                                             <span class="text-muted">-</span>
                                         @endif
                                     </td>
-                                    <td><code>{{ $key->email ?? '-' }}</code></td>
+                                    <td><code>{{ $key->user->getVpnEmail() ?? '-' }}</code></td>
                                     <td><code>{{ $key->uuid }}</code></td>
                                     <td>
                                         @if($key->expires_at)
