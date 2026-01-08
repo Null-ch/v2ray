@@ -21,7 +21,6 @@ final readonly class TelegramWebhookController
     {
         try {
             $data = $request->all();
-            Log::info('Telegram webhook data', ['data' => $data]);
             $update = Update::fromArray($data);
             $bot = $this->telegramService->getBot();
             $bot->processUpdate($update);
