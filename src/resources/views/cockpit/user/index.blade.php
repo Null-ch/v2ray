@@ -71,7 +71,7 @@
                 <button type="button"
                         class="btn btn-success btn-sm btn-glass btn-user-balance-sign"
                         data-uid="{{ $user->id }}"
-                        data-username="{{ $user->tg_tag ?? 'N/A' }}"
+                        data-username="{{ $user->name}}"
                         data-balance="{{ number_format($user->balance->balance ?? 0, 2) }}"
                         data-sign="+"
                         title="Начислить баланс">
@@ -80,7 +80,7 @@
                 <button type="button"
                         class="btn btn-danger btn-sm btn-glass btn-user-balance-sign"
                         data-uid="{{ $user->id }}"
-                        data-username="{{ $user->tg_tag ?? 'N/A' }}"
+                        data-username="{{ $user->name}}"
                         data-balance="{{ number_format($user->balance->balance ?? 0, 2) }}"
                         data-sign="-"
                         title="Списать баланс">
