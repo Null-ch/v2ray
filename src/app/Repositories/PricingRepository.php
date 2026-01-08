@@ -89,7 +89,7 @@ class PricingRepository extends BaseRepository
     {
         return $this->model
             ->newQuery()
-            ->orderBy('created_at', 'desc')
+            ->orderBy('duration', 'asc')
             ->get();
     }
 
