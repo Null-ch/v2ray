@@ -15,6 +15,7 @@ class Payment extends Model
     public const STATUS_PENDING = 'pending';
     public const STATUS_SUCCEEDED = 'succeeded';
     public const STATUS_CANCELED = 'canceled';
+    public const STATUS_CANCELING = 'canceling';
 
     protected $fillable = [
         'user_id',
@@ -66,7 +67,7 @@ class Payment extends Model
      */
     public function isCanceled(): bool
     {
-        return $this->status === self::STATUS_CANCELED;
+        return $this->status === self::STATUS_CANCELED || $this->status === self::STATUS_CANCELING;
     }
 
     /**
@@ -94,5 +95,11 @@ class Payment extends Model
         return isset($this->metadata['duration'])
             ? (int) $this->metadata['duration']
             : null;
+    }
+
+    public function scopeExpiredPending(): Payment   
+    {
+        return $this->where('status', self::STATUS_PENDING)
+            ->where('created_at', '<=', now()->subMinutes(10));
     }
 }
