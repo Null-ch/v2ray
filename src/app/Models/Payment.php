@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Builder;
+use Carbon\CarbonImmutable;
 
 class Payment extends Model
 {
@@ -130,6 +131,7 @@ class Payment extends Model
 
     public function scopeExpiredPending(Builder $query): Builder
     {
+        $utcNow = CarbonImmutable::now('UTC');
         return $query
             ->where('status', self::STATUS_PENDING)
             ->where('created_at', '<=', now()->subMinutes(10));
