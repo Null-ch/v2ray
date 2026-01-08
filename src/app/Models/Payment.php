@@ -134,6 +134,6 @@ class Payment extends Model
         $utcNow = CarbonImmutable::now('UTC');
         return $query
             ->where('status', self::STATUS_PENDING)
-            ->where('created_at', '<=', now()->subMinutes(10));
+            ->where('created_at', '<=', $utcNow->subMinutes(10));
     }
 }
