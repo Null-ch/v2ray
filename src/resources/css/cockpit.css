@@ -208,6 +208,15 @@ body::after {
 }
 
 /* Модалки */
+.modal {
+  z-index: 1055;
+}
+
+.modal-backdrop {
+  z-index: 1050;
+  background-color: rgba(0, 0, 0, 0.5);
+}
+
 .modal.modal-blur .modal-content {
   background: color-mix(in oklab, var(--bg-card) 70%, transparent) !important;
   border: 1px solid color-mix(in oklab, #ffffff 22%, var(--border-color) 78%) !important;
@@ -215,6 +224,12 @@ body::after {
   -webkit-backdrop-filter: blur(12px) saturate(140%);
   box-shadow: 0 24px 60px rgba(0,0,0,0.40) !important;
   border-radius: 14px !important;
+  z-index: 1056;
+}
+
+.modal.modal-blur .modal-content .btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 /* Toast уведомления */
@@ -941,10 +956,39 @@ a:hover {
 
 .btn-list .btn i,
 .btn-list .btn .ti {
-    font-size: 0.875rem;
+    font-size: 1rem;
     width: 1em;
     height: 1em;
     display: inline-block;
+    line-height: 1;
+    vertical-align: middle;
+    font-style: normal;
+    font-variant: normal;
+    text-rendering: auto;
+}
+
+/* Убеждаемся, что иконки видны и имеют правильный размер */
+.btn-list .btn .ti::before {
+    display: inline-block;
+    font-style: normal;
+    font-variant: normal;
+    text-rendering: auto;
+    line-height: 1;
+    width: 1em;
+    height: 1em;
+}
+
+/* Убеждаемся, что кнопки с иконками имеют минимальную ширину */
+.btn-list .btn:has(.ti) {
+    min-width: 2rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Убеждаемся, что иконки наследуют цвет текста кнопки */
+.btn-list .btn .ti {
+    color: inherit;
 }
 
 /* Убираем отступы у форм внутри btn-list */
