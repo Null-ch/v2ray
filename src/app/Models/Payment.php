@@ -97,6 +97,36 @@ class Payment extends Model
             : null;
     }
 
+    public function getId()
+    {
+        return $this->id;
+    }
+
+    public function getProviderPaimentChargeId()
+    {
+        return $this->provider_payment_charge_id;
+    }
+
+    public function getTelegramPaimentChargeId()
+    {
+        return $this->telegram_payment_charge_id;
+    }
+
+    public function getDescription()
+    {
+        return $this->description;
+    }
+
+    public function getAmount()
+    {
+        return $this->amount;
+    }
+
+    public function getTelegramMessageId()
+    {
+        return $this->telegram_message_id;
+    }
+
     public function scopeExpiredPending(): Payment   
     {
         return $this->where('status', self::STATUS_PENDING)

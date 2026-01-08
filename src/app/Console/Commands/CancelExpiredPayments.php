@@ -4,6 +4,7 @@ namespace App\Console\Commands;
 
 use App\Models\Payment;
 use Illuminate\Console\Command;
+use App\Services\TelegramService;
 use App\Services\YooKassaService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -15,13 +16,15 @@ class CancelExpiredPayments extends Command
     protected $description = 'Cancel pending payments older than 10 minutes';
 
     public function __construct(
-        private readonly YooKassaService $yooKassaService
+        private readonly YooKassaService $yooKassaService,
+        private readonly TelegramService $telegramService,
     ) {
         parent::__construct();
     }
 
     public function handle(): int
     {
+        $bot = $this->telegramService->getBot();
         $payments = DB::transaction(function () {
             $payments = Payment::expiredPending()
                 ->lockForUpdate()
@@ -49,6 +52,19 @@ class CancelExpiredPayments extends Command
                     'processed_at' => now(),
                     'yookassa_status' => PaymentStatus::CANCELED,
                 ]);
+
+                $paymentId = $payment->getProviderPaimentChargeId() ?? $payment->getTelegramPaimentChargeId();
+                $description = $payment->getDescription();
+                $amount = $payment->getAmount();
+                $message = "Платеж (ID:{$paymentId}). Описание: {$description}. Сумма: {$amount} отменен ✅";
+                $chatId = $payment->user->getTgId();
+                $msgId = $payment->getTelegramMessageId();
+
+                if (!empty($msgId)) {
+                    $bot->deleteMessage($bot->chatId(), $msgId);
+                }
+
+                $bot->sendMessage(text: $message, chat_id: $chatId);
             } catch (\Throwable $e) {
                 Log::error('Failed to cancel payment in YooKassa', [
                     'payment_id' => $payment->id,
