@@ -148,6 +148,17 @@ class CockpitController extends Controller
             }
         }
 
+        // Данные для графиков (последние 30 дней)
+        $chartData = $this->getDailyStatsForCharts(30);
+        
+        // Недавние транзакции
+        $recentTransactions = Payment::query()
+            ->where('status', Payment::STATUS_SUCCEEDED)
+            ->with('user')
+            ->orderBy('created_at', 'desc')
+            ->limit(8)
+            ->get();
+
         return view('cockpit.dashboard', compact(
             'totalUsers',
             'activeUsers',
@@ -159,6 +170,94 @@ class CockpitController extends Controller
             'totalRevenue',
             'todayRevenue',
             'pricingTableData',
+            'chartData',
+            'recentTransactions',
         ));
+    }
+
+    /**
+     * Get daily stats for charts.
+     */
+    private function getDailyStatsForCharts(int $days = 30): array
+    {
+        $usersData = [];
+        $keysData = [];
+        
+        $startDate = now()->subDays($days);
+        
+        // Новые пользователи по дням
+        $newUsers = User::query()
+            ->where('created_at', '>=', $startDate)
+            ->selectRaw('DATE(created_at) as date, COUNT(*) as count')
+            ->groupBy('date')
+            ->get()
+            ->keyBy('date');
+        
+        // Новые ключи (subscriptions) по дням
+        $newKeys = Subscription::query()
+            ->where('created_at', '>=', $startDate)
+            ->selectRaw('DATE(created_at) as date, COUNT(*) as count')
+            ->groupBy('date')
+            ->get()
+            ->keyBy('date');
+        
+        for ($i = $days - 1; $i >= 0; $i--) {
+            $date = now()->subDays($i)->format('Y-m-d');
+            $usersData[$date] = $newUsers->get($date)?->count ?? 0;
+            $keysData[$date] = $newKeys->get($date)?->count ?? 0;
+        }
+        
+        return [
+            'users' => $usersData,
+            'keys' => $keysData,
+        ];
+    }
+
+    /**
+     * Partial: dashboard stats.
+     */
+    public function dashboardStatsPartial(): View
+    {
+        $totalUsers = User::count();
+        $totalKeys = Subscription::count();
+        $totalRevenue = Payment::query()
+            ->where('status', Payment::STATUS_SUCCEEDED)
+            ->sum('amount');
+        $totalXui = Xui::where('is_active', true)->count();
+        
+        $stats = [
+            'user_count' => $totalUsers,
+            'total_keys' => $totalKeys,
+            'total_spent' => $totalRevenue,
+            'host_count' => $totalXui,
+        ];
+        
+        return view('cockpit.partials.dashboard_stats', compact('stats'));
+    }
+
+    /**
+     * Partial: dashboard transactions.
+     */
+    public function dashboardTransactionsPartial(Request $request): View
+    {
+        $page = $request->query('page', 1);
+        $perPage = 8;
+        
+        $transactions = Payment::query()
+            ->where('status', Payment::STATUS_SUCCEEDED)
+            ->with('user')
+            ->orderBy('created_at', 'desc')
+            ->paginate($perPage, ['*'], 'page', $page);
+        
+        return view('cockpit.partials.dashboard_transactions', compact('transactions'));
+    }
+
+    /**
+     * JSON: dashboard charts data.
+     */
+    public function dashboardChartsJson(): \Illuminate\Http\JsonResponse
+    {
+        $data = $this->getDailyStatsForCharts(30);
+        return response()->json($data);
     }
 }
