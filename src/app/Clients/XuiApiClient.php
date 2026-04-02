@@ -36,6 +36,8 @@ final class XuiApiClient
             $host = explode(':', $host)[0];
         }
 
+        $host = rtrim($host, '/');
+
         $protocol = $xuiModel->ssl ? 'https' : 'http';
         $port = $xuiModel->port;
         $path = trim($xuiModel->path, '/');
