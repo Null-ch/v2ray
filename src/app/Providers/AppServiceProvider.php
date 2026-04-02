@@ -12,6 +12,7 @@ use App\Services\TelegramBotHandlers;
 use App\Services\VpnConnectionService;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\URL;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -63,6 +64,10 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        if (env('FORCE_HTTPS', false)) {
+            URL::forceScheme('https');
+        }
+
         $token = config('services.telegram.bot_token');
 
         if (empty($token) || !$this->app->bound(TelegramService::class) || !$this->app->bound(VpnConnectionService::class)) {
