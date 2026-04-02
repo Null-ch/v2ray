@@ -102,6 +102,22 @@ services:
       timeout: 5s
       retries: 5
 
+  phpmyadmin:
+    image: phpmyadmin:apache
+    container_name: ${PHPMYADMIN_CONTAINER_NAME:-v2ray-phpmyadmin}
+    ports:
+      - "${PHPMYADMIN_PORT:-8083}:80"
+    environment:
+      PMA_HOST: db
+      PMA_PORT: 3306
+      PMA_ARBITRARY: 0
+      UPLOAD_LIMIT: 256M
+    networks:
+      - app-network
+    depends_on:
+      db:
+        condition: service_healthy
+
   bot:
     build:
       context: .
