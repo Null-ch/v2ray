@@ -171,8 +171,9 @@ final class ProcessAcceptTermsJob implements ShouldQueue
     protected function createUserSubscription($user, XuiService $xuiService): void
     {
         $trialTag = $this->settingService->getString('trial.tag');
+        $trialDuration = (int) $this->settingService->getInt('trial.duration');
         $xuiModel = $xuiService->getXuiModelByTag($trialTag);
-        $expiryTimeMs = MillisecondsHelper::addDaysInMillisecondsToNow(7);
+        $expiryTimeMs = MillisecondsHelper::addDaysInMillisecondsToNow($trialDuration);
         $inboundId = $xuiModel->inbound_id;
         $subscriptionName = Str::substr($user->uuid, 0, 6) . $user->id;
         $createResult = $xuiService->addClient($trialTag, $inboundId, [
