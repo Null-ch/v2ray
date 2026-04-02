@@ -342,12 +342,12 @@ final class XuiService
 
         $link = "{$host}:2096/sub/{$uuid}";
 
-        if ($type !== 'base') {
-            return route('export.link', [
-                'tag' => $tag,
-                'uuid' => $uuid,
-            ]);
-        }
+        // if ($type !== 'base') {
+        //     return route('export.link', [
+        //         'tag' => $tag,
+        //         'uuid' => $uuid,
+        //     ]);
+        // }
 
         return $link;
     }
