@@ -1,4 +1,12 @@
 @forelse($transactions as $transaction)
+  @php
+    $meta = is_array($transaction->metadata)
+      ? $transaction->metadata
+      : (json_decode((string) $transaction->metadata, true) ?? []);
+    $tag = $meta['xui_tag'] ?? $meta['vpn_tag'] ?? null;
+    $pricingLabel = $meta['pricing_title']
+      ?? (isset($meta['pricing_id']) ? 'Тариф #' . $meta['pricing_id'] : null);
+  @endphp
   <tr>
     <td>
       @if($transaction->user)
@@ -10,15 +18,15 @@
       @endif
     </td>
     <td>
-      @if($transaction->metadata && isset(json_decode($transaction->metadata, true)['xui_tag']))
-        {{ json_decode($transaction->metadata, true)['xui_tag'] }}
+      @if($tag)
+        {{ $tag }}
       @else
         <span class="text-muted">-</span>
       @endif
     </td>
     <td>
-      @if($transaction->metadata && isset(json_decode($transaction->metadata, true)['pricing_title']))
-        {{ json_decode($transaction->metadata, true)['pricing_title'] }}
+      @if($pricingLabel)
+        {{ $pricingLabel }}
       @else
         <span class="text-muted">-</span>
       @endif
