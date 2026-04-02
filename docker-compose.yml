@@ -27,6 +27,47 @@ services:
     volumes:
       - ./src:/var/www/html/v2ray/src
 
+  queue:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ${QUEUE_CONTAINER_NAME:-v2ray-queue}
+    working_dir: /var/www/html/v2ray/src
+    networks:
+      - app-network
+    depends_on:
+      db:
+        condition: service_healthy
+      app:
+        condition: service_started
+    environment:
+      APP_ENV: ${APP_ENV}
+      COMPOSER_ALLOW_SUPERUSER: 1
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN}
+      DB_CONNECTION: mysql
+      DB_HOST: db
+      DB_PORT: 3306
+      DB_DATABASE: v2ray
+      DB_USERNAME: v2ray
+      DB_PASSWORD: CHvcuXdcHECcfMrK
+    command:
+      - sh
+      - -c
+      - |
+        if [ ! -f /var/www/html/v2ray/src/.env ]; then
+          cp /var/www/html/v2ray/src/.env.example /var/www/html/v2ray/src/.env;
+        fi;
+        if ! grep -q '^APP_ENV=' /var/www/html/v2ray/src/.env; then
+          echo "APP_ENV=${APP_ENV}" >> /var/www/html/v2ray/src/.env;
+        fi;
+        if ! grep -q '^APP_KEY=' /var/www/html/v2ray/src/.env || grep -q '^APP_KEY=$' /var/www/html/v2ray/src/.env; then
+          php artisan key:generate --force;
+        fi;
+        exec php artisan queue:work --sleep=3 --tries=3 --timeout=90
+    restart: always
+    volumes:
+      - ./src:/var/www/html/v2ray/src
+
   web:
     image: nginx:alpine
     container_name: ${WEB_CONTAINER_NAME}
