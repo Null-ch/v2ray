@@ -741,7 +741,7 @@ final class TelegramBotHandlers
                 $refBonusDuration = (int) $this->settingService->getInt('ref.bonus.duration');
                 $defaultMonthlyCost = (int) $this->settingService->getInt('default.monthly.cost');
                 $referralLink = "https://t.me/{$botUsername}?start={$user->referral_code}";
-                $shareUrl = "https://t.me/share/url?" . "text=" . urlencode("Дешевый VPN! 7 дней бесплатно, подписка на месяц {$defaultMonthlyCost}Р!") . '&url=' . urlencode($referralLink);
+                $shareUrl = "https://t.me/share/url?" . "text=" . urlencode("Дешевый VPN! {$trialDuration} дней бесплатно, подписка на месяц {$defaultMonthlyCost}Р!") . '&url=' . urlencode($referralLink);
                 $message = "За каждого, кто подключит VPN, Вы получите на баланс {$refBonusDuration} дня подписки, а все приглашенные {$trialDuration} дней бесплатного VPN";
 
                 $keyboard = InlineKeyboardMarkup::make()
