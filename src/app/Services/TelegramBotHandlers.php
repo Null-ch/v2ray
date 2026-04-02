@@ -737,9 +737,12 @@ final class TelegramBotHandlers
                     }
                 }
 
+                $trialDuration = (int) $this->settingService->getInt('trial.duration');
+                $refBonusDuration = (int) $this->settingService->getInt('ref.bonus.duration');
+                $defaultMonthlyCost = (int) $this->settingService->getInt('default.monthly.cost');
                 $referralLink = "https://t.me/{$botUsername}?start={$user->referral_code}";
-                $shareUrl = "https://t.me/share/url?" . "text=" . urlencode("Дешевый VPN! 7 дней бесплатно, подписка на месяц 70Р!") . '&url=' . urlencode($referralLink);
-                $message = "За каждого, кто подключит VPN, Вы получите на баланс " .  $this->settingService->getInt('ref.bonus.duration') . " дня подписки, а все приглашенные 7 дней бесплатного VPN";
+                $shareUrl = "https://t.me/share/url?" . "text=" . urlencode("Дешевый VPN! 7 дней бесплатно, подписка на месяц {$defaultMonthlyCost}Р!") . '&url=' . urlencode($referralLink);
+                $message = "За каждого, кто подключит VPN, Вы получите на баланс {$refBonusDuration} дня подписки, а все приглашенные {$trialDuration} дней бесплатного VPN";
 
                 $keyboard = InlineKeyboardMarkup::make()
                     ->addRow(InlineKeyboardButton::make('Пригласить', url: $shareUrl))
@@ -853,8 +856,8 @@ final class TelegramBotHandlers
     private function getInstructionsKeyboard(): InlineKeyboardMarkup
     {
         return InlineKeyboardMarkup::make()
-            ->addRow(InlineKeyboardButton::make('🤖 Приложение для Android', url: 'https://play.google.com/store/apps/details?id=com.v2raytun.android&pcampaignid=web_share'))
-            ->addRow(InlineKeyboardButton::make('🍏 Приложение для MacOS\iPhone', url: 'https://apps.apple.com/ru/app/v2raytun/id6476628951'))
+            ->addRow(InlineKeyboardButton::make('🤖 Приложение для Android', url: 'https://telegra.ph/Podklyuchenie-k-VPN-04-02-2'))
+            ->addRow(InlineKeyboardButton::make('🍏 Инструкция для MacOS\iPhone', url: 'https://telegra.ph/Podklyuchenie-k-VPN-04-02'))
             ->addRow(InlineKeyboardButton::make('🖥️ Инструкция для Windows', url: 'https://telegra.ph/Instrukciya-po-ustanovke-V2raytun-na-PK--Windows-1011-01-02'))
             ->addRow(InlineKeyboardButton::make('🏠 Главное меню', callback_data: 'main_menu'));
     }
