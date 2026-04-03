@@ -12,6 +12,7 @@ use App\Services\User\UserService;
 use App\Helpers\MillisecondsHelper;
 use App\Repositories\XuiRepository;
 use App\Services\SubscriptionService;
+use App\Enums\XuiTag;
 
 final class XuiService
 {
@@ -115,8 +116,9 @@ final class XuiService
      * 
      * @return array
      */
-    public function getInbounds(string $tag): array
+    public function getInbounds(string|XuiTag $tag): array
     {
+        $tag = $tag instanceof XuiTag ? $tag->value : (string) $tag;
         $client = $this->getXuiApiClient($tag);
         return $client->getInboundsList();
     }
