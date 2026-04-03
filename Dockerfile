@@ -69,5 +69,5 @@ CMD ["sh", "-c", "\
   chmod -R 775 /var/www/html/v2ray/src/storage /var/www/html/v2ray/src/bootstrap/cache; \
   exec php-fpm"]
 
-COPY docker-entrypoint.sh /docker-entrypoint.sh
-ENTRYPOINT ["/docker-entrypoint.sh"]
+  COPY docker-entrypoint.sh /docker-entrypoint.sh
+  ENTRYPOINT ["sh", "/docker-entrypoint.sh"]
