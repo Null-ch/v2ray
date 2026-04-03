@@ -39,7 +39,7 @@ cd v2ray
 Соберите Docker-образы и запустите контейнеры:
 
 ```bash
-docker-compose up -d --build
+docker compose up -d --build
 ```
 ```bash
 docker exec -it v2ray_test_app bash
@@ -57,14 +57,14 @@ php artisan migrate:fresh --force
 Если нужно собрать фронтенд-ресурсы, выполните:
 
 ```bash
-docker-compose exec app npm install
-docker-compose exec app npm run build
+docker compose exec app npm install
+docker compose exec app npm run build
 ```
 
 Или для разработки с hot-reload:
 
 ```bash
-docker-compose exec app npm run dev
+docker compose exec app npm run dev
 ```
 
 ## Использование
@@ -88,70 +88,70 @@ docker-compose exec app npm run dev
 
 ```bash
 # Логи всех сервисов
-docker-compose logs -f
+docker compose logs -f
 
 # Логи конкретного сервиса
-docker-compose logs -f app
-docker-compose logs -f web
-docker-compose logs -f db
+docker compose logs -f app
+docker compose logs -f web
+docker compose logs -f db
 ```
 
 #### Выполнение Artisan команд
 
 ```bash
-docker-compose exec app php artisan <command>
+docker compose exec app php artisan <command>
 ```
 
 Примеры:
 ```bash
 # Очистка кеша
-docker-compose exec app php artisan cache:clear
+docker compose exec app php artisan cache:clear
 
 # Запуск миграций
-docker-compose exec app php artisan migrate
+docker compose exec app php artisan migrate
 
 # Создание контроллера
-docker-compose exec app php artisan make:controller ExampleController
+docker compose exec app php artisan make:controller ExampleController
 ```
 
 #### Выполнение Composer команд
 
 ```bash
-docker-compose exec app composer install
-docker-compose exec app composer update
+docker compose exec app composer install
+docker compose exec app composer update
 ```
 
 #### Выполнение NPM команд
 
 ```bash
-docker-compose exec app npm install
-docker-compose exec app npm run build
-docker-compose exec app npm run dev
+docker compose exec app npm install
+docker compose exec app npm run build
+docker compose exec app npm run dev
 ```
 
 #### Доступ к контейнеру
 
 ```bash
-docker-compose exec app bash
+docker compose exec app bash
 ```
 
 #### Остановка проекта
 
 ```bash
-docker-compose down
+docker compose down
 ```
 
 #### Остановка с удалением volumes (⚠️ удалит данные БД)
 
 ```bash
-docker-compose down -v
+docker compose down -v
 ```
 
 ## Структура проекта
 
 ```
 v2ray/
-├── docker-compose.yml      # Конфигурация Docker Compose
+├── docker compose.yml      # Конфигурация Docker Compose
 ├── Dockerfile              # Образ PHP-FPM приложения
 ├── nginx/                  # Конфигурация Nginx
 │   └── conf.d/
@@ -191,7 +191,7 @@ php artisan serve
 ### Запуск тестов
 
 ```bash
-docker-compose exec app php artisan test
+docker compose exec app php artisan test
 ```
 
 ## Устранение неполадок
@@ -201,25 +201,25 @@ docker-compose exec app php artisan test
 Если возникают проблемы с правами доступа к директориям `storage` и `bootstrap/cache`:
 
 ```bash
-docker-compose exec app chmod -R 775 storage bootstrap/cache
-docker-compose exec app chown -R www-data:www-data storage bootstrap/cache
+docker compose exec app chmod -R 775 storage bootstrap/cache
+docker compose exec app chown -R www-data:www-data storage bootstrap/cache
 ```
 
 ### Проблемы с подключением к БД
 
 Убедитесь, что:
-1. Контейнер `db` запущен: `docker-compose ps`
+1. Контейнер `db` запущен: `docker compose ps`
 2. В `.env` указаны правильные параметры подключения
-3. Хост БД в `.env` указан как `db` (имя сервиса в docker-compose)
+3. Хост БД в `.env` указан как `db` (имя сервиса в docker compose)
 
 ### Очистка и пересборка
 
 Если нужно полностью пересобрать проект:
 
 ```bash
-docker-compose down -v
-docker-compose build --no-cache
-docker-compose up -d
+docker compose down -v
+docker compose build --no-cache
+docker compose up -d
 ```
 
 ## Лицензия
