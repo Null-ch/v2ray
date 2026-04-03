@@ -14,6 +14,3 @@ if ! grep -q '^APP_KEY=' /var/www/html/v2ray/src/.env || grep -q '^APP_KEY=$' /v
 fi
 
 exec php artisan queue:work --sleep=3 --tries=3 --timeout=90
-EOF
-
-sudo chmod +x docker-queue.sh
