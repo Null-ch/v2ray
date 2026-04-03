@@ -1,10 +1,10 @@
-FROM php:8.4-fpm
+FROM php:8.4-fpm AS base
 
-# Аргумент сборки, по умолчанию dev
+# Аргумент сборки
 ARG APP_ENV=dev
 ENV APP_ENV=$APP_ENV
 
-# Установка зависимостей
+# Установка зависимостей ОС и PHP расширений
 RUN apt-get update && apt-get install -y \
     default-mysql-client \
     libonig-dev \
@@ -35,22 +35,25 @@ COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
 WORKDIR /var/www/html/v2ray/src
 
-# Копируем исходники
+
 COPY ./src/composer.json ./src/composer.lock* ./
-COPY ./src ./
+
+RUN composer install --no-dev --no-scripts --prefer-dist --no-interaction --optimize-autoloader
+
+COPY ./src ./ 
 COPY docker-queue.sh /docker-queue.sh
 
-# Установка прав и владельца для www-data
+# Права и владелец
 RUN chmod +x /docker-queue.sh \
     && chown -R www-data:www-data /var/www/html/v2ray/src /docker-queue.sh \
     && chmod -R 775 /var/www/html/v2ray/src/storage /var/www/html/v2ray/src/bootstrap/cache
 
-# Используем www-data для php-fpm
+# Используем www-data
 USER www-data
 
 EXPOSE 9000
 
-# CMD с корректными правами
+# CMD с проверкой .env и прав
 CMD ["sh", "-c", "\
   if [ ! -f /var/www/html/v2ray/src/.env ]; then \
     cp /var/www/html/v2ray/src/.env.example /var/www/html/v2ray/src/.env; \
@@ -63,6 +66,5 @@ CMD ["sh", "-c", "\
   if ! grep -q '^APP_KEY=' /var/www/html/v2ray/src/.env || grep -q '^APP_KEY=$' /var/www/html/v2ray/src/.env; then \
     php artisan key:generate --force; \
   fi; \
-  # на всякий случай обновляем права перед запуском php-fpm \
   chmod -R 775 /var/www/html/v2ray/src/storage /var/www/html/v2ray/src/bootstrap/cache; \
   exec php-fpm"]
