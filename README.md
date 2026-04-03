@@ -47,6 +47,7 @@ docker exec -it v2ray_test_app bash
 ```bash
 php artisan migrate:fresh --force
 php artisan db:seed
+php artisan key:generate --force
 ```
 
 При первом запуске Dockerfile автоматически выполнит:
