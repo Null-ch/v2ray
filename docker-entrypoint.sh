@@ -1,9 +1,16 @@
 #!/bin/sh
 set -e
 
-# Устанавливаем права на storage и bootstrap/cache
-chown -R www-data:www-data /var/www/html/v2ray/src/storage /var/www/html/v2ray/src/bootstrap/cache
-chmod -R 775 /var/www/html/v2ray/src/storage /var/www/html/v2ray/src/bootstrap/cache
+# Устанавливаем права на storage и bootstrap/cache.
+# Контейнер запущен от `www-data` (см. Dockerfile), поэтому `chown` может быть запрещен.
+# Если мы не root — пропускаем `chown`, чтобы не валить контейнер.
+if [ "$(id -u)" -eq 0 ]; then
+  chown -R www-data:www-data /var/www/html/v2ray/src/storage /var/www/html/v2ray/src/bootstrap/cache
+fi
+
+# chmod может тоже быть запрещён в некоторых bind-mount сценариях (Windows->Linux),
+# поэтому не останавливаемся на ошибке.
+chmod -R 775 /var/www/html/v2ray/src/storage /var/www/html/v2ray/src/bootstrap/cache || true
 
 # Генерация .env если нет
 if [ ! -f /var/www/html/v2ray/src/.env ]; then
