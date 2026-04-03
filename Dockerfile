@@ -35,18 +35,22 @@ COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
 WORKDIR /var/www/html/v2ray/src
 
+# Копируем исходники
 COPY ./src/composer.json ./src/composer.lock* ./
 COPY ./src ./
 COPY docker-queue.sh /docker-queue.sh
 
+# Установка прав и владельца для www-data
 RUN chmod +x /docker-queue.sh \
-    && chown -R www-data:www-data /docker-queue.sh \
-    && chown -R www-data:www-data /var/www/html/v2ray/src \
+    && chown -R www-data:www-data /var/www/html/v2ray/src /docker-queue.sh \
     && chmod -R 775 /var/www/html/v2ray/src/storage /var/www/html/v2ray/src/bootstrap/cache
 
+# Используем www-data для php-fpm
 USER www-data
+
 EXPOSE 9000
 
+# CMD с корректными правами
 CMD ["sh", "-c", "\
   if [ ! -f /var/www/html/v2ray/src/.env ]; then \
     cp /var/www/html/v2ray/src/.env.example /var/www/html/v2ray/src/.env; \
@@ -59,4 +63,6 @@ CMD ["sh", "-c", "\
   if ! grep -q '^APP_KEY=' /var/www/html/v2ray/src/.env || grep -q '^APP_KEY=$' /var/www/html/v2ray/src/.env; then \
     php artisan key:generate --force; \
   fi; \
+  # на всякий случай обновляем права перед запуском php-fpm \
+  chmod -R 775 /var/www/html/v2ray/src/storage /var/www/html/v2ray/src/bootstrap/cache; \
   exec php-fpm"]
