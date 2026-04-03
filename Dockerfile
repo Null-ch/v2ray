@@ -4,6 +4,7 @@ FROM php:8.4-fpm
 ARG APP_ENV=dev
 ENV APP_ENV=$APP_ENV
 
+# Установка зависимостей
 RUN apt-get update && apt-get install -y \
     default-mysql-client \
     libonig-dev \
@@ -37,10 +38,13 @@ WORKDIR /var/www/html/v2ray/src
 COPY ./src/composer.json ./src/composer.lock* ./
 COPY ./src ./
 COPY docker-queue.sh /docker-queue.sh
-RUN chmod +x /docker-queue.sh && chown -R www-data:www-data /docker-queue.sh
-RUN chown -R www-data:www-data /var/www/html/v2ray/src \
+
+RUN chmod +x /docker-queue.sh \
+    && chown -R www-data:www-data /docker-queue.sh \
+    && chown -R www-data:www-data /var/www/html/v2ray/src \
     && chmod -R 775 /var/www/html/v2ray/src/storage /var/www/html/v2ray/src/bootstrap/cache
 
+USER www-data
 EXPOSE 9000
 
 CMD ["sh", "-c", "\
