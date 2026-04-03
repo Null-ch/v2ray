@@ -36,7 +36,8 @@ WORKDIR /var/www/html/v2ray/src
 
 COPY ./src/composer.json ./src/composer.lock* ./
 COPY ./src ./
-
+COPY docker-queue.sh /docker-queue.sh
+RUN chmod +x /docker-queue.sh && chown -R www-data:www-data /docker-queue.sh
 RUN chown -R www-data:www-data /var/www/html/v2ray/src \
     && chmod -R 775 /var/www/html/v2ray/src/storage /var/www/html/v2ray/src/bootstrap/cache
 
