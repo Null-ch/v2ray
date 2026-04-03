@@ -81,8 +81,9 @@ final class XuiService
      * @param string $tag
      * @return XuiApiClient
      */
-    public function getXuiApiClient(string $tag): XuiApiClient
+    public function getXuiApiClient(string|XuiTag $tag): XuiApiClient
     {
+        $tag = $tag instanceof XuiTag ? $tag->value : (string) $tag;
         if (isset($this->clientCache[$tag])) {
             return $this->clientCache[$tag];
         }
