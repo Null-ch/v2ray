@@ -856,7 +856,7 @@ final class TelegramBotHandlers
     private function getInstructionsKeyboard(): InlineKeyboardMarkup
     {
         return InlineKeyboardMarkup::make()
-            ->addRow(InlineKeyboardButton::make('🤖 Приложение для Android', url: 'https://telegra.ph/Podklyuchenie-k-VPN-04-02-2'))
+            ->addRow(InlineKeyboardButton::make('🤖 Инструкция для Android', url: 'https://telegra.ph/Podklyuchenie-k-VPN-04-02-2'))
             ->addRow(InlineKeyboardButton::make('🍏 Инструкция для MacOS\iPhone', url: 'https://telegra.ph/Podklyuchenie-k-VPN-04-02'))
             ->addRow(InlineKeyboardButton::make('🖥️ Инструкция для Windows', url: 'https://telegra.ph/Instrukciya-po-ustanovke-V2raytun-na-PK--Windows-1011-01-02'))
             ->addRow(InlineKeyboardButton::make('🏠 Главное меню', callback_data: 'main_menu'));
