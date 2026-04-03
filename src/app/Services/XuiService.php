@@ -12,7 +12,6 @@ use App\Services\User\UserService;
 use App\Helpers\MillisecondsHelper;
 use App\Repositories\XuiRepository;
 use App\Services\SubscriptionService;
-use App\Enums\XuiTag;
 
 final class XuiService
 {
