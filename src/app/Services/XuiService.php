@@ -340,9 +340,16 @@ final class XuiService
     public function getSubLink(string $tag, string $uuid, string $type = 'base'): string
     {
         $xuiModel = $this->getXuiModel($tag);
-        $host = $xuiModel->host;
+        $host = $xuiModel->host ?? 'localhost';
 
-        $link = "{$host}:2096/sub/{$uuid}";
+        // Убираем протокол и слэши с конца
+        $host = preg_replace('#^https?://#', '', $host);
+        $host = rtrim($host, '/');
+
+        $protocol = $xuiModel->ssl ? 'https' : 'http';
+        $port = 2096; // если порт фиксированный
+
+        $link = "{$protocol}://{$host}:{$port}/sub/{$uuid}";
 
         // if ($type !== 'base') {
         //     return route('export.link', [
