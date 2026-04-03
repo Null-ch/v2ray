@@ -37,6 +37,12 @@ fi
 # Важно: в docker-compose для сервисов `app`/`web`/`bot`/`queue` может быть задана
 # своя команда. Поэтому если команда передана, запускаем ее; иначе поднимаем php-fpm.
 if [ "$#" -gt 0 ]; then
+  # Скрипты могут быть смонтированы с хоста (например, Windows),
+  # и тогда бит executable может быть потерян. Для docker-queue.sh запускаем через `sh`.
+  if [ "$1" = "/docker-queue.sh" ]; then
+    exec sh /docker-queue.sh
+  fi
+
   exec "$@"
 fi
 
