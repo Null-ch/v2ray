@@ -21,15 +21,11 @@ final class XuiApiClient
 
     public function __construct(Xui $xuiModel)
     {
-        // Формируем базовый URL
-        $host = $xuiModel->host;
+        // Формируем базовый host
+        $host = $xuiModel->host ?? 'localhost';
 
         // Очищаем host от протокола если он там есть
-        if (str_starts_with($host, 'https://')) {
-            $host = str_replace('https://', '', $host);
-        } elseif (str_starts_with($host, 'http://')) {
-            $host = str_replace('http://', '', $host);
-        }
+        $host = preg_replace('#^https?://#', '', $host);
 
         // Убираем порт из host если он там есть
         if (str_contains($host, ':')) {
@@ -38,11 +34,17 @@ final class XuiApiClient
 
         $host = rtrim($host, '/');
 
+        // Протокол и порт
         $protocol = $xuiModel->ssl ? 'https' : 'http';
-        $port = $xuiModel->port;
-        $path = trim($xuiModel->path, '/');
+        $port = (int) ($xuiModel->port ?? ($xuiModel->ssl ? 443 : 80));
 
-        $this->baseUrl = sprintf('%s://%s:%d/%s/', $protocol, $host, $port, $path);
+        // Путь
+        $path = trim($xuiModel->path ?? '', '/');
+        $pathSegment = $path !== '' ? $path . '/' : '';
+
+        // Собираем base URL без лишнего слэша перед портом
+        $this->baseUrl = sprintf('%s://%s:%d/%s', $protocol, $host, $port, $pathSegment);
+
         // Создаём CookieJar для хранения сессии
         $this->cookieJar = new CookieJar();
 
@@ -50,7 +52,7 @@ final class XuiApiClient
         $this->client = new Client([
             'base_uri' => $this->baseUrl,
             'cookies' => $this->cookieJar,
-            'verify' => false, // Отключаем проверку SSL для самоподписанных сертификатов
+            'verify' => false, // отключаем проверку SSL для самоподписанных сертификатов
             'timeout' => 30,
             'headers' => [
                 'Accept' => 'application/json',
