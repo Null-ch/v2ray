@@ -195,8 +195,8 @@ final class ProcessAcceptTermsJob implements ShouldQueue
         $userConfigImportLink = $xuiService->getSubLink($trialTag, $user->uuid, 'import');
 
         $instructionsKeyboard = InlineKeyboardMarkup::make()
-            ->addRow(InlineKeyboardButton::make('🤖 Приложение для Android', url: 'https://play.google.com/store/apps/details?id=com.v2raytun.android&pcampaignid=web_share'))
-            ->addRow(InlineKeyboardButton::make('🍎 Приложение для iPhone/iOS', url: 'https://apps.apple.com/ru/app/v2raytun/id6476628951'))
+            ->addRow(InlineKeyboardButton::make('🤖 Инструкция для Android', url: 'https://telegra.ph/Podklyuchenie-k-VPN-04-02-2'))
+            ->addRow(InlineKeyboardButton::make('🍏 Инструкция для MacOS\iPhone', url: 'https://telegra.ph/Podklyuchenie-k-VPN-04-02'))
             ->addRow(InlineKeyboardButton::make('🖥️ Инструкция для Windows', url: 'https://telegra.ph/Instrukciya-po-ustanovke-V2raytun-na-PK--Windows-1011-01-02'))
             ->addRow(InlineKeyboardButton::make('📲 Перенести в приложение', url: $userConfigImportLink))
             ->addRow(InlineKeyboardButton::make('🏠 Вернуться в главное меню', callback_data: 'main_menu'));
